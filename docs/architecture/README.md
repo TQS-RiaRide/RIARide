@@ -1,0 +1,253 @@
+# RiaRide architecture proposal
+
+**Status:** proposed for iteration I1, pending team review.
+
+This document describes how RiaRide is built and why. Each significant choice has a short decision record in [`adr/`](adr/). The diagrams in [`diagrams/`](diagrams/) are `.drawio.svg` files: GitHub renders them, and draw.io opens them for editing.
+
+## 1. Drivers
+
+| Driver | Consequence for the architecture |
+|---|---|
+| Spring Boot and Java 21 are required | Backend stack is fixed |
+| Simulator is a separate service, read through one interface behind an adapter | `telemetry` module exposes ports; only its adapter knows MQTT |
+| Payments sit behind an adapter with integration tests | `payments` module exposes a port; only its adapter knows Stripe |
+| Production is described as code and deployed from `main` | Docker Compose, images built in CI |
+| The grade depends on evidence of quality | Boundaries, adapters and flows must be testable in isolation |
+| Four people, five weeks | One deployable, few moving parts, parallel work per module |
+
+### Traceability to the assignment
+
+Each requirement of the assignment guidelines (v2026-11-10) that shapes the architecture, and where this proposal answers it.
+
+| Requirement | Guidelines | Where it is answered |
+|---|---|---|
+| Spring Boot (stable) and Java 21 | 1.2 | Decisions 1 to 3, section 5 |
+| Web UI; end-to-end tests with Selenium or Playwright | 1.2, T4 | [ADR 0005](adr/0005-react-frontend.md), [ADR 0014](adr/0014-sqa-tools.md) |
+| Deployment on a department VM or a cloud provider, reachable by the teaching staff | 1.2 | [ADR 0011](adr/0011-deployment.md), section 12; reachability is an open risk (section 13) |
+| Find vehicles by hub and type; book or start immediately; end at a hub; user dashboard | 4.1 | `fleet` and `trips`, section 7. Booking for a period is an open question (section 13) |
+| Register vehicles and hubs; lifecycle with activation and deactivation; tickets with an SLA deadline assigned to a technician; operator dashboard | 4.1 | `fleet` and `maintenance`, section 8 |
+| Rules of use (maximum duration, hub capacity); business KPIs; technical metrics | 4.1 | `usage_rule`, `backoffice`, Micrometer (section 11). Restricting who may use which vehicles is an open question (section 13) |
+| Registration, authentication, role-based access | 4.1 | [ADR 0009](adr/0009-keycloak.md), [ADR 0010](adr/0010-registration-admin-api.md) |
+| Deposit and overtime in a payment sandbox | 4.1 | [ADR 0008](adr/0008-stripe-test-mode.md), section 9 |
+| Telemetry reflected in vehicle state; low battery blocks booking | 4.1 | `telemetry` and `fleet`, section 8 |
+| Simulator in its own container, read through one interface; replacing it changes only the adapter | 4.4 | [ADR 0006](adr/0006-mqtt-integration.md), [ADR 0007](adr/0007-python-simulator.md), section 9 |
+| End users report problems | 3.2 | Open question (section 13) |
+| Feature branch per story, protected `main`, merges through pull requests | D1 | Working rules in `CLAUDE.md`; `main` is not protected yet (section 13) |
+| CI on every push and pull request, with a blocking quality gate | D2, Q1, Q2 | Section 12, [ADR 0014](adr/0014-sqa-tools.md) |
+| Production described as code; `main` deploys automatically with representative data | D3, D4 | [ADR 0011](adr/0011-deployment.md), section 12 |
+| Dependency vulnerability scanning on every build | Q3 | [ADR 0014](adr/0014-sqa-tools.md) |
+| Integration tests separate from unit tests | T3 | [ADR 0003](adr/0003-maven.md), section 11 |
+| SLOs checked by a k6 load test with thresholds | T5 | Section 11; the SLOs belong in the Product Specification report |
+
+## 2. Decisions
+
+| # | Topic | Decision | Record |
+|---|---|---|---|
+| 1 | Style | Modular monolith, ports and adapters only at external integrations | [ADR 0001](adr/0001-modular-monolith.md) |
+| 2 | Module boundaries | Spring Modulith, with `verify()` as a test and events persisted in PostgreSQL | [ADR 0002](adr/0002-spring-modulith.md) |
+| 3 | Build | Maven with wrapper; Surefire, Failsafe, JaCoCo, SonarQube | [ADR 0003](adr/0003-maven.md) |
+| 4 | Database | PostgreSQL only, Flyway migrations, Testcontainers | [ADR 0004](adr/0004-postgresql.md) |
+| 5 | Frontend | React, Vite and TypeScript, react-i18next for Portuguese and English | [ADR 0005](adr/0005-react-frontend.md) |
+| 6 | Vehicle integration | Bidirectional MQTT through Eclipse Mosquitto | [ADR 0006](adr/0006-mqtt-integration.md) |
+| 7 | Simulator | Python with paho-mqtt, pytest and coverage reported to SonarQube | [ADR 0007](adr/0007-python-simulator.md) |
+| 8 | Payments | Stripe test mode, confirmed server-side, WireMock in tests | [ADR 0008](adr/0008-stripe-test-mode.md) |
+| 9 | Authentication | Keycloak OIDC: SPA with Authorization Code and PKCE, backend as resource server | [ADR 0009](adr/0009-keycloak.md) |
+| 10 | Guest registration | Own form, backend validates the stay code, then Keycloak Admin API | [ADR 0010](adr/0010-registration-admin-api.md) |
+| 11 | Deployment | Docker Compose on a university VM, images in GHCR, GitHub Actions | [ADR 0011](adr/0011-deployment.md) |
+| 12 | Diagrams | draw.io stored as `.drawio.svg` | [ADR 0012](adr/0012-drawio-diagrams.md) |
+| 13 | Pricing | One base price per pass type across the hotel chain | [ADR 0013](adr/0013-chain-base-price.md) |
+| 14 | SQA tools | SonarQube Cloud (OSS plan), JaCoCo, Cucumber, Playwright, k6, Xray and per-stack dependency scanning | [ADR 0014](adr/0014-sqa-tools.md) |
+
+## 3. System context
+
+![System context](diagrams/01-system-context.drawio.svg)
+
+Guests, RodaLeve operators and technicians, Marés hotel managers and admins use one web application. Stripe test mode processes payments. The simulator stands in for the e-bikes.
+
+## 4. Containers
+
+![Containers](diagrams/02-containers.drawio.svg)
+
+| Container | Technology | Responsibility |
+|---|---|---|
+| Reverse proxy and SPA | nginx, static React build | Single public origin, TLS, routes `/api/v1` and `/auth` |
+| Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server |
+| PostgreSQL | One server, databases `riaride` and `keycloak` | Durable state |
+| Keycloak | OIDC provider | Credentials, login pages, roles; realm exported to the repository |
+| Mosquitto | MQTT broker | Telemetry and commands, internal network only |
+| Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
+
+Dashboards poll the REST API. A push channel is not justified by the MVP.
+
+## 5. Backend modules
+
+![Backend modules](diagrams/03-backend-modules.drawio.svg)
+
+| Module | Responsibility | Depends on |
+|---|---|---|
+| `accounts` | Stays, stay codes, guests, link to Keycloak | none |
+| `payments` | `PaymentGateway` port, Stripe adapter, charges and refunds | none |
+| `telemetry` | `TelemetrySource` and `VehicleCommandGateway` ports, MQTT adapter, event history | none |
+| `fleet` | Vehicles, hubs, lifecycle, hub capacity, latest vehicle state | `telemetry` |
+| `maintenance` | Tickets, SLA deadlines, technician assignment | `fleet`, `telemetry` |
+| `passes` | Pass types, base price, usage rules, activation, deposit | `accounts`, `payments`, `maintenance` |
+| `trips` | Reservations, trips, overtime | `passes`, `fleet`, `maintenance`, `telemetry`, `payments` |
+| `backoffice` | Suggested routes, KPIs, technical metrics | read access to all of the above |
+
+Only a module's top-level package is public. `ApplicationModules.of(...).verify()` runs as a test and fails the build on a cycle or a reach into another module's internals.
+
+**Communication rule.** A module calls another module's public API for queries and for commands whose result it needs now. A module publishes an event for side effects elsewhere, handled by an `@ApplicationModuleListener` after commit. Spring Modulith stores each publication in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge.
+
+| Event | Published by | Handled by | Effect |
+|---|---|---|---|
+| `VehicleTelemetryReceived` | `telemetry` | `fleet` | Updates latest vehicle state |
+| `VehicleFaultDetected` | `telemetry` | `maintenance`, `fleet`, `trips` | Opens a ticket with an SLA deadline; takes the vehicle out of service; cancels its reservation or links its trip to the ticket |
+| `VehicleUnlocked` | `telemetry` | `trips` | Confirms the trip start |
+| `TripEnded` | `trips` | `trips` | Sends `LOCK`; charges overtime through `payments` |
+| `DamageAttributed` | `maintenance` | `passes` | Withholds the deposit of the pass linked to the ticket |
+
+`passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and ends, through the `passes` public API, and `passes` keeps an `in_trip` flag. A pass that expires mid-trip is closed, and its deposit released, only once that flag is cleared.
+
+**Faults.** Three modules react to `VehicleFaultDetected`, each in its own data:
+
+- `maintenance` opens one ticket per fault, identified by the event's `messageId`, so a repeated message opens no second ticket.
+- `fleet` moves an `available` or `reserved` vehicle to `maintenance`. A vehicle `in use` keeps its status and is flagged `maintenancePending`; when the trip ends at a hub, `fleet` moves it to `maintenance` instead of `available`.
+- `trips` cancels an active reservation for the vehicle. If a trip is in progress, the trip continues, and `trips` attaches the trip and its pass to the ticket through the `maintenance` public API. The call carries the fault's `messageId`, so it works whichever listener runs first.
+
+When a technician resolves the ticket and attributes the damage to the guest, `maintenance` publishes `DamageAttributed` with the pass, and `passes` withholds the deposit. `maintenance` cannot look up the trip itself: depending on `trips` would close the cycle `trips` → `passes` → `maintenance`.
+
+## 6. Domain and data model
+
+### Domain model
+
+![Domain model](diagrams/10-domain-model.drawio.svg)
+
+The UML class diagram shows the business concepts and their associations, independent of tables and keys. Border colour shows the owning module. A reservation can lead to several trips, because a trip that fails to start leaves the reservation active until it expires. A pass copies its price and deposit from `PassPrice` at purchase.
+
+### Data model
+
+![Data model](diagrams/04-data-model.drawio.svg)
+
+Each table belongs to one module, and code in another module never accesses it directly. The rules with the highest concurrency risk are enforced by the database, not only in code:
+
+| Rule | Mechanism |
+|---|---|
+| One vehicle in use per pass | Partial unique index on `trip (pass_id)` for active statuses |
+| One active reservation per vehicle | Partial unique index on `reservation (vehicle_id)` for active statuses |
+| Trip ends only at a hub with a free slot | Hub row locked, occupancy checked, trip ended, all in one transaction |
+| No duplicate charge | Unique `payment.idempotency_key`, also sent to Stripe |
+| No duplicate telemetry | Unique `telemetry_event.message_id` |
+| One ticket per reported fault | Unique `maintenance_ticket.fault_message_id` |
+
+The base price lives in `pass_price`, one row per pass type. `pass` copies the amounts at purchase, so later price changes do not alter past passes. Thresholds live in `usage_rule`, owned by `passes` and edited from the backoffice UI: maximum trip duration (3 h), reservation hold (15 min), minimum battery (20 %), overtime price per 15 min, and `overtimeGraceMinutes` (0).
+
+## 7. Key flows
+
+### Registration
+
+![Registration](diagrams/05-seq-registration.drawio.svg)
+
+The stay-code rule stays in `accounts`, covered by our tests. If the local insert fails after Keycloak created the user, the backend deletes that user.
+
+### Booking and starting a trip
+
+![Book and start](diagrams/06-seq-book-start-trip.drawio.svg)
+
+Starting immediately creates a reservation first, so there is one code path. A scheduled job expires reservations; the database condition makes it safe to rerun. A trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip is `FAILED`, the pass stays inactive, and the reservation remains until it expires.
+
+### Ending a trip
+
+![End trip](diagrams/07-seq-end-trip-overtime.drawio.svg)
+
+A hub without a free slot rejects the end of the trip. The response lists the nearest hubs that have a free slot, ordered by straight-line distance from the hub's `position`, and the trip continues.
+
+Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip. The event registry retries it.
+
+## 8. Vehicle lifecycle
+
+![Vehicle lifecycle](diagrams/08-vehicle-lifecycle.drawio.svg)
+
+Battery below 20 % blocks booking without changing the status. A fault during a trip opens a ticket immediately, and the vehicle moves to `maintenance` when the trip ends (see **Faults** in section 5).
+
+## 9. Integration contracts
+
+**MQTT.** Both directions use QoS 1, so consumers must tolerate duplicates.
+
+| Topic | Direction | Content |
+|---|---|---|
+| `riaride/vehicles/{id}/telemetry` | Simulator to platform | Battery, position or hub, lock state |
+| `riaride/vehicles/{id}/events` | Simulator to platform | Fault events |
+| `riaride/vehicles/{id}/commands` | Platform to simulator | `UNLOCK`, `LOCK` |
+| `riaride/simulator/status` | Simulator to platform | Retained status and last will, marks telemetry as stale |
+
+```json
+{
+  "messageId": "6f1c2a10-52b4-4a8e-9a31-1f0f7a1d9c11",
+  "emittedAt": "2026-11-20T10:15:30Z",
+  "batteryPct": 74,
+  "lockState": "UNLOCKED",
+  "hubId": null,
+  "position": { "lat": 40.64, "lon": -8.65 }
+}
+```
+
+The consumer ignores a repeated `messageId` and any message older than the vehicle's last state. Replacing the simulator means replacing the adapter in `telemetry`, with no change to the ports or to other modules.
+
+**Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
+
+**REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details.
+
+## 10. Security
+
+- The SPA uses Authorization Code with PKCE through keycloak-js and keeps tokens in memory. The backend validates JWTs against Keycloak's JWKS and authorizes by role.
+- The only public port is 443. Mosquitto, PostgreSQL and the backend are reachable only inside the Compose network, and Mosquitto requires credentials.
+- The Stripe test key, Keycloak client secret, and database and MQTT credentials live in GitHub Secrets and a host-only `.env` file.
+- The password in the registration request is never stored by the backend or written to logs.
+- Seed data is synthetic.
+
+## 11. Testability
+
+| Test type | Where it applies |
+|---|---|
+| Unit | Overtime calculation, pass rules, lifecycle transitions; pytest for the simulator |
+| Module | `verify()` and `@ApplicationModuleTest` per module, including event flows |
+| Integration (Failsafe) | API and persistence with Testcontainers; MQTT adapter against Mosquitto; Stripe adapter against WireMock; Keycloak adapter against a Keycloak container |
+| BDD | Cucumber scenarios for core stories against the REST API |
+| E2E | Playwright against the Compose stack, not on every build |
+| Load | k6 on the book-and-start flow, against the SLOs in the Product Specification report |
+
+Technical metrics come from Micrometer inside the backend, with no extra monitoring container. Telemetry lag is `received_at` minus `emitted_at`.
+
+## 12. Deployment and delivery
+
+![Deployment](diagrams/09-deployment.drawio.svg)
+
+A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and updates the VM with `docker compose pull` and `up`. Migrations run when the backend starts. Representative data comes from a seed profile.
+
+Planned repository layout:
+
+```text
+backend/    Maven project, one package per module
+frontend/   React application
+simulator/  Python service
+infra/      compose.yaml, nginx, Mosquitto configuration, Keycloak realm export
+docs/       Reports and this proposal
+```
+
+## 13. Risks and open questions
+
+| Item | Impact | Owner |
+|---|---|---|
+| The guidelines ask to "book a vehicle for a period", but a reservation only holds a vehicle for 15 min | Future bookings would need `startsAt` and `endsAt` on `Reservation` and an overlap check | Product Owner |
+| The guidelines list "who may use which vehicles" as a rule of use, which is not modelled | Could be allowed vehicle types per pass type, kept in `usage_rule` | Product Owner |
+| The guidelines list end users reporting problems, which has no flow | Could be a guest-sourced ticket opened through the `maintenance` public API | Product Owner |
+| University VM availability, and whether it is reachable only from the internal network | Internal-only access requires a self-hosted runner; public reachability for the teaching staff must be confirmed | DevOps Master |
+| Memory: the full stack is estimated at about 4 GB | Keycloak and the JVM may need limits | DevOps Master |
+| Overtime grace period: the comment in the team document was resolved without changing the rule | Configured as 0 until confirmed | Product Owner |
+| 3-day pass: assumed to last 72 h after activation | Rule to confirm | Product Owner |
+| Whether 1-day and 3-day passes also end at check-out | Affects the overtime limit | Product Owner |
+| Overtime price and deposit amount are undefined | Configurable, values needed for seed data | Product Owner |
+| Epic 8 in the team document still mentions per-hotel prices | Contradicts decision 13 | Product Owner |
+| Exact versions of Spring Boot, Spring Modulith and Keycloak | Pinned in the walking skeleton | DevOps Master |
+| SonarQube Cloud OSS plan: the organization's plan and the gate on a real pull request are to be confirmed | The repository must stay public; otherwise the fallback is SonarQube Server Developer Edition ([ADR 0014](adr/0014-sqa-tools.md)) | QA Engineer |
+| `main` is not protected yet | A pull request can be merged without approval or a passing quality gate | DevOps Master |
