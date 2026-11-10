@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Group project for the TQS course: a *light-mobility fleet-as-a-service* platform, graded on both the product and the evidence that quality was built in from the start. A practice only counts if the QA Manual's compliance table links to evidence of it working.
 
-**There is no code yet.** `backend/`, `frontend/` and `simulator/` are empty, so no build, lint or test commands exist. When the walking skeleton (I1) lands, document the commands here, including how to run a single test, and replace the "Still to decide" section.
+**There is no code yet.** `backend/`, `frontend/` and `simulator/` are empty, so no build, lint or test commands exist. When the walking skeleton (I1) lands, document the commands here, including how to run a single test, and update the "Proposed decisions" section.
 
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
@@ -29,8 +29,8 @@ Product definitions and backlog:
 | Rule | Proposal |
 |---|---|
 | Access | Only guests with an active stay can register and book |
-| Pass types | 1-day pass (24 h after activation) and stay pass (valid until check-out) |
-| Pricing | Each hotel defines which passes it offers and at what price, in the backoffice |
+| Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
+| Pricing | One base price, used by all hotels in the group |
 | Activation | On the first trip, not at purchase |
 | Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |
 | One bike at a time | Each pass can only have one vehicle in use |
@@ -43,10 +43,7 @@ Product definitions and backlog:
 
 Payments are always made by the guest. Invoicing the hotel is out of scope.
 
-**Open in the Google Doc** (confirm before implementing):
-
-- Per-hotel pricing: since guests can use bikes from any hub, they can pay one hotel's price and pick up at another. A chain-wide default price was proposed.
-- A possible 2-day or 3-day pass, in addition to the current two.
+Open business questions are listed in section 13 of the [architecture proposal](docs/architecture/README.md).
 
 ### Required MVP
 
@@ -66,9 +63,17 @@ The architecture proposal is I1 work. Already fixed:
 - **Payments:** also behind an adapter, covered by integration tests.
 - **Infrastructure as code:** production environment described in, for example, Docker Compose. `main` deploys automatically, with representative data, to an environment reachable by the teaching staff.
 
-### Still to decide
+### Proposed decisions
 
-Frontend stack, backend build tool, database, deployment environment.
+Pending team review. Full rationale, diagrams and ADRs are in [`docs/architecture/`](docs/architecture/README.md).
+
+- **Backend:** modular monolith with Spring Modulith, built with Maven. Ports and adapters only at external integrations.
+- **Database:** PostgreSQL only, with Flyway.
+- **Frontend:** React, Vite and TypeScript.
+- **Simulator:** Python, bidirectional MQTT through Mosquitto.
+- **Payments:** Stripe test mode.
+- **Authentication:** Keycloak OIDC; guest registration goes through the backend and the Keycloak Admin API.
+- **Deployment:** Docker Compose on a university VM, with images in GHCR. VM availability is still to be confirmed.
 
 ## Working rules
 
@@ -80,13 +85,13 @@ Frontend stack, backend build tool, database, deployment environment.
 
 ### Expected tests
 
-| Type | Rule |
-|---|---|
-| BDD | Acceptance criteria of core stories in Gherkin, automated with Cucumber |
-| Unit | Cover business logic |
+| Type        | Rule                                                                                                 |
+|-------------|------------------------------------------------------------------------------------------------------|
+| BDD         | Acceptance criteria of core stories in Gherkin, automated with Cucumber                              |
+| Unit        | Cover business logic                                                                                 |
 | Integration | API, persistence with Testcontainers, simulator and payment adapters; run separately from unit tests |
-| E2E | Selenium or Playwright for core use cases; must **not** run on every build |
-| Load | k6 with thresholds on a critical flow, against SLOs defined in the Product Specification report |
+| E2E         | Selenium or Playwright for core use cases; must **not** run on every build                           |
+| Load        | k6 with thresholds on a critical flow, against SLOs defined in the Product Specification report      |
 
 Tests are linked to stories in Xray, and CI results are imported there.
 
@@ -110,11 +115,11 @@ Product Specification report (draft after I1) and QA Manual (draft in I2).
 
 ## Schedule
 
-| Iteration | Start (P1/P2; P3/P4 +3 days) | Focus |
-|---|---|---|
-| I1 | 10 Nov | Personas, stories, architecture, walking skeleton with CI, specification draft, SQA tools |
-| I2 | 17 Nov | First core stories (one generated from a specification), minimal simulator integrated, blocking quality gate, Xray, SLOs, QA Manual v1 |
-| I3 | 24 Nov | CD, complete API, persistence, integration tests |
-| I4 | 1 Dec | MVP with representative data, k6, E2E, valued practices |
-| I5 | 8 Dec | Stabilize, reports and critical AI analysis, final tag |
-| Presentation | 15 Dec (P1/P2), 18 Dec (P3/P4) | Demo of the deployed MVP and defense of the team's choices |
+| Iteration    | Start (P1/P2; P3/P4 +3 days)   | Focus                                                                                                                                  |
+|--------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| I1           | 10 Nov                         | Personas, stories, architecture, walking skeleton with CI, specification draft, SQA tools                                              |
+| I2           | 17 Nov                         | First core stories (one generated from a specification), minimal simulator integrated, blocking quality gate, Xray, SLOs, QA Manual v1 |
+| I3           | 24 Nov                         | CD, complete API, persistence, integration tests                                                                                       |
+| I4           | 1 Dec                          | MVP with representative data, k6, E2E, valued practices                                                                                |
+| I5           | 8 Dec                          | Stabilize, reports and critical AI analysis, final tag                                                                                 |
+| Presentation | 15 Dec (P1/P2), 18 Dec (P3/P4) | Demo of the deployed MVP and defense of the team's choices                                                                             |
