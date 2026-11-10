@@ -9,7 +9,7 @@ The guest pays for a pass and a deposit, gets the deposit refunded later, and ma
 
 ## Decision
 
-Implement `PaymentGateway` with Stripe test mode. The backend confirms PaymentIntents with test payment methods, charges overtime off-session and sends an idempotency key per operation. Integration tests use WireMock.
+Implement `PaymentGateway` with Stripe test mode. The backend confirms PaymentIntents with test payment methods and sends an idempotency key per operation. The purchase saves the payment method with `setup_future_usage=off_session`, and overtime is charged off-session to it; the adapter finds it through the purchase payment's `provider_ref`. Integration tests use WireMock.
 
 ## Alternatives considered
 
