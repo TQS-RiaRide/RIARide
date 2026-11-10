@@ -83,7 +83,15 @@ Only a module's top-level package is public. `ApplicationModules.of(...).verify(
 
 `passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and ends, through the `passes` public API, and `passes` keeps an `in_trip` flag. A pass that expires mid-trip is closed, and its deposit released, only once that flag is cleared.
 
-## 6. Data model
+## 6. Domain and data model
+
+### Domain model
+
+![Domain model](diagrams/10-domain-model.drawio.svg)
+
+The UML class diagram shows the business concepts and their associations, independent of tables and keys. Border colour shows the owning module. A reservation can lead to several trips, because a trip that fails to start leaves the reservation active until it expires. A pass copies its price and deposit from `PassPrice` at purchase.
+
+### Data model
 
 ![Data model](diagrams/04-data-model.drawio.svg)
 
