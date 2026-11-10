@@ -15,6 +15,30 @@ This document describes how RiaRide is built and why. Each significant choice ha
 | The grade depends on evidence of quality | Boundaries, adapters and flows must be testable in isolation |
 | Four people, five weeks | One deployable, few moving parts, parallel work per module |
 
+### Traceability to the assignment
+
+Each requirement of the assignment guidelines (v2026-11-10) that shapes the architecture, and where this proposal answers it.
+
+| Requirement | Guidelines | Where it is answered |
+|---|---|---|
+| Spring Boot (stable) and Java 21 | 1.2 | Decisions 1 to 3, section 5 |
+| Web UI; end-to-end tests with Selenium or Playwright | 1.2, T4 | [ADR 0005](adr/0005-react-frontend.md), [ADR 0014](adr/0014-sqa-tools.md) |
+| Deployment on a department VM or a cloud provider, reachable by the teaching staff | 1.2 | [ADR 0011](adr/0011-deployment.md), section 12; reachability is an open risk (section 13) |
+| Find vehicles by hub and type; book or start immediately; end at a hub; user dashboard | 4.1 | `fleet` and `trips`, section 7. Booking for a period is an open question (section 13) |
+| Register vehicles and hubs; lifecycle with activation and deactivation; tickets with an SLA deadline assigned to a technician; operator dashboard | 4.1 | `fleet` and `maintenance`, section 8 |
+| Rules of use (maximum duration, hub capacity); business KPIs; technical metrics | 4.1 | `usage_rule`, `backoffice`, Micrometer (section 11). Restricting who may use which vehicles is an open question (section 13) |
+| Registration, authentication, role-based access | 4.1 | [ADR 0009](adr/0009-keycloak.md), [ADR 0010](adr/0010-registration-admin-api.md) |
+| Deposit and overtime in a payment sandbox | 4.1 | [ADR 0008](adr/0008-stripe-test-mode.md), section 9 |
+| Telemetry reflected in vehicle state; low battery blocks booking | 4.1 | `telemetry` and `fleet`, section 8 |
+| Simulator in its own container, read through one interface; replacing it changes only the adapter | 4.4 | [ADR 0006](adr/0006-mqtt-integration.md), [ADR 0007](adr/0007-python-simulator.md), section 9 |
+| End users report problems | 3.2 | Open question (section 13) |
+| Feature branch per story, protected `main`, merges through pull requests | D1 | Working rules in `CLAUDE.md`; `main` is not protected yet (section 13) |
+| CI on every push and pull request, with a blocking quality gate | D2, Q1, Q2 | Section 12, [ADR 0014](adr/0014-sqa-tools.md) |
+| Production described as code; `main` deploys automatically with representative data | D3, D4 | [ADR 0011](adr/0011-deployment.md), section 12 |
+| Dependency vulnerability scanning on every build | Q3 | [ADR 0014](adr/0014-sqa-tools.md) |
+| Integration tests separate from unit tests | T3 | [ADR 0003](adr/0003-maven.md), section 11 |
+| SLOs checked by a k6 load test with thresholds | T5 | Section 11; the SLOs belong in the Product Specification report |
+
 ## 2. Decisions
 
 | # | Topic | Decision | Record |
@@ -214,7 +238,9 @@ docs/       Reports and this proposal
 
 | Item | Impact | Owner |
 |---|---|---|
-| The original assignment was not reviewed for this proposal, only its summary in `CLAUDE.md` | A constraint may be missing | Team Coordinator |
+| The guidelines ask to "book a vehicle for a period", but a reservation only holds a vehicle for 15 min | Future bookings would need `startsAt` and `endsAt` on `Reservation` and an overlap check | Product Owner |
+| The guidelines list "who may use which vehicles" as a rule of use, which is not modelled | Could be allowed vehicle types per pass type, kept in `usage_rule` | Product Owner |
+| The guidelines list end users reporting problems, which has no flow | Could be a guest-sourced ticket opened through the `maintenance` public API | Product Owner |
 | University VM availability, and whether it is reachable only from the internal network | Internal-only access requires a self-hosted runner; public reachability for the teaching staff must be confirmed | DevOps Master |
 | Memory: the full stack is estimated at about 4 GB | Keycloak and the JVM may need limits | DevOps Master |
 | Overtime grace period: the comment in the team document was resolved without changing the rule | Configured as 0 until confirmed | Product Owner |

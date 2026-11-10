@@ -13,7 +13,7 @@ The quality gate must block the merge, so SonarQube has to analyze a pull reques
 
 | Concern | Tool | Why |
 |---|---|---|
-| Static analysis and quality gate | SonarQube Cloud on the free OSS plan, with a quality gate on new code, analyzed from GitHub Actions | The OSS plan covers public repositories and includes unlimited branch and pull request analysis. The gate status appears on the pull request, there is no server to host, and all three stacks are covered |
+| Static analysis and quality gate | SonarQube Cloud on the free OSS plan, analyzed from GitHub Actions, with a quality gate on new code covering coverage, reliability, security and reviewed security hotspots | The OSS plan covers public repositories and includes unlimited branch and pull request analysis. The gate status appears on the pull request, there is no server to host, and all three stacks are covered |
 | Coverage | JaCoCo (backend), Vitest with LCOV (frontend), pytest-cov (simulator) | Each is the standard for its stack, and SonarQube imports all three reports |
 | BDD | Cucumber JVM, run by Failsafe against the REST API | Required by the assignment; acceptance criteria stay readable by the Product Owner |
 | End-to-end | Playwright with TypeScript, against the Compose stack, not on every build | Auto-waiting reduces flaky tests, traces make failures diagnosable, and it shares the frontend's language |
