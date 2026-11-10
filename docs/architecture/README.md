@@ -32,7 +32,7 @@ This document describes how RiaRide is built and why. Each significant choice ha
 | 11 | Deployment | Docker Compose on a university VM, images in GHCR, GitHub Actions | [ADR 0011](adr/0011-deployment.md) |
 | 12 | Diagrams | draw.io stored as `.drawio.svg` | [ADR 0012](adr/0012-drawio-diagrams.md) |
 | 13 | Pricing | One base price per pass type across the hotel chain | [ADR 0013](adr/0013-chain-base-price.md) |
-| 14 | SQA tools | SonarQube Server, JaCoCo, Cucumber, Playwright, k6, Xray and per-stack dependency scanning | [ADR 0014](adr/0014-sqa-tools.md) |
+| 14 | SQA tools | SonarQube Cloud (OSS plan), JaCoCo, Cucumber, Playwright, k6, Xray and per-stack dependency scanning | [ADR 0014](adr/0014-sqa-tools.md) |
 
 ## 3. System context
 
@@ -223,4 +223,5 @@ docs/       Reports and this proposal
 | Overtime price and deposit amount are undefined | Configurable, values needed for seed data | Product Owner |
 | Epic 8 in the team document still mentions per-hotel prices | Contradicts decision 13 | Product Owner |
 | Exact versions of Spring Boot, Spring Modulith and Keycloak | Pinned in the walking skeleton | DevOps Master |
-| SonarQube Server: edition, host and reachability from CI are to be confirmed | Below Developer Edition, the quality gate cannot block merges ([ADR 0014](adr/0014-sqa-tools.md)) | QA Engineer |
+| SonarQube Cloud OSS plan: the organization's plan and the gate on a real pull request are to be confirmed | The repository must stay public; otherwise the fallback is SonarQube Server Developer Edition ([ADR 0014](adr/0014-sqa-tools.md)) | QA Engineer |
+| `main` is not protected yet | A pull request can be merged without approval or a passing quality gate | DevOps Master |
