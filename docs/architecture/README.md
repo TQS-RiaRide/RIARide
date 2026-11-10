@@ -135,6 +135,8 @@ Starting immediately creates a reservation first, so there is one code path. A s
 
 ![End trip](diagrams/07-seq-end-trip-overtime.drawio.svg)
 
+A hub without a free slot rejects the end of the trip. The response lists the nearest hubs that have a free slot, ordered by straight-line distance from the hub's `position`, and the trip continues.
+
 Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip. The event registry retries it.
 
 ## 8. Vehicle lifecycle
