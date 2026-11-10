@@ -67,7 +67,7 @@ Dashboards poll the REST API. A push channel is not justified by the MVP.
 | `fleet` | Vehicles, hubs, lifecycle, hub capacity, latest vehicle state | `telemetry` |
 | `maintenance` | Tickets, SLA deadlines, technician assignment | `fleet`, `telemetry` |
 | `passes` | Pass types, base price, usage rules, activation, deposit | `accounts`, `payments`, `maintenance` |
-| `trips` | Reservations, trips, overtime | `passes`, `fleet`, `telemetry`, `payments` |
+| `trips` | Reservations, trips, overtime | `passes`, `fleet`, `maintenance`, `telemetry`, `payments` |
 | `backoffice` | Suggested routes, KPIs, technical metrics | read access to all of the above |
 
 Only a module's top-level package is public. `ApplicationModules.of(...).verify()` runs as a test and fails the build on a cycle or a reach into another module's internals.
@@ -77,12 +77,20 @@ Only a module's top-level package is public. `ApplicationModules.of(...).verify(
 | Event | Published by | Handled by | Effect |
 |---|---|---|---|
 | `VehicleTelemetryReceived` | `telemetry` | `fleet` | Updates latest vehicle state |
-| `VehicleFaultDetected` | `telemetry` | `maintenance` | Opens a ticket with an SLA deadline |
+| `VehicleFaultDetected` | `telemetry` | `maintenance`, `fleet`, `trips` | Opens a ticket with an SLA deadline; takes the vehicle out of service; cancels its reservation or links its trip to the ticket |
 | `VehicleUnlocked` | `telemetry` | `trips` | Confirms the trip start |
 | `TripEnded` | `trips` | `trips` | Sends `LOCK`; charges overtime through `payments` |
-| `DamageAttributed` | `maintenance` | `passes` | Withholds the deposit |
+| `DamageAttributed` | `maintenance` | `passes` | Withholds the deposit of the pass linked to the ticket |
 
 `passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and ends, through the `passes` public API, and `passes` keeps an `in_trip` flag. A pass that expires mid-trip is closed, and its deposit released, only once that flag is cleared.
+
+**Faults.** Three modules react to `VehicleFaultDetected`, each in its own data:
+
+- `maintenance` opens one ticket per fault, identified by the event's `messageId`, so a repeated message opens no second ticket.
+- `fleet` moves an `available` or `reserved` vehicle to `maintenance`. A vehicle `in use` keeps its status and is flagged `maintenancePending`; when the trip ends at a hub, `fleet` moves it to `maintenance` instead of `available`.
+- `trips` cancels an active reservation for the vehicle. If a trip is in progress, the trip continues, and `trips` attaches the trip and its pass to the ticket through the `maintenance` public API. The call carries the fault's `messageId`, so it works whichever listener runs first.
+
+When a technician resolves the ticket and attributes the damage to the guest, `maintenance` publishes `DamageAttributed` with the pass, and `passes` withholds the deposit. `maintenance` cannot look up the trip itself: depending on `trips` would close the cycle `trips` → `passes` → `maintenance`.
 
 ## 6. Domain and data model
 
@@ -105,6 +113,7 @@ Each table belongs to one module, and code in another module never accesses it d
 | Trip ends only at a hub with a free slot | Hub row locked, occupancy checked, trip ended, all in one transaction |
 | No duplicate charge | Unique `payment.idempotency_key`, also sent to Stripe |
 | No duplicate telemetry | Unique `telemetry_event.message_id` |
+| One ticket per reported fault | Unique `maintenance_ticket.fault_message_id` |
 
 The base price lives in `pass_price`, one row per pass type. `pass` copies the amounts at purchase, so later price changes do not alter past passes. Thresholds live in `usage_rule`, owned by `passes` and edited from the backoffice UI: maximum trip duration (3 h), reservation hold (15 min), minimum battery (20 %), overtime price per 15 min, and `overtimeGraceMinutes` (0).
 
@@ -132,7 +141,7 @@ Overtime is the time beyond the earliest of three limits: maximum trip duration,
 
 ![Vehicle lifecycle](diagrams/08-vehicle-lifecycle.drawio.svg)
 
-Battery below 20 % blocks booking without changing the status. A fault during a trip opens a ticket immediately, and the vehicle moves to `maintenance` when the trip ends.
+Battery below 20 % blocks booking without changing the status. A fault during a trip opens a ticket immediately, and the vehicle moves to `maintenance` when the trip ends (see **Faults** in section 5).
 
 ## 9. Integration contracts
 
