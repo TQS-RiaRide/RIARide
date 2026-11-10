@@ -1,26 +1,26 @@
 # RiaRide
 
-## Resumo
+## Project abstract
 
-O **RiaRide** é uma plataforma de e-bikes partilhadas para mobilidade turística, uma variante do modelo *fleet-as-a-service*. Foi desenvolvido como projeto educacional da UC de Testes e Qualidade de Software (TQS), do 3.º ano da Licenciatura em Engenharia Informática.
+**RiaRide** is a shared e-bike platform for tourist mobility, a variant of the *fleet-as-a-service* model. It is an educational project for the Software Testing and Quality (TQS) course, in the 3rd year of the Bachelor's in Computer Engineering.
 
-**Concretização: mobilidade turística em Vila Ria**
+**Concretization: tourist mobility in Vila Ria**
 
-- **Cidade:** Vila Ria, uma cidade costeira turística (fictícia).
-- **Cliente:** Turismo de Vila Ria, o posto de turismo municipal, que define os hubs, as capacidades e as rotas sugeridas.
-- **Operador:** RodaLeve Fleet Services, que fornece as e-bikes e faz a manutenção, a redistribuição e a gestão das baterias.
-- **Utilizadores:** turistas registados como convidados (email e password). Compram um passe de 1 ou 3 dias e, enquanto o passe for válido, fazem várias viagens entre hubs. Podem seguir rotas sugeridas, como *Centro histórico → Praia → Salinas*.
-- **Idiomas:** português e inglês.
+- **City:** Vila Ria, a fictional coastal tourist city.
+- **Client:** Grupo Hoteleiro Marés, a hotel group with three hotels in Vila Ria (Marés Centro, Marés Praia and Marés Salinas). It defines the passes, prices, rules of use, hub capacity and suggested routes.
+- **Operator:** RodaLeve Fleet Services, which supplies the e-bikes and handles maintenance, redistribution and battery management.
+- **Users:** hotel guests, registered with an email, a password and the stay code generated at check-in. They buy a 1-day pass or a stay pass and, while the pass is valid, make several trips between hubs. They can follow suggested routes, such as *Marés Centro → Praia → Salinas → Marés Centro*.
+- **Languages:** Portuguese and English.
 
-## Equipa
+## Project team
 
-| Nome | Papel |
+| Name | Role |
 |---|---|
 | Maria Mané | Team Coordinator |
 | Tomás Xavier | DevOps Master |
 | Martim Gil | QA Engineer |
 | Inês Gomes | Product Owner |
 
-## Bookmarks
+## Project bookmarks
 
 - [Backlog (Jira)](<https://riaride.atlassian.net/jira/software/projects/SCRUM/boards/1>)

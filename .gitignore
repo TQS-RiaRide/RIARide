@@ -1,0 +1,30 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Java
+target/
+build/
+.gradle/
+*.class
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# E2E tests
+playwright-report/
+test-results/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Course assignment brief (not part of the submission)
+/TQS26-*.docx
