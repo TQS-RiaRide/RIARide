@@ -7,7 +7,7 @@ Practice AI3. Every non-draft pull request gets an advisory review from Claude.
 - Workflow: [`.github/workflows/ai-review.yml`](../.github/workflows/ai-review.yml), using `anthropics/claude-code-action`.
 - Triggers: PR opened, updated, reopened or marked ready for review. Drafts and PRs from forks are skipped.
 - Output: inline comments and one summary comment, each finding tagged `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`.
-- The job has `contents: read` and can only comment. It never approves, requests changes or merges.
+- The job has `contents: read` and `pull-requests: write`, so it can only comment. `id-token: write` is required: the action exchanges an OIDC token for its GitHub App token. It never approves, requests changes or merges.
 - A new push cancels a review still running for the same PR.
 
 ## Setup (once, repository admin)
