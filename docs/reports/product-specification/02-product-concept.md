@@ -30,12 +30,23 @@ Unlike public bike-sharing schemes, RiaRide is tied to a hotel stay: only guests
 
 ## 2.3 Project roadmap and priorities
 
-The plan below follows the iteration focus of the assignment and the backend modules of the [architecture proposal](../../architecture/README.md#5-backend-modules). It will be replaced by the roadmap view from Jira once the epics are dated.
+The product is built in five one-week iterations after a kick-off week. Each epic in Jira groups the stories of one area, and the timeline below shows when each epic is planned (Jira timeline, 15 Nov 2026).
 
-| Iteration | Main deliverables |
-|---|---|
-| I1 (10 Nov) | Concept, personas and first stories; architecture proposal and ADRs; walking skeleton built by CI; this report as a draft |
-| I2 (17 Nov) | `accounts`: stays, stay codes and guest registration with Keycloak. `fleet` and `telemetry`: vehicles, hubs and the minimal simulator over MQTT. Blocking quality gate, Xray, SLOs, QA Manual v1 |
-| I3 (24 Nov) | `passes` and `payments`: buy a pass, deposit in Stripe test mode. `trips`: reserve, start and end a trip. Continuous delivery to the VM; integration tests |
-| I4 (1 Dec) | `maintenance`: tickets with SLA deadlines and technician assignment. `backoffice`: usage rules, hub capacity, KPIs. Overtime charges. k6 load test and end-to-end tests |
-| I5 (8 Dec) | Suggested routes, stabilization, final reports and AI analysis, tag `final_v1` |
+![Jira timeline of the epics](roadmap-timeline.png)
+
+| Epic | Area | Planned iterations |
+|---|---|---|
+| RIA-76 | Accounts and access | I2 to I4 (17 Nov to 8 Dec) |
+| RIA-77 | Passes and payments | I2 to I4 (17 Nov to 8 Dec) |
+| RIA-78 | Find and use bikes | I2 to I3 (17 Nov to 1 Dec) |
+| RIA-79 | Suggested routes | I4 (1 to 8 Dec) |
+| RIA-80 | Guest area | I2 to I4 (17 Nov to 8 Dec) |
+| RIA-81 | Fleet management | I2 to I4 (17 Nov to 8 Dec) |
+| RIA-82 | Maintenance and SLA | I3 (24 Nov to 1 Dec) |
+| RIA-83 | Hotel backoffice | I3 to I4 (24 Nov to 8 Dec) |
+| RIA-84 | Telemetry and simulator | I2 to I3 (17 Nov to 1 Dec) |
+| RIA-85 | Platform and DevOps | I2 to I5 (from 17 Nov) |
+
+Before the epics start, iteration I1 (10 Nov) delivers the concept, personas and first stories, the architecture proposal, the walking skeleton built by CI and this report as a draft. Iteration I5 (8 Dec) is kept for stabilization, the final reports and the tag `final_v1`.
+
+Priorities follow the business value of the core flow: a guest must be able to register, buy a pass and ride before routes and backoffice features are added. That is why accounts, passes, bikes, fleet and telemetry start in I2, maintenance and the backoffice in I3, and suggested routes last, in I4.
