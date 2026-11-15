@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchHealth, type HealthStatus } from './api';
+import { fetchHealth, type HealthStatus } from './features/health/api';
 
 export default function App() {
   const { t, i18n } = useTranslation();
   const [health, setHealth] = useState<HealthStatus | 'checking'>('checking');
 
   useEffect(() => {
-    fetchHealth().then(setHealth);
+    void fetchHealth().then(setHealth);
   }, []);
 
-  const toggleLanguage = () => i18n.changeLanguage(i18n.language === 'en' ? 'pt' : 'en');
+  const toggleLanguage = () => {
+    void i18n.changeLanguage(i18n.language === 'en' ? 'pt' : 'en');
+  };
 
   return (
     <main className="app">

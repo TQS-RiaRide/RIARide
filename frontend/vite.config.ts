@@ -24,6 +24,13 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       globals: true,
       setupFiles: './src/setupTests.ts',
+      coverage: {
+        // LCOV is imported by SonarQube (QA Manual, section 3.3)
+        provider: 'v8',
+        reporter: ['text', 'lcov'],
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['src/main.tsx', 'src/**/*.test.{ts,tsx}', 'src/setupTests.ts'],
+      },
     },
   };
 });

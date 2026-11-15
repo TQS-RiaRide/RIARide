@@ -1,32 +1,15 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import en from './locales/en.json';
+import pt from './locales/pt.json';
 
-// Translations for the walking skeleton. Move them to one JSON file per
-// language (for example, src/locales/en.json) as the UI grows.
+// UI text lives only in the translation files under src/locales.
 export const resources = {
-  en: {
-    translation: {
-      tagline: 'E-bikes for guests of the Marés hotels in Vila Ria',
-      backendStatus: 'Backend status',
-      checking: 'Checking…',
-      up: 'Online',
-      down: 'Unreachable',
-      switchLang: 'Português',
-    },
-  },
-  pt: {
-    translation: {
-      tagline: 'Bicicletas elétricas para hóspedes dos hotéis Marés em Vila Ria',
-      backendStatus: 'Estado do backend',
-      checking: 'A verificar…',
-      up: 'Disponível',
-      down: 'Indisponível',
-      switchLang: 'English',
-    },
-  },
+  en: { translation: en },
+  pt: { translation: pt },
 } as const;
 
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   resources,
   lng: 'en',
   fallbackLng: 'en',

@@ -1,6 +1,6 @@
 # RiaRide frontend
 
-Walking skeleton of the RiaRide web UI, following [ADR 0005](../docs/architecture/adr/0005-react-frontend.md): React, Vite and TypeScript, with react-i18next for Portuguese and English and Vitest for unit tests. It shows whether the backend is reachable and switches language.
+Walking skeleton of the RiaRide web UI, following [ADR 0005](../docs/architecture/adr/0005-react-frontend.md): React, Vite and TypeScript, with react-i18next for Portuguese and English (texts in `src/locales/*.json`) and Vitest for unit tests. It shows whether the backend is reachable and switches language.
 
 ## Commands
 
@@ -9,9 +9,12 @@ Requires Node.js 22.22.2 or later (24 LTS recommended), as declared in `package.
 ```bash
 npm install          # first time; commit the generated package-lock.json
 npm run dev          # http://localhost:5173, /api/v1 forwarded to http://localhost:8080
+npm run lint         # ESLint (typescript-eslint strict, react-hooks)
+npm run format       # Prettier; npm run format:check only checks
 npm test             # unit tests (Vitest + Testing Library)
-npx vitest run src/App.test.tsx -t "unreachable"   # a single test
-npm run build        # production build in dist/
+npm run test:coverage                              # tests with LCOV coverage in coverage/
+npx vitest run src/features/health/api.test.ts -t "unreachable"   # a single test
+npm run build        # type check and production build in dist/
 docker build -t riaride-frontend .
 ```
 
