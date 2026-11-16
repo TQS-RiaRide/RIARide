@@ -72,6 +72,10 @@ jobs:
             backend/target/failsafe-reports/
           if-no-files-found: ignore
 
+      # Checks that the Dockerfile builds; the image is not pushed here.
+      - name: Build Docker image
+        run: docker build -t riaride-backend:ci .
+
   frontend:
     name: Frontend build & tests
     needs: detect

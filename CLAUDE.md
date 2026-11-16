@@ -6,7 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Group project for the TQS course: a *light-mobility fleet-as-a-service* platform, graded on both the product and the evidence that quality was built in from the start. A practice only counts if the QA Manual's compliance table links to evidence of it working.
 
-**There is no code yet.** `backend/`, `frontend/` and `simulator/` are empty, so no build, lint or test commands exist. When the walking skeleton (I1) lands, document the commands here, including how to run a single test, and update the "Proposed decisions" section.
+The backend walking skeleton exists (Spring Boot 4.1, Java 21, Spring Modulith, Maven). `frontend/` and `simulator/` are still empty; document their commands here when they land.
+
+### Backend commands
+
+Run from `backend/`, with JDK 21 active (`java -version`).
+
+| Task | Command |
+|---|---|
+| Unit tests (Surefire, `*Test.java` / `*Tests.java`) | `./mvnw test` |
+| Integration tests only (Failsafe, `*IT.java`) | `./mvnw verify -DskipUnitTests=true` |
+| All tests and JaCoCo report | `./mvnw verify` |
+| Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
+| Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
+| Run the app | `./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
+| Docker image | `docker build -t riaride-backend .` |
+
+To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds Surefire's `skipTests` to `skipUnitTests`, so `-DskipTests` does not skip them.
 
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
