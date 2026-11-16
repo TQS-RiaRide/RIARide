@@ -35,7 +35,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | T10 | Further non-functional tests | V | Decided (I5) | Section 5.4 |
 | Q1 | Static analysis and coverage dashboard | E | Decided (I2) | Section 3.3 |
 | Q2 | Blocking quality gate on new code | E | Decided (I2) | Section 3.3 |
-| Q3 | Dependency vulnerability scanning | E | Partial | [`dependabot.yml`](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/dependabot.yml) on `main` for Maven, npm and GitHub Actions; pip is added with the simulator. Updates for a component fail until its manifest exists. Per-build scan: section 3.4 |
+| Q3 | Dependency vulnerability scanning | E | Partial | [`dependabot.yml`](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/dependabot.yml) on `main` for Maven, npm, pip and GitHub Actions. Updates for a component fail until its manifest exists. Per-build scan: section 3.4 |
 | Q4 | Peer code review | E | Partial | [PR template](../../../.github/pull_request_template.md), section 3.2; branch protection pending (section 4.1) |
 | Q5 | Contributor guidelines | E | Done | Section 3.1 |
 | Q6 | Container image scanning or added security testing | V | Decided (I4) | Section 3.4 |
@@ -47,7 +47,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | D6 | Observability with SLO alerts | V | Decided (I4) | Section 4.3 |
 | AI1 | Team AI policy and declaration of AI use | E | Done | Sections 6.1 and 6.2 |
 | AI2 | Versioned agent instructions | E | Partial | [`AGENTS.md`](../../../AGENTS.md) → [`CLAUDE.md`](../../../CLAUDE.md), covering style, definition of done and test rules; build commands are added with the walking skeleton. Section 6.3 |
-| AI3 | AI-assisted code review | E | Partial | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md), proposed in [PR #2](https://github.com/TQS-RiaRide/RIARide/pull/2). Its first runs posted no review; evidence is a PR with AI comments and a filled findings table |
+| AI3 | AI-assisted code review | E | Partial | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Its first runs posted no review; evidence is a PR with AI comments and a filled findings table |
 | AI4 | Specification-driven generation (≥ 2 stories) | E | Decided (I2) | Section 6.4 |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.6; data collected from every PR from now on |
 | AI6 | Coordination of several agents | V | Decided (I2) | Section 6.3; the agents are defined with the first generated story (AI4) |
@@ -192,7 +192,7 @@ The platform stores guests' email, password, stay and trip history, which is per
 
 - Collect only what the flows need: no name, address or document number for guests.
 - Passwords are held by Keycloak only; card data stays in Stripe and never reaches the backend.
-- A trip records its start and end hubs and times. A vehicle keeps only its latest telemetry position, so no route history is linked to a guest.
+- A trip records its start and end hubs and times. The latest vehicle state is kept on `vehicle`, and every telemetry message, with its position, is kept in `telemetry_event`; joined with `trip`, that history rebuilds a guest's route. A scheduled job therefore deletes `telemetry_event` rows older than 7 days, which is enough for the telemetry lag metrics and for debugging.
 - Logs and error responses contain no email, password, token or stay code.
 - Seed, test and demo data are synthetic (section 3.1); real data is never loaded into any environment.
 
@@ -245,9 +245,9 @@ A story is done when all of the following hold:
 | Backend | Spotless check → unit tests (Surefire) → integration and Cucumber tests (Failsafe, Testcontainers) → JaCoCo → OWASP Dependency-Check → SonarQube |
 | Frontend | ESLint and Prettier check → Vitest with coverage → build → `npm audit` → SonarQube |
 | Simulator | ruff → pytest with coverage → `pip-audit` → SonarQube |
-| AI review | Advisory review of non-draft pull requests (section 6.5) |
+| AI review | Advisory review of non-draft pull requests from this repository, when opened, reopened or marked ready (section 6.5) |
 
-The workflow always starts; a first job detects which components a change touches, and the three component jobs run in parallel only for those, plus always on `main`. A final summary job depends on all of them and fails if any failed. It is the required status check: a skipped component job counts as passing, whereas a workflow that never starts (path filters at workflow level) would leave a required check waiting forever. On `main`, the test reports are also imported into Xray (section 2.3).
+The workflow always starts; a first job detects which components a change touches, and the three component jobs run in parallel only for those, plus always on `main`. A final summary job depends on all of them, runs with `if: always()` and fails unless every `needs.<job>.result` is `success` or `skipped`; a `failure` or `cancelled` result fails it. Without `if: always()`, the summary job would itself be skipped when a component job fails, and branch protection treats a skipped required check as passing. It is the required status check: a component job skipped because its component did not change counts as passing, whereas a workflow that never starts (path filters at workflow level) would leave a required check waiting forever. On `main`, the test reports are also imported into Xray (section 2.3).
 
 - **Failure notification:** GitHub Actions emails the author of the push or pull request when a run fails.
 - **Badge:** the CI status badge for `main` is shown in the README.
@@ -258,7 +258,7 @@ The workflow always starts; a first job detects which components a change touche
 - **Images:** a merge to `main` builds the images, scans them with Trivy and pushes them to the GitHub Container Registry.
 - **Staging:** every merge to `main` deploys automatically to staging.
 - **Production:** an iteration tag (`iter1`, ..., `final_v1`) promotes the images already running in staging to production, after a manual approval in a GitHub Environment. The same image goes to both environments; nothing is rebuilt.
-- **Runner:** deployment runs on a self-hosted GitHub Actions runner on the university VM, so the VM does not need to accept connections from GitHub. The repository is public, and a self-hosted runner would run code from any pull request that reaches it, so it is restricted: only the deploy jobs target it (by runner label), they run only on `main` and tags through a protected GitHub Environment, workflows from forks need maintainer approval, and the runner has no access beyond the Compose stacks.
+- **Runner:** deployment runs on a self-hosted GitHub Actions runner on the university VM, so the VM does not need to accept connections from GitHub. The repository is public, and a self-hosted runner would run code from any pull request that reaches it, so it is restricted. A runner label alone is not enough, because a workflow edited on any branch could target it with `runs-on: [self-hosted, deploy]` and no `environment:`. Therefore the runner is in a dedicated runner group limited to this repository and to selected workflows (the deploy workflow on `refs/heads/main` and on tags); the deploy jobs also run through a protected GitHub Environment; the repository requires approval for workflow runs from all outside collaborators; and the runner runs as an unprivileged user with no access beyond the Compose stacks. If the organization's plan does not allow restricting a runner group to selected workflows, this section will record it, with the residual risk that a team member's branch can reach the runner.
 - **Capacity:** staging and production are two Compose stacks on the same VM. Before D5, the DevOps Master checks that the VM can run both (each with PostgreSQL, Keycloak and the monitoring stack); if not, monitoring is shared and staging stops between uses.
 - **Representative data:** the `demo` profile loads synthetic seed data through Flyway: the three Marés hotels, about eight hubs, about forty e-bikes in every lifecycle state, guests with active stays, passes and past trips. The simulator emits telemetry for the seeded vehicles.
 
@@ -347,11 +347,11 @@ A threshold miss fails the k6 run. Results are kept as workflow artifacts and su
 **Workload model.** The load must stress the service, not the business rules: with about forty e-bikes and one bike per pass, fifty users booking at once would mostly get legitimate rejections, counted as errors. The k6 runs therefore use:
 
 - a dedicated `loadtest` seed with enough guests, passes, hubs and available vehicles for every virtual user to book its own vehicle;
-- one guest and pass per virtual user, logged in during setup, so token requests are not part of the measured flow;
+- one guest and pass per virtual user, logged in during setup; each virtual user refreshes its access token with the refresh token before it expires (Keycloak's default lifespan is 5 minutes, shorter than the load and soak runs), and token requests carry their own tag, so the thresholds apply only to the trip flow;
 - a cycle of book, start, end, with a think time of a few seconds, so each vehicle returns to a hub and can be booked again;
 - a database reset from the seed before each run, so runs are comparable.
 
-The 50 virtual users stand for a peak above the expected demand of three hotels, to leave margin. The runs target staging from a GitHub-hosted runner, so the load generator does not share the VM with the system under test.
+The 50 virtual users stand for a peak above the expected demand of three hotels, to leave margin. The runs target staging from a GitHub-hosted runner, so the load generator does not share the VM with the system under test. If staging does not accept connections from outside the university (open risk in architecture section 13), k6 runs from the self-hosted runner or another host inside the network instead, and the results say so, since a generator on the same VM competes with the system for resources.
 
 **Accessibility (T8).** axe runs inside the Playwright suite on the core pages in both languages, with zero `serious` or `critical` violations allowed.
 
@@ -398,7 +398,7 @@ One declaration for the whole project, updated as tools are added.
 | Tool or agent (and model) | Used for | How the output was verified |
 |---|---|---|
 | Claude Code (Claude Opus) | Drafting the architecture proposal, ADRs, report sections and this manual; setting up the AI review workflow | Reviewed and edited by the author, then reviewed in a pull request by another member |
-| Claude Code GitHub Action (`anthropics/claude-code-action`) | Advisory review of every non-draft pull request (practice AI3) | Each finding accepted or rejected by the author, and checked by the human reviewer |
+| Claude Code GitHub Action (`anthropics/claude-code-action`) | Advisory review of non-draft pull requests (practice AI3) | Each finding accepted or rejected by the author, and checked by the human reviewer |
 | GitHub Copilot code review | Review requested on PR #2; it produced no review (quota) | Not applicable |
 
 *Each member adds the tools they use.*
@@ -430,7 +430,7 @@ For each, this section will link the specification, the agent's pull request and
 
 ### 6.5 Agents in the CI pipeline
 
-- **AI review (AI3):** [`ai-review.yml`](../../../.github/workflows/ai-review.yml) reviews every non-draft pull request.
+- **AI review (AI3):** [`ai-review.yml`](../../../.github/workflows/ai-review.yml) reviews non-draft pull requests from this repository when they are opened, reopened or marked ready for review. It skips Dependabot and fork pull requests, and it does not run on each push; a new review is requested by re-running the job.
 - **PR summary (AI7):** a comment summarizing the change and its risk, posted when a pull request is opened.
 - **Failure triage (AI7):** when CI fails on a pull request, an agent reads the logs and posts a comment with the likely cause and a suggested fix.
 
@@ -440,7 +440,7 @@ All agent jobs have permission only to read the code and comment on pull request
 
 *Written in I5*, from data collected on every pull request from now on:
 
-- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. A CI check fails when a pull request has no label or more than one, so the data is complete.
+- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. A CI check that fails when a pull request has no label or more than one is planned for I2; until then, the reviewer checks the label.
 - **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so a script can count them.
 - **Defects and rework traced to AI:** Jira bugs and follow-up pull requests that name the original pull request, and quality gate failures on AI-labelled pull requests.
 
