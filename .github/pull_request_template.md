@@ -1,7 +1,7 @@
 ## Story
 
 <!-- The Jira key must also appear in the branch name and in the commits. -->
-SCRUM-
+RIA-
 
 ## What changes
 

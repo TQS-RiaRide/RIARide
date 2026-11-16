@@ -1,0 +1,74 @@
+name: AI review
+
+# Advisory review only. The job comments on the PR; it never approves,
+# requests changes or merges. A human approval decides the merge.
+
+on:
+  pull_request:
+    # Not on every push: re-running the full review on each push duplicates
+    # findings. Use "Re-run jobs" to request a new review after changes.
+    types: [opened, reopened, ready_for_review]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  # Queue instead of cancelling: a cancelled run could leave inline comments
+  # without a summary, and the next run would post them again.
+  cancel-in-progress: false
+
+jobs:
+  review:
+    # Secrets are not available to PRs from forks or Dependabot, and drafts
+    # are not ready.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write # the action exchanges an OIDC token for its GitHub App token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8 # v1.0.275
+        with:
+          # OAuth token from a Claude Pro/Max subscription, generated with `claude setup-token`.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request as an advisory reviewer for a Spring Boot
+            (Java 21) / React / Python project. Use `gh pr diff ${{ github.event.pull_request.number }}` and
+            `gh pr view ${{ github.event.pull_request.number }}`
+            to read the change. Read CLAUDE.md and docs/ for conventions.
+
+            Focus on, in this order:
+            1. Correctness bugs and unhandled edge cases, against the business
+               rules in CLAUDE.md.
+            2. Security: secrets, credentials, personal data, injection, auth,
+               input validation.
+            3. Tests: new logic covered; unit, integration and BDD kept separate.
+            4. Architecture: Spring Modulith boundaries; external systems
+               (simulator, payments) only behind adapters.
+
+            Rules:
+            - Only act on PR ${{ github.event.pull_request.number }}.
+            - Before reviewing, read existing comments with `gh pr view
+              ${{ github.event.pull_request.number }} --comments` and do not
+              repeat findings already posted.
+            - Post specific issues as inline comments on the affected lines, then
+              one short summary comment with `gh pr comment`. Prefix each finding
+              with a severity: CRITICAL, HIGH, MEDIUM or LOW.
+            - Skip style nits that a formatter or linter would catch.
+            - Never approve, request changes or merge. A human decides.
+            - Do not invent findings. If nothing material is found, post only a
+              one-line summary saying so, without the reminder below.
+            - Otherwise, end the summary with: "Record each finding as accepted
+              or rejected, with a reason, in the PR's 'AI review findings' table."
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment ${{ github.event.pull_request.number }}:*),Bash(gh pr diff ${{ github.event.pull_request.number }}:*),Bash(gh pr view ${{ github.event.pull_request.number }}:*),Read,Grep,Glob"
