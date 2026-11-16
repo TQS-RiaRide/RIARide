@@ -1,5 +1,7 @@
 # RiaRide
 
+[![CI](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml)
+
 ## Project abstract
 
 **RiaRide** is a shared e-bike platform for tourist mobility, a variant of the *fleet-as-a-service* model. It is an educational project for the Software Testing and Quality (TQS) course, in the 3rd year of the Bachelor's in Computer Engineering.
@@ -23,5 +25,5 @@
 
 ## Project bookmarks
 
-- [Backlog (Jira)](<https://riaride.atlassian.net/jira/software/projects/SCRUM/boards/1>)
-![CI](https://github.com/<org>/<repo>/actions/workflows/ci.yml/badge.svg?branch=main)
+- [Backlog (Jira)](<https://riaride.atlassian.net/jira/software/projects/RIA/boards/1>)
+- [CI pipeline (GitHub Actions)](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml)
