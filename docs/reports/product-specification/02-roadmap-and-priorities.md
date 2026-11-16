@@ -1,4 +1,6 @@
-# User stories
+# 2.3 Project roadmap and priorities
+
+> Draft for section 2.3 of the Product Specification report (RIA-9). The user stories are in the [Jira backlog](https://riaride.atlassian.net/jira/software/projects/RIA/boards/1); this section lists them by iteration.
 
 As stories estão organizadas por iteração, da mais prioritária para a menos prioritária. O I2 tem as stories *Highest*, que formam o fluxo principal. O I3 tem as *High* e o I4 as restantes, *High* e *Medium*. O I5 não tem stories novas.
 
@@ -33,12 +35,12 @@ Também nesta iteração: deploy automático (CD), persistência e testes de int
 | 2.5 | **Fim do passe durante uma viagem.** Como gestora do hotel, quero que o tempo de viagem depois do fim do passe seja cobrado como excesso para que os hóspedes não usem as bicicletas sem passe. | • Dado um passe de 1 dia que expira às 15h00 e uma viagem em curso, quando a viagem termina às 15h30, então o hóspede paga 2 blocos de 15 minutos de excesso.<br>• Dado um passe de estadia com check-out às 12h00 e uma bicicleta em uso, quando a viagem termina às 12h20, então o hóspede paga 2 blocos de 15 minutos de excesso. | High |
 | 3.3 | **Reservar uma bicicleta com antecedência.** Como hóspede, quero reservar uma bicicleta com antecedência para que esteja à minha espera quando chegar. | • Dado uma bicicleta disponível, quando o hóspede a reserva, então a bicicleta passa a reservada.<br>• Dado uma bicicleta reservada, quando passam 15 minutos sem a viagem começar, então a reserva é cancelada e a bicicleta volta a disponível. | High |
 | 6.3 | **Mudar o estado de uma bicicleta.** Como operador, quero ativar, desativar ou retirar bicicletas para controlar quais podem ser usadas. | • Dado uma bicicleta disponível, quando o operador a retira, então passa a retirada e deixa de aparecer aos hóspedes.<br>• Dado uma bicicleta em uso, quando o operador a tenta retirar, então o pedido é recusado. | High |
-| 7.1 | **Abrir um ticket de manutenção.** Como operador, quero abrir um ticket para uma bicicleta avariada para que seja reparada dentro do prazo. | Dado uma bicicleta disponível com uma avaria, quando o operador abre um ticket, então a bicicleta passa a manutenção e o ticket recebe um prazo de 24 horas. | High |
+| 7.1 | **Abrir um ticket de manutenção.** Como operador, quero abrir um ticket para uma bicicleta avariada para que seja reparada dentro do prazo. | Dado uma bicicleta disponível com uma avaria, quando o operador abre um ticket, então a bicicleta passa a manutenção e o ticket recebe um prazo SLA. | High |
 | 7.2 | **Atribuir um ticket a um técnico.** Como operador, quero atribuir tickets a técnicos para dividir o trabalho. | Dado um ticket aberto, quando o operador o atribui a um técnico, então o ticket aparece na lista desse técnico. | High |
 | 7.3 | **Fechar um ticket.** Como técnico, quero fechar um ticket depois da reparação para que a bicicleta volte ao serviço. | Dado uma bicicleta em manutenção com o ticket atribuído ao técnico, quando o técnico fecha o ticket, então a bicicleta volta a disponível. | High |
-| 7.4 | **Alerta de prazo ultrapassado.** Como operador, quero ser avisado quando um ticket passa do prazo para cumprir o SLA. | Dado um ticket aberto há mais de 24 horas, quando o prazo passa, então o ticket fica marcado como fora do SLA no dashboard. | High |
+| 7.4 | **Alerta de prazo ultrapassado.** Como operador, quero ser avisado quando um ticket passa do prazo para cumprir o SLA. | Dado um ticket aberto, quando o prazo SLA passa sem o ticket estar fechado, então o ticket fica marcado como fora do SLA no dashboard. | High |
 | 8.2 | **Definir as regras de uso.** Como gestora do hotel, quero definir a duração máxima das viagens e a capacidade dos hubs para controlar o serviço. | • Dado a duração máxima alterada para 2 horas, quando uma viagem passa das 2 horas, então começa a ser cobrado excesso.<br>• Dado um hub com 8 bicicletas cuja capacidade passa para 8, quando um hóspede tenta terminar ali uma viagem, então o pedido é recusado. | High |
-| 9.3 | **Ticket automático por avaria comunicada pela telemetria.** Como operador, quero que uma avaria comunicada por uma bicicleta abra logo um ticket de manutenção para que a reparação comece sem esperar que um hóspede se queixe. | • Dado uma bicicleta disponível, quando o simulador comunica uma avaria nos travões, então é aberto um ticket com prazo SLA de 24 horas e a bicicleta passa a manutenção.<br>• Dado uma bicicleta em uso, quando o simulador comunica uma avaria, então é aberto logo um ticket, a viagem continua e a bicicleta só passa a manutenção quando a viagem termina.<br>• Dado uma avaria já comunicada com um ticket aberto, quando chega de novo a mesma mensagem (mesmo `messageId`), então não é aberto um segundo ticket. | High |
+| 9.3 | **Ticket automático por avaria comunicada pela telemetria.** Como operador, quero que uma avaria comunicada por uma bicicleta abra logo um ticket de manutenção para que a reparação comece sem esperar que um hóspede se queixe. | • Dado uma bicicleta disponível, quando o simulador comunica uma avaria nos travões, então é aberto um ticket com prazo SLA e a bicicleta passa a manutenção.<br>• Dado uma bicicleta em uso, quando o simulador comunica uma avaria, então é aberto logo um ticket, a viagem continua e a bicicleta só passa a manutenção quando a viagem termina.<br>• Dado uma avaria já comunicada com um ticket aberto, quando chega de novo a mesma mensagem (mesmo `messageId`), então não é aberto um segundo ticket. | High |
 
 ## I4 (1–8 dez): MVP completo e testes de sistema
 
@@ -65,6 +67,6 @@ Sem stories novas. O MVP já tem de estar completo e em produção no início de
 - corrigir erros;
 - terminar o Product Specs, o QA Manual e a análise do uso de IA (AI5);
 - preparar a apresentação e a demo;
-- criar a tag `v1.0` até ao dia da apresentação.
+- criar a tag `final_v1` até ao dia da apresentação.
 
 Se alguma story do I4 se atrasar, acaba-se aqui, mas não entram stories novas.
