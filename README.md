@@ -24,3 +24,4 @@
 ## Project bookmarks
 
 - [Backlog (Jira)](<https://riaride.atlassian.net/jira/software/projects/SCRUM/boards/1>)
+![CI](https://github.com/<org>/<repo>/actions/workflows/ci.yml/badge.svg?branch=main)
