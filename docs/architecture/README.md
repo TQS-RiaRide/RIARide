@@ -53,7 +53,7 @@ Each requirement of the assignment guidelines (v2026-11-10) that shapes the arch
 | 8 | Payments | Stripe test mode, confirmed server-side, WireMock in tests | [ADR 0008](adr/0008-stripe-test-mode.md) |
 | 9 | Authentication | Keycloak OIDC: SPA with Authorization Code and PKCE, backend as resource server | [ADR 0009](adr/0009-keycloak.md) |
 | 10 | Guest registration | Own form, backend validates the stay code, then Keycloak Admin API | [ADR 0010](adr/0010-registration-admin-api.md) |
-| 11 | Deployment | Docker Compose on a university VM, images in GHCR, GitHub Actions | [ADR 0011](adr/0011-deployment.md) |
+| 11 | Deployment | Staging and production Compose stacks on a university VM, images in GHCR, deploys through a self-hosted runner, promotion on iteration tags | [ADR 0011](adr/0011-deployment.md) |
 | 12 | Diagrams | draw.io stored as `.drawio.svg` | [ADR 0012](adr/0012-drawio-diagrams.md) |
 | 13 | Pricing | One base price per pass type across the hotel chain | [ADR 0013](adr/0013-chain-base-price.md) |
 | 14 | SQA tools | SonarQube Cloud (OSS plan), JaCoCo, Cucumber, Playwright, k6, Xray and per-stack dependency scanning | [ADR 0014](adr/0014-sqa-tools.md) |
@@ -225,7 +225,7 @@ Technical metrics come from Micrometer inside the backend, with no extra monitor
 
 ![Deployment](diagrams/09-deployment.drawio.svg)
 
-A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and updates the VM with `docker compose pull` and `up`. Migrations run when the backend starts. Representative data comes from a seed profile.
+A merge to `main` builds and tests in GitHub Actions, scans the images with Trivy and pushes them to GHCR. A self-hosted runner on the VM deploys them to the staging stack with `docker compose pull` and `up`. An iteration tag promotes the same images to the production stack after a manual approval ([ADR 0011](adr/0011-deployment.md)). Migrations run when the backend starts. Representative data comes from a seed profile.
 
 Planned repository layout:
 
@@ -244,8 +244,8 @@ docs/       Reports and this proposal
 | The guidelines ask to "book a vehicle for a period", but a reservation only holds a vehicle for 15 min | Future bookings would need `startsAt` and `endsAt` on `Reservation` and an overlap check per vehicle and per pass, replacing the one-active-reservation-per-pass index | Product Owner |
 | The guidelines list "who may use which vehicles" as a rule of use, which is not modelled | Could be allowed vehicle types per pass type, kept in `usage_rule` | Product Owner |
 | The guidelines list end users reporting problems, which has no flow | Could be a guest-sourced ticket opened through the `maintenance` public API | Product Owner |
-| University VM availability, and whether it is reachable only from the internal network | Internal-only access requires a self-hosted runner; public reachability for the teaching staff must be confirmed | DevOps Master |
-| Memory: the full stack is estimated at about 4 GB | Keycloak and the JVM may need limits | DevOps Master |
+| University VM availability, and public reachability for the teaching staff | Deploys use a self-hosted runner, so inbound access from GitHub is not needed; teaching staff access must still be confirmed | DevOps Master |
+| Memory: each stack is estimated at about 4 GB, and staging and production share the VM | Keycloak and the JVM may need limits; if both stacks do not fit, monitoring is shared and staging stops between uses | DevOps Master |
 | Overtime grace period: the comment in the team document was resolved without changing the rule | Configured as 0 until confirmed | Product Owner |
 | 3-day pass: assumed to last 72 h after activation | Rule to confirm | Product Owner |
 | Whether 1-day and 3-day passes also end at check-out | Affects the overtime limit | Product Owner |

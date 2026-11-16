@@ -56,7 +56,7 @@ A module calls another module's public API for queries and for commands whose re
 
 ![Deployment](../../architecture/diagrams/09-deployment.drawio.svg)
 
-A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and updates the university VM with Docker Compose ([ADR 0011](../../architecture/adr/0011-deployment.md)). The only public port is 443. Secrets come from GitHub Secrets and a host-only `.env` file.
+A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and deploys them to a staging Compose stack on the university VM, through a self-hosted runner. An iteration tag promotes the same images to production after a manual approval ([ADR 0011](../../architecture/adr/0011-deployment.md)). The only public port is 443. Secrets come from GitHub Secrets and a host-only `.env` file.
 
 ## 4.5 Integration contracts
 
