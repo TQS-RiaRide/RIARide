@@ -80,7 +80,7 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 ### Git and Jira
 
 - One feature branch per story; protected `main`; merges only through a pull request approved by another member.
-- The Jira key (for example, `SCRUM-12`) must appear in the branch name, the commits and the pull request.
+- The Jira key (for example, `RIA-12`) must appear in the branch name, the commits and the pull request.
 - Tags at the end of each iteration: `iter1`, `iter2`, ..., `final_v1`. At each tag, a PDF of each report goes in `docs/`.
 
 ### Expected tests
