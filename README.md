@@ -25,5 +25,5 @@
 
 ## Project bookmarks
 
-- [Backlog (Jira)](<https://riaride.atlassian.net/jira/software/projects/SCRUM/boards/1>)
+- [Backlog (Jira)](<https://riaride.atlassian.net/jira/software/projects/RIA/boards/1>)
 - [CI pipeline (GitHub Actions)](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml)
