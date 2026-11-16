@@ -2,49 +2,49 @@
 
 > Draft for section 2.2 of the Product Specification report (RIA-8). There is one persona for each main actor (guest, operator, hotel manager) and one scenario for each persona.
 
-O técnico e o administrador não têm persona própria. O técnico aparece no cenário do Rui, e o administrador só gere contas e papéis.
+The technician and the admin have no persona of their own. The technician appears in Rui's scenario, and the admin only manages accounts and roles.
 
-## Sophie Laurent, a hóspede
+## Sophie Laurent, the guest
 
-- **Idade e profissão:** 34 anos, designer, de Lyon (França).
-- **Contexto:** está 4 noites no hotel Marés Praia com o namorado. Fala francês e inglês, mas não fala português.
-- **Objetivos:** conhecer Vila Ria de bicicleta ao seu ritmo; saber sempre quanto vai pagar.
-- **Frustrações:** apps que pedem documentos ou números de telefone locais; custos escondidos; bicicletas sem bateria.
+- **Age and occupation:** 34, designer, from Lyon (France).
+- **Context:** staying 4 nights at the Marés Praia hotel with her boyfriend. She speaks French and English, but not Portuguese.
+- **Goals:** explore Vila Ria by bike at her own pace; always know how much she will pay.
+- **Frustrations:** apps that ask for documents or local phone numbers; hidden costs; bikes with a flat battery.
 
-## Rui Matos, o operador da frota
+## Rui Matos, the fleet operator
 
-- **Idade e profissão:** 41 anos, responsável de operações na RodaLeve Fleet Services.
-- **Contexto:** gere as bicicletas de todos os hubs e coordena dois técnicos.
-- **Objetivos:** ter bicicletas a funcionar em todos os hubs; reparar avarias dentro do prazo do SLA; mudar bicicletas de hub antes das horas de mais procura.
-- **Frustrações:** só saber de uma avaria quando um hóspede se queixa; hubs cheios num hotel e vazios noutro.
+- **Age and occupation:** 41, operations manager at RodaLeve Fleet Services.
+- **Context:** manages the bikes at every hub and coordinates two technicians.
+- **Goals:** have working bikes at every hub; repair faults within the SLA deadline; move bikes between hubs before the busiest hours.
+- **Frustrations:** only learning about a fault when a guest complains; hubs that are full at one hotel and empty at another.
 
-## Ana Ribeiro, a gestora do hotel
+## Ana Ribeiro, the hotel manager
 
-- **Idade e profissão:** 45 anos, responsável pela experiência dos hóspedes no Grupo Hoteleiro Marés.
-- **Contexto:** gere o serviço de bicicletas nos três hotéis do grupo.
-- **Objetivos:** oferecer as bicicletas como um serviço que os hóspedes valorizam; definir o preço base dos passes, igual para os três hotéis do grupo; confirmar que o operador cumpre o SLA, o acordo de nível de serviço assinado com o grupo.
-- **Frustrações:** pagar por um serviço sem saber quanto é usado nem quantas vezes as bicicletas estão indisponíveis.
+- **Age and occupation:** 45, guest experience manager at Grupo Hoteleiro Marés.
+- **Context:** manages the bike service at the group's three hotels.
+- **Goals:** offer the bikes as a service that guests value; set the base price of the passes, the same for the group's three hotels; check that the operator meets the SLA, the service level agreement signed with the group.
+- **Frustrations:** paying for a service without knowing how much it is used or how often the bikes are unavailable.
 
-## Cenários
+## Scenarios
 
-### Cenário 1: Sophie passeia até às salinas
+### Scenario 1: Sophie rides to the salt pans
 
-Sophie faz check-in no Marés Praia e recebe um código de estadia na receção. No telemóvel, muda o RiaRide para inglês e cria uma conta com email, password e o código de estadia. Escolhe o passe de estadia em vez do passe de 1 dia ou de 3 dias, e a caução é cobrada no cartão.
+Sophie checks in at Marés Praia and gets a stay code at the front desk. On her phone, she switches RiaRide to English and creates an account with her email, a password and the stay code. She chooses the stay pass instead of the 1-day or 3-day pass, and the deposit is charged to her card.
 
-Na manhã seguinte, abre a rota sugerida “Marés Praia → Centro histórico → Salinas → Marés Praia” e vê que há três bicicletas no hub do hotel. Quando começa a primeira viagem, o passe fica ativo. Vai até ao centro histórico e entrega a bicicleta num hub com lugar livre. Depois do almoço, levanta outra bicicleta e segue até às salinas.
+The next morning, she opens the suggested route "Marés Praia → Historic centre → Salinas → Marés Praia" and sees that there are three bikes at the hotel hub. When she starts her first trip, the pass becomes active. She rides to the historic centre and returns the bike at a hub with a free slot. After lunch, she picks up another bike and rides on to the salt pans.
 
-No último dia, entrega a bicicleta antes do check-out. O passe termina no check-out e a caução é devolvida. No dashboard, Sophie vê todas as viagens e o total pago, sem custos extra.
+On her last day, she returns the bike before check-out. The pass ends at check-out and the deposit is refunded. On the dashboard, Sophie sees all her trips and the total she paid, with no extra costs.
 
-### Cenário 2: Rui resolve uma avaria antes da hora de ponta
+### Scenario 2: Rui fixes a fault before the rush hour
 
-Às 8h, Rui abre o dashboard do operador. Vê que uma bicicleta no hub do Centro histórico comunicou uma avaria nos travões durante a noite. A partir da posição das bicicletas, o dashboard mostra também que o hub do Marés Centro está cheio e o das Salinas quase vazio.
+At 8:00, Rui opens the operator dashboard. He sees that a bike at the Historic centre hub reported a brake fault overnight. From the bikes' positions, the dashboard also shows that the Marés Centro hub is full and the Salinas hub is almost empty.
 
-Durante a noite, a avaria abriu automaticamente um ticket de manutenção com prazo SLA, e a bicicleta passou a manutenção, para que nenhum hóspede a possa reservar. Rui atribui o ticket a um técnico. Depois, combina com a equipa levar quatro bicicletas do Marés Centro para as Salinas numa carrinha. Esta tarefa é feita fora do RiaRide.
+Overnight, the fault automatically opened a maintenance ticket with an SLA deadline, and the bike changed to maintenance, so that no guest can book it. Rui assigns the ticket to a technician. Then he arranges with the team to take four bikes from Marés Centro to Salinas in a van. This task is done outside RiaRide.
 
-À tarde, o técnico repara os travões e fecha o ticket. A bicicleta volta a ficar disponível.
+In the afternoon, the technician repairs the brakes and closes the ticket. The bike becomes available again.
 
-### Cenário 3: Ana prepara a época de verão
+### Scenario 3: Ana prepares the summer season
 
-Antes do verão, Ana entra no backoffice do hotel. Atualiza o preço base do passe de 1 dia, do passe de 3 dias e do passe de estadia, que se aplica aos três hotéis do grupo. Aumenta também a capacidade do hub do Marés Praia, que no ano anterior estava muitas vezes cheio.
+Before the summer, Ana logs in to the hotel backoffice. She updates the base price of the 1-day pass, the 3-day pass and the stay pass, which applies to the group's three hotels. She also increases the capacity of the Marés Praia hub, which was often full the year before.
 
-Depois, consulta os indicadores do último mês: utilização das bicicletas, disponibilidade face ao SLA, viagens por dia e tempo médio de reparação. Repara que a disponibilidade no Marés Salinas ficou abaixo do SLA em duas semanas e marca uma reunião com o operador para falarem sobre isso.
+Then she checks last month's indicators: bike utilization, availability against the SLA, trips per day and average time to repair. She notices that availability at Marés Salinas fell below the SLA for two weeks and sets up a meeting with the operator to discuss it.
