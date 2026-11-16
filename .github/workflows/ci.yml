@@ -19,25 +19,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  detect:
-    name: Detect components
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.detect.outputs.backend }}
-      frontend: ${{ steps.detect.outputs.frontend }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Components are added incrementally during I1. A job only runs once
-      # its project file exists, so an empty folder does not break the build.
-      - id: detect
-        run: |
-          echo "backend=$([ -f backend/pom.xml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "frontend=$([ -f frontend/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-
+  # Backend and frontend jobs always run: if pom.xml or package.json goes
+  # missing, the job fails instead of being skipped.
   backend:
     name: Backend build & tests
-    needs: detect
-    if: needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -78,8 +63,6 @@ jobs:
 
   frontend:
     name: Frontend build & tests
-    needs: detect
-    if: needs.detect.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -102,19 +85,19 @@ jobs:
 
   result:
     name: CI result
-    needs: [detect, backend, frontend]
+    needs: [backend, frontend]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      # Skipped jobs (component not created yet) count as passing;
-      # a failed or cancelled job fails the whole pipeline.
+      # Every job must succeed: a failed, cancelled or skipped job fails
+      # the whole pipeline, so a missing build can never pass this check.
       - name: Check job results
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "Job results: $RESULTS"
           for r in $RESULTS; do
-            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+            if [ "$r" != "success" ]; then
               exit 1
             fi
           done
