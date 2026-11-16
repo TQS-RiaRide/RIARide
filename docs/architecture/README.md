@@ -102,11 +102,11 @@ Only a module's top-level package is public. `ApplicationModules.of(...).verify(
 |---|---|---|---|
 | `VehicleTelemetryReceived` | `telemetry` | `fleet` | Updates latest vehicle state |
 | `VehicleFaultDetected` | `telemetry` | `maintenance`, `fleet`, `trips` | Opens a ticket with an SLA deadline; takes the vehicle out of service; cancels its reservation or links its trip to the ticket |
-| `VehicleUnlocked` | `telemetry` | `trips` | Confirms the trip start |
-| `TripEnded` | `trips` | `trips` | Sends `LOCK`; charges overtime through `payments` |
-| `DamageAttributed` | `maintenance` | `passes` | Withholds the deposit of the pass linked to the ticket |
+| `VehicleUnlocked` | `telemetry` | `trips` | Confirms the trip start; for a trip already `FAILED`, sends `LOCK` again |
+| `TripEnded` | `trips` | `trips` | Sends `LOCK`; charges overtime through `payments`, or takes it from the deposit if the charge fails permanently |
+| `TicketResolved` | `maintenance` | `passes` | Carries the linked pass, if any, and whether the damage was attributed to the guest. Withholds the deposit, or lets the pass close |
 
-`passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and ends, through the `passes` public API, and `passes` keeps an `in_trip` flag. A pass that expires mid-trip is closed, and its deposit released, only once that flag is cleared.
+`passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and when it is settled, through the `passes` public API, and `passes` keeps an `in_trip` flag. A trip is settled once it has ended and its overtime, if any, is paid or taken from the deposit (section 7), so the deposit cannot be refunded while an overtime charge is still pending. A pass that ends (expiry or check-out) is closed, and its deposit refunded, only when the flag is cleared **and** `maintenance` reports no open ticket linked to the pass. Until then the deposit is `HELD`. Each settled trip and each `TicketResolved` for the pass make `passes` check again.
 
 **Faults.** Three modules react to `VehicleFaultDetected`, each in its own data:
 
@@ -114,7 +114,7 @@ Only a module's top-level package is public. `ApplicationModules.of(...).verify(
 - `fleet` moves an `available` or `reserved` vehicle to `maintenance`. A vehicle `in use` keeps its status and is flagged `maintenancePending`; when the trip ends at a hub, `fleet` moves it to `maintenance` instead of `available`.
 - `trips` cancels an active reservation for the vehicle. If a trip is in progress, the trip continues, and `trips` attaches the trip and its pass to the ticket through the `maintenance` public API. The call carries the fault's `messageId`, so it works whichever listener runs first.
 
-When a technician resolves the ticket and attributes the damage to the guest, `maintenance` publishes `DamageAttributed` with the pass, and `passes` withholds the deposit. `maintenance` cannot look up the trip itself: depending on `trips` would close the cycle `trips` → `passes` → `maintenance`.
+When a technician resolves the ticket, `maintenance` publishes `TicketResolved` with the pass and whether the damage was attributed to the guest. If it was, `passes` withholds the deposit; if not, the pass closes and the deposit is refunded once no other ticket is open. Holding the refund while a ticket is open means a technician who attributes damage days later still finds the deposit there. `maintenance` cannot look up the trip itself: depending on `trips` would close the cycle `trips` → `passes` → `maintenance`.
 
 ## 6. Domain and data model
 
@@ -134,6 +134,7 @@ Each table belongs to one module, and code in another module never accesses it d
 |---|---|
 | One vehicle in use per pass | Partial unique index on `trip (pass_id)` for active statuses |
 | One active reservation per vehicle | Partial unique index on `reservation (vehicle_id)` for active statuses |
+| One active reservation per pass | Partial unique index on `reservation (pass_id)` for active statuses |
 | Trip ends only at a hub with a free slot | Hub row locked, occupancy checked, trip ended, all in one transaction |
 | No duplicate charge | Unique `payment.idempotency_key`, also sent to Stripe |
 | No duplicate telemetry | Unique `telemetry_event.message_id` |
@@ -153,7 +154,7 @@ The stay-code rule stays in `accounts`, covered by our tests. If the local inser
 
 ![Book and start](diagrams/06-seq-book-start-trip.drawio.svg)
 
-Starting immediately creates a reservation first, so there is one code path. A scheduled job expires reservations; the database condition makes it safe to rerun. A trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip is `FAILED`, the pass stays inactive, and the reservation remains until it expires.
+Starting immediately creates a reservation first, so there is one code path. A scheduled job expires reservations; the database condition makes it safe to rerun. A trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip is `FAILED`, `trips` sends `LOCK` in case the vehicle did unlock, the pass stays inactive, and the reservation remains until it expires. If a `VehicleUnlocked` arrives later for that `FAILED` trip, `trips` sends `LOCK` again, so a vehicle is never left unlocked with no trip recorded. Because a pass holds at most one active reservation, the guest can retry on the same reservation or cancel it.
 
 ### Ending a trip
 
@@ -161,7 +162,9 @@ Starting immediately creates a reservation first, so there is one code path. A s
 
 A hub without a free slot rejects the end of the trip. The response lists the nearest hubs that have a free slot, ordered by straight-line distance from the hub's `position`, and the trip continues.
 
-Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip. The event registry retries it.
+Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip.
+
+The `PaymentGateway` port reports a failed charge as transient (network error, Stripe 5xx, rate limit) or permanent (card declined, `authentication_required`). Spring Modulith keeps a failed publication as incomplete but does not retry it on its own, so a scheduled job in `trips` resubmits incomplete overtime publications with backoff, up to a maximum number of attempts. A permanent failure, or the last failed attempt, is final: the `payment` row is `FAILED`, `trips` asks `passes` to take the overtime from the deposit, which is still held because the trip is not settled yet, and the case appears on the operator dashboard. Only then is the trip settled.
 
 ## 8. Vehicle lifecycle
 
@@ -191,7 +194,7 @@ Battery below 20 % blocks booking without changing the status. A fault during a 
 }
 ```
 
-The consumer ignores a repeated `messageId` and any message older than the vehicle's last state. Replacing the simulator means replacing the adapter in `telemetry`, with no change to the ports or to other modules.
+The consumer ignores a repeated `messageId` on both topics. Only telemetry is also checked for staleness: a telemetry message older than the vehicle's last state is ignored. Fault events are never dropped as stale, because MQTT does not order messages across topics, so a fault can arrive after a later telemetry message. Replacing the simulator means replacing the adapter in `telemetry`, with no change to the ports or to other modules.
 
 **Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
 
@@ -238,7 +241,7 @@ docs/       Reports and this proposal
 
 | Item | Impact | Owner |
 |---|---|---|
-| The guidelines ask to "book a vehicle for a period", but a reservation only holds a vehicle for 15 min | Future bookings would need `startsAt` and `endsAt` on `Reservation` and an overlap check | Product Owner |
+| The guidelines ask to "book a vehicle for a period", but a reservation only holds a vehicle for 15 min | Future bookings would need `startsAt` and `endsAt` on `Reservation` and an overlap check per vehicle and per pass, replacing the one-active-reservation-per-pass index | Product Owner |
 | The guidelines list "who may use which vehicles" as a rule of use, which is not modelled | Could be allowed vehicle types per pass type, kept in `usage_rule` | Product Owner |
 | The guidelines list end users reporting problems, which has no flow | Could be a guest-sourced ticket opened through the `maintenance` public API | Product Owner |
 | University VM availability, and whether it is reachable only from the internal network | Internal-only access requires a self-hosted runner; public reachability for the teaching staff must be confirmed | DevOps Master |

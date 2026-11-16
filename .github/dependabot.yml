@@ -13,3 +13,6 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+  - package-ecosystem: pip
+    directory: /simulator
+    schedule: { interval: weekly }

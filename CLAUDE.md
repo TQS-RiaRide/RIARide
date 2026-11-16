@@ -13,7 +13,7 @@ All repository content is written in English: code, documentation, reports, pull
 Product definitions and backlog:
 
 - Idea and business rules: [team Google Doc](https://docs.google.com/document/d/1w1e6eqr99A0CTGNzh3KBUNgs5tphVJQwKrlbpchY1xo/edit) (in Portuguese)
-- Backlog: [Jira, project `SCRUM`](https://riaride.atlassian.net/jira/software/projects/SCRUM/boards/1)
+- Backlog: [Jira, project `RIA`](https://riaride.atlassian.net/jira/software/projects/RIA/boards/1)
 
 ## Domain
 

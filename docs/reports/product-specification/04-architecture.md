@@ -36,21 +36,21 @@ The backend is a modular monolith ([ADR 0001](../../architecture/adr/0001-modula
 
 ## 4.3 Module interactions
 
-A module calls another module's public API for queries and for commands whose result it needs now. For side effects elsewhere, it publishes an event, handled after commit. Spring Modulith stores each event in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge.
+A module calls another module's public API for queries and for commands whose result it needs now. For side effects elsewhere, it publishes an event, handled after commit. Spring Modulith stores each event in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge. A pass closes, and its deposit is refunded, only when no trip is in progress or waiting for its overtime and no maintenance ticket linked to it is open.
 
 **Guest registration.** The backend checks the stay code, creates the user through the Keycloak Admin API, and deletes that user if the local insert fails.
 
 ![Registration](../../architecture/diagrams/05-seq-registration.drawio.svg)
 
-**Booking and starting a trip.** Starting immediately creates a reservation first, so there is one code path. The trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip fails and the pass stays inactive.
+**Booking and starting a trip.** Starting immediately creates a reservation first, so there is one code path. The trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip fails, the platform sends `LOCK` in case the vehicle did unlock, and the pass stays inactive. A late unlock confirmation for a failed trip gets another `LOCK`. A pass holds at most one active reservation.
 
 ![Book and start](../../architecture/diagrams/06-seq-book-start-trip.drawio.svg)
 
-**Ending a trip.** A full hub rejects the end of the trip and lists the nearest hubs with a free slot. Overtime is the time beyond the earliest of the maximum trip duration, the pass expiry and check-out, in 15-minute blocks. It is charged after commit, so a Stripe outage does not stop a guest from ending a trip.
+**Ending a trip.** A full hub rejects the end of the trip and lists the nearest hubs with a free slot. Overtime is the time beyond the earliest of the maximum trip duration, the pass expiry and check-out, in 15-minute blocks. It is charged after commit, so a Stripe outage does not stop a guest from ending a trip. Transient failures are retried with backoff. A permanent failure, such as a declined card, is taken from the deposit and flagged on the operator dashboard.
 
 ![End trip](../../architecture/diagrams/07-seq-end-trip-overtime.drawio.svg)
 
-**Faults.** `maintenance` opens one ticket per fault. `fleet` takes the vehicle out of service, or flags it `maintenancePending` while a trip is in progress. `trips` cancels the vehicle's reservation, or attaches the trip to the ticket so that damage can be charged against the deposit.
+**Faults.** `maintenance` opens one ticket per fault. `fleet` takes the vehicle out of service, or flags it `maintenancePending` while a trip is in progress. `trips` cancels the vehicle's reservation, or attaches the trip to the ticket so that damage can be charged against the deposit. The deposit stays held until the ticket is resolved. Fault events are deduplicated by `messageId` but never dropped as stale, because MQTT does not order messages across topics.
 
 ## 4.4 Deployment
 
