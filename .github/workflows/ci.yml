@@ -98,7 +98,7 @@ jobs:
 
   result:
     name: CI result
-    needs: [backend, frontend]
+    needs: [detect, backend, frontend]
     if: always()
     runs-on: ubuntu-latest
     steps:
