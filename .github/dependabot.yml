@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # Keeps pinned action SHAs (checkout, claude-code-action) up to date.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
