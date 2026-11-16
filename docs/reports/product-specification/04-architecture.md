@@ -23,12 +23,14 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 | Container | Technology | Responsibility |
 |---|---|---|
-| Reverse proxy and SPA | nginx, React build | Single public origin, TLS, routes `/api/v1` and `/auth` |
+| Reverse proxy and SPA | nginx, React build | Single public origin, TLS, routes `/api/v1`, `/auth` and `/grafana` |
 | Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server |
 | PostgreSQL | One server | Databases `riaride` and `keycloak` |
 | Keycloak | OIDC provider | Credentials, login pages, roles |
 | Mosquitto | MQTT broker | Telemetry and commands, internal network only |
 | Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
+| Prometheus | Metrics store | Scrapes the backend's Actuator metrics; the backoffice reads technical metrics from it |
+| Grafana | Dashboards and alerts | Dashboards and SLO alerts by email |
 
 ![Backend modules](../../architecture/diagrams/03-backend-modules.drawio.svg)
 

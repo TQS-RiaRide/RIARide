@@ -26,7 +26,7 @@ Each requirement of the assignment guidelines (v2026-11-10) that shapes the arch
 | Deployment on a department VM or a cloud provider, reachable by the teaching staff | 1.2 | [ADR 0011](adr/0011-deployment.md), section 12; reachability is an open risk (section 13) |
 | Find vehicles by hub and type; book or start immediately; end at a hub; user dashboard | 4.1 | `fleet` and `trips`, section 7. Booking for a period is an open question (section 13) |
 | Register vehicles and hubs; lifecycle with activation and deactivation; tickets with an SLA deadline assigned to a technician; operator dashboard | 4.1 | `fleet` and `maintenance`, section 8 |
-| Rules of use (maximum duration, hub capacity); business KPIs; technical metrics | 4.1 | `usage_rule`, `backoffice`, Micrometer (section 11). Restricting who may use which vehicles is an open question (section 13) |
+| Rules of use (maximum duration, hub capacity); business KPIs; technical metrics | 4.1 | `usage_rule`, `backoffice`, Micrometer and Prometheus (section 11). Restricting who may use which vehicles is an open question (section 13) |
 | Registration, authentication, role-based access | 4.1 | [ADR 0009](adr/0009-keycloak.md), [ADR 0010](adr/0010-registration-admin-api.md) |
 | Deposit and overtime in a payment sandbox | 4.1 | [ADR 0008](adr/0008-stripe-test-mode.md), section 9 |
 | Telemetry reflected in vehicle state; low battery blocks booking | 4.1 | `telemetry` and `fleet`, section 8 |
@@ -38,6 +38,7 @@ Each requirement of the assignment guidelines (v2026-11-10) that shapes the arch
 | Dependency vulnerability scanning on every build | Q3 | [ADR 0014](adr/0014-sqa-tools.md) |
 | Integration tests separate from unit tests | T3 | [ADR 0003](adr/0003-maven.md), section 11 |
 | SLOs checked by a k6 load test with thresholds | T5 | Section 11; the SLOs belong in the Product Specification report |
+| Observability: dashboards and alerts on SLOs (valued) | D6 | Prometheus and Grafana, section 11 |
 
 ## 2. Decisions
 
@@ -70,12 +71,14 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 | Container | Technology | Responsibility |
 |---|---|---|
-| Reverse proxy and SPA | nginx, static React build | Single public origin, TLS, routes `/api/v1` and `/auth` |
+| Reverse proxy and SPA | nginx, static React build | Single public origin, TLS, routes `/api/v1`, `/auth` and `/grafana` |
 | Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server |
 | PostgreSQL | One server, databases `riaride` and `keycloak` | Durable state |
 | Keycloak | OIDC provider | Credentials, login pages, roles; realm exported to the repository |
 | Mosquitto | MQTT broker | Telemetry and commands, internal network only |
 | Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
+| Prometheus | Metrics store | Scrapes the backend's Actuator endpoint; queried by the backoffice for technical metrics |
+| Grafana | Dashboards and alerts | Versioned dashboards, SLO alert rules sent by email |
 
 Dashboards poll the REST API. A push channel is not justified by the MVP.
 
@@ -203,7 +206,7 @@ The consumer ignores a repeated `messageId` on both topics. Only telemetry is al
 ## 10. Security
 
 - The SPA uses Authorization Code with PKCE through keycloak-js and keeps tokens in memory. The backend validates JWTs against Keycloak's JWKS and authorizes by role.
-- The only public port is 443. Mosquitto, PostgreSQL and the backend are reachable only inside the Compose network, and Mosquitto requires credentials.
+- The only public port is 443. Mosquitto, PostgreSQL, Prometheus and the backend are reachable only inside the Compose network, and Mosquitto requires credentials. Grafana is reached only through nginx, with its own login.
 - The Stripe test key, Keycloak client secret, and database and MQTT credentials live in GitHub Secrets and a host-only `.env` file.
 - The password in the registration request is never stored by the backend or written to logs.
 - Seed data is synthetic.
@@ -219,7 +222,7 @@ The consumer ignores a repeated `messageId` on both topics. Only telemetry is al
 | E2E | Playwright against the Compose stack, not on every build |
 | Load | k6 on the book-and-start flow, against the SLOs in the Product Specification report |
 
-Technical metrics come from Micrometer inside the backend, with no extra monitoring container. Telemetry lag is `received_at` minus `emitted_at`.
+Technical metrics follow the QA Manual (section 4.3). Spring Boot Actuator and Micrometer expose them in Prometheus format: API latency and error rate per endpoint, JVM and connection pool health, telemetry lag (`received_at` minus `emitted_at`), active trips and bookings. Prometheus scrapes them, and the `backoffice` module reads the hotel manager's technical metrics (API latency, error rate, telemetry lag) from Prometheus' query API, so the dashboard and the alerts use the same numbers. Grafana holds the dashboards, versioned in `infra/` and provisioned on start, and alert rules on the SLOs, sent by email. nginx serves Grafana under `/grafana`, behind Grafana's own login, so the observability dashboard can be linked from the repository README.
 
 ## 12. Deployment and delivery
 
@@ -233,7 +236,7 @@ Planned repository layout:
 backend/    Maven project, one package per module
 frontend/   React application
 simulator/  Python service
-infra/      compose.yaml, nginx, Mosquitto configuration, Keycloak realm export
+infra/      compose.yaml, nginx, Mosquitto configuration, Keycloak realm export, Prometheus and Grafana provisioning
 docs/       Reports and this proposal
 ```
 
@@ -245,7 +248,7 @@ docs/       Reports and this proposal
 | The guidelines list "who may use which vehicles" as a rule of use, which is not modelled | Could be allowed vehicle types per pass type, kept in `usage_rule` | Product Owner |
 | The guidelines list end users reporting problems, which has no flow | Could be a guest-sourced ticket opened through the `maintenance` public API | Product Owner |
 | University VM availability, and public reachability for the teaching staff | Deploys use a self-hosted runner, so inbound access from GitHub is not needed; teaching staff access must still be confirmed | DevOps Master |
-| Memory: each stack is estimated at about 4 GB, and staging and production share the VM | Keycloak and the JVM may need limits; if both stacks do not fit, monitoring is shared and staging stops between uses | DevOps Master |
+| Memory: each stack, including Prometheus and Grafana, is estimated at about 4 GB, and staging and production share the VM | Keycloak and the JVM may need limits; if both stacks do not fit, monitoring is shared and staging stops between uses | DevOps Master |
 | Overtime grace period: the comment in the team document was resolved without changing the rule | Configured as 0 until confirmed | Product Owner |
 | 3-day pass: assumed to last 72 h after activation | Rule to confirm | Product Owner |
 | Whether 1-day and 3-day passes also end at check-out | Affects the overtime limit | Product Owner |
