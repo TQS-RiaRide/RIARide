@@ -19,7 +19,7 @@ The quality gate must block the merge, so SonarQube has to analyze a pull reques
 | End-to-end | Playwright with TypeScript, against the Compose stack, not on every build | Auto-waiting reduces flaky tests, traces make failures diagnosable, and it shares the frontend's language |
 | Load | k6 on the book-and-start flow | Required by the assignment; thresholds fail the run when an SLO is missed |
 | Dependency scanning on every build | OWASP Dependency-Check (backend), `npm audit` (frontend), `pip-audit` (simulator) | Each runs in CI and can fail the build on known vulnerabilities in its ecosystem |
-| Dependency updates | Dependabot | Opens update pull requests for all three stacks and for GitHub Actions |
+| Dependency updates | Dependabot (Maven, npm, pip and GitHub Actions) | Opens update pull requests for all three stacks and for GitHub Actions |
 | Test management | Xray, importing Cucumber JSON and JUnit XML from CI | Required by the assignment; links tests to Jira stories |
 
 ## Alternatives considered

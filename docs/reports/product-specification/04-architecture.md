@@ -23,12 +23,14 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 | Container | Technology | Responsibility |
 |---|---|---|
-| Reverse proxy and SPA | nginx, React build | Single public origin, TLS, routes `/api/v1` and `/auth` |
+| Reverse proxy and SPA | nginx, React build | Single public origin, TLS, routes `/api/v1`, `/auth` and `/grafana` |
 | Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server |
 | PostgreSQL | One server | Databases `riaride` and `keycloak` |
 | Keycloak | OIDC provider | Credentials, login pages, roles |
 | Mosquitto | MQTT broker | Telemetry and commands, internal network only |
 | Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
+| Prometheus | Metrics store | Scrapes the backend's Actuator metrics; the backoffice reads technical metrics from it |
+| Grafana | Dashboards and alerts | Dashboards and SLO alerts by email |
 
 ![Backend modules](../../architecture/diagrams/03-backend-modules.drawio.svg)
 
@@ -36,27 +38,27 @@ The backend is a modular monolith ([ADR 0001](../../architecture/adr/0001-modula
 
 ## 4.3 Module interactions
 
-A module calls another module's public API for queries and for commands whose result it needs now. For side effects elsewhere, it publishes an event, handled after commit. Spring Modulith stores each event in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge.
+A module calls another module's public API for queries and for commands whose result it needs now. For side effects elsewhere, it publishes an event, handled after commit. Spring Modulith stores each event in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge. A pass closes, and its deposit is refunded, only when no trip is in progress or waiting for its overtime and no maintenance ticket linked to it is open.
 
 **Guest registration.** The backend checks the stay code, creates the user through the Keycloak Admin API, and deletes that user if the local insert fails.
 
 ![Registration](../../architecture/diagrams/05-seq-registration.drawio.svg)
 
-**Booking and starting a trip.** Starting immediately creates a reservation first, so there is one code path. The trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip fails and the pass stays inactive.
+**Booking and starting a trip.** Starting immediately creates a reservation first, so there is one code path. The trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip fails, the platform sends `LOCK` in case the vehicle did unlock, and the pass stays inactive. A late unlock confirmation for a failed trip gets another `LOCK`. A pass holds at most one active reservation.
 
 ![Book and start](../../architecture/diagrams/06-seq-book-start-trip.drawio.svg)
 
-**Ending a trip.** A full hub rejects the end of the trip and lists the nearest hubs with a free slot. Overtime is the time beyond the earliest of the maximum trip duration, the pass expiry and check-out, in 15-minute blocks. It is charged after commit, so a Stripe outage does not stop a guest from ending a trip.
+**Ending a trip.** A full hub rejects the end of the trip and lists the nearest hubs with a free slot. Overtime is the time beyond the earliest of the maximum trip duration, the pass expiry and check-out, in 15-minute blocks. It is charged after commit, so a Stripe outage does not stop a guest from ending a trip. Transient failures are retried with backoff. A permanent failure, such as a declined card, is taken from the deposit and flagged on the operator dashboard.
 
 ![End trip](../../architecture/diagrams/07-seq-end-trip-overtime.drawio.svg)
 
-**Faults.** `maintenance` opens one ticket per fault. `fleet` takes the vehicle out of service, or flags it `maintenancePending` while a trip is in progress. `trips` cancels the vehicle's reservation, or attaches the trip to the ticket so that damage can be charged against the deposit.
+**Faults.** `maintenance` opens one ticket per fault. `fleet` takes the vehicle out of service, or flags it `maintenancePending` while a trip is in progress. `trips` cancels the vehicle's reservation, or attaches the trip to the ticket so that damage can be charged against the deposit. The deposit stays held until the ticket is resolved. Fault events are deduplicated by `messageId` but never dropped as stale, because MQTT does not order messages across topics.
 
 ## 4.4 Deployment
 
 ![Deployment](../../architecture/diagrams/09-deployment.drawio.svg)
 
-A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and updates the university VM with Docker Compose ([ADR 0011](../../architecture/adr/0011-deployment.md)). The only public port is 443. Secrets come from GitHub Secrets and a host-only `.env` file.
+A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and deploys them to a staging Compose stack on the university VM, through a self-hosted runner. An iteration tag promotes the same images to production after a manual approval ([ADR 0011](../../architecture/adr/0011-deployment.md)). The only public port is 443. Secrets come from GitHub Secrets and a host-only `.env` file.
 
 ## 4.5 Integration contracts
 

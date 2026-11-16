@@ -26,7 +26,7 @@ Each requirement of the assignment guidelines (v2026-11-10) that shapes the arch
 | Deployment on a department VM or a cloud provider, reachable by the teaching staff | 1.2 | [ADR 0011](adr/0011-deployment.md), section 12; reachability is an open risk (section 13) |
 | Find vehicles by hub and type; book or start immediately; end at a hub; user dashboard | 4.1 | `fleet` and `trips`, section 7. Booking for a period is an open question (section 13) |
 | Register vehicles and hubs; lifecycle with activation and deactivation; tickets with an SLA deadline assigned to a technician; operator dashboard | 4.1 | `fleet` and `maintenance`, section 8 |
-| Rules of use (maximum duration, hub capacity); business KPIs; technical metrics | 4.1 | `usage_rule`, `backoffice`, Micrometer (section 11). Restricting who may use which vehicles is an open question (section 13) |
+| Rules of use (maximum duration, hub capacity); business KPIs; technical metrics | 4.1 | `usage_rule`, `backoffice`, Micrometer and Prometheus (section 11). Restricting who may use which vehicles is an open question (section 13) |
 | Registration, authentication, role-based access | 4.1 | [ADR 0009](adr/0009-keycloak.md), [ADR 0010](adr/0010-registration-admin-api.md) |
 | Deposit and overtime in a payment sandbox | 4.1 | [ADR 0008](adr/0008-stripe-test-mode.md), section 9 |
 | Telemetry reflected in vehicle state; low battery blocks booking | 4.1 | `telemetry` and `fleet`, section 8 |
@@ -38,6 +38,7 @@ Each requirement of the assignment guidelines (v2026-11-10) that shapes the arch
 | Dependency vulnerability scanning on every build | Q3 | [ADR 0014](adr/0014-sqa-tools.md) |
 | Integration tests separate from unit tests | T3 | [ADR 0003](adr/0003-maven.md), section 11 |
 | SLOs checked by a k6 load test with thresholds | T5 | Section 11; the SLOs belong in the Product Specification report |
+| Observability: dashboards and alerts on SLOs (valued) | D6 | Prometheus and Grafana, section 11 |
 
 ## 2. Decisions
 
@@ -53,7 +54,7 @@ Each requirement of the assignment guidelines (v2026-11-10) that shapes the arch
 | 8 | Payments | Stripe test mode, confirmed server-side, WireMock in tests | [ADR 0008](adr/0008-stripe-test-mode.md) |
 | 9 | Authentication | Keycloak OIDC: SPA with Authorization Code and PKCE, backend as resource server | [ADR 0009](adr/0009-keycloak.md) |
 | 10 | Guest registration | Own form, backend validates the stay code, then Keycloak Admin API | [ADR 0010](adr/0010-registration-admin-api.md) |
-| 11 | Deployment | Docker Compose on a university VM, images in GHCR, GitHub Actions | [ADR 0011](adr/0011-deployment.md) |
+| 11 | Deployment | Staging and production Compose stacks on a university VM, images in GHCR, deploys through a self-hosted runner, promotion on iteration tags | [ADR 0011](adr/0011-deployment.md) |
 | 12 | Diagrams | draw.io stored as `.drawio.svg` | [ADR 0012](adr/0012-drawio-diagrams.md) |
 | 13 | Pricing | One base price per pass type across the hotel chain | [ADR 0013](adr/0013-chain-base-price.md) |
 | 14 | SQA tools | SonarQube Cloud (OSS plan), JaCoCo, Cucumber, Playwright, k6, Xray and per-stack dependency scanning | [ADR 0014](adr/0014-sqa-tools.md) |
@@ -70,12 +71,14 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 | Container | Technology | Responsibility |
 |---|---|---|
-| Reverse proxy and SPA | nginx, static React build | Single public origin, TLS, routes `/api/v1` and `/auth` |
+| Reverse proxy and SPA | nginx, static React build | Single public origin, TLS, routes `/api/v1`, `/auth` and `/grafana` |
 | Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server |
 | PostgreSQL | One server, databases `riaride` and `keycloak` | Durable state |
 | Keycloak | OIDC provider | Credentials, login pages, roles; realm exported to the repository |
 | Mosquitto | MQTT broker | Telemetry and commands, internal network only |
 | Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
+| Prometheus | Metrics store | Scrapes the backend's Actuator endpoint; queried by the backoffice for technical metrics |
+| Grafana | Dashboards and alerts | Versioned dashboards, SLO alert rules sent by email |
 
 Dashboards poll the REST API. A push channel is not justified by the MVP.
 
@@ -102,11 +105,11 @@ Only a module's top-level package is public. `ApplicationModules.of(...).verify(
 |---|---|---|---|
 | `VehicleTelemetryReceived` | `telemetry` | `fleet` | Updates latest vehicle state |
 | `VehicleFaultDetected` | `telemetry` | `maintenance`, `fleet`, `trips` | Opens a ticket with an SLA deadline; takes the vehicle out of service; cancels its reservation or links its trip to the ticket |
-| `VehicleUnlocked` | `telemetry` | `trips` | Confirms the trip start |
-| `TripEnded` | `trips` | `trips` | Sends `LOCK`; charges overtime through `payments` |
-| `DamageAttributed` | `maintenance` | `passes` | Withholds the deposit of the pass linked to the ticket |
+| `VehicleUnlocked` | `telemetry` | `trips` | Confirms the trip start; for a trip already `FAILED`, sends `LOCK` again |
+| `TripEnded` | `trips` | `trips` | Sends `LOCK`; charges overtime through `payments`, or takes it from the deposit if the charge fails permanently |
+| `TicketResolved` | `maintenance` | `passes` | Carries the linked pass, if any, and whether the damage was attributed to the guest. Withholds the deposit, or lets the pass close |
 
-`passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and ends, through the `passes` public API, and `passes` keeps an `in_trip` flag. A pass that expires mid-trip is closed, and its deposit released, only once that flag is cleared.
+`passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and when it is settled, through the `passes` public API, and `passes` keeps an `in_trip` flag. A trip is settled once it has ended and its overtime, if any, is paid or taken from the deposit (section 7), so the deposit cannot be refunded while an overtime charge is still pending. A pass that ends (expiry or check-out) is closed, and its deposit refunded, only when the flag is cleared **and** `maintenance` reports no open ticket linked to the pass. Until then the deposit is `HELD`. Each settled trip and each `TicketResolved` for the pass make `passes` check again.
 
 **Faults.** Three modules react to `VehicleFaultDetected`, each in its own data:
 
@@ -114,7 +117,7 @@ Only a module's top-level package is public. `ApplicationModules.of(...).verify(
 - `fleet` moves an `available` or `reserved` vehicle to `maintenance`. A vehicle `in use` keeps its status and is flagged `maintenancePending`; when the trip ends at a hub, `fleet` moves it to `maintenance` instead of `available`.
 - `trips` cancels an active reservation for the vehicle. If a trip is in progress, the trip continues, and `trips` attaches the trip and its pass to the ticket through the `maintenance` public API. The call carries the fault's `messageId`, so it works whichever listener runs first.
 
-When a technician resolves the ticket and attributes the damage to the guest, `maintenance` publishes `DamageAttributed` with the pass, and `passes` withholds the deposit. `maintenance` cannot look up the trip itself: depending on `trips` would close the cycle `trips` → `passes` → `maintenance`.
+When a technician resolves the ticket, `maintenance` publishes `TicketResolved` with the pass and whether the damage was attributed to the guest. If it was, `passes` withholds the deposit; if not, the pass closes and the deposit is refunded once no other ticket is open. Holding the refund while a ticket is open means a technician who attributes damage days later still finds the deposit there. `maintenance` cannot look up the trip itself: depending on `trips` would close the cycle `trips` → `passes` → `maintenance`.
 
 ## 6. Domain and data model
 
@@ -134,6 +137,7 @@ Each table belongs to one module, and code in another module never accesses it d
 |---|---|
 | One vehicle in use per pass | Partial unique index on `trip (pass_id)` for active statuses |
 | One active reservation per vehicle | Partial unique index on `reservation (vehicle_id)` for active statuses |
+| One active reservation per pass | Partial unique index on `reservation (pass_id)` for active statuses |
 | Trip ends only at a hub with a free slot | Hub row locked, occupancy checked, trip ended, all in one transaction |
 | No duplicate charge | Unique `payment.idempotency_key`, also sent to Stripe |
 | No duplicate telemetry | Unique `telemetry_event.message_id` |
@@ -153,7 +157,7 @@ The stay-code rule stays in `accounts`, covered by our tests. If the local inser
 
 ![Book and start](diagrams/06-seq-book-start-trip.drawio.svg)
 
-Starting immediately creates a reservation first, so there is one code path. A scheduled job expires reservations; the database condition makes it safe to rerun. A trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip is `FAILED`, the pass stays inactive, and the reservation remains until it expires.
+Starting immediately creates a reservation first, so there is one code path. A scheduled job expires reservations; the database condition makes it safe to rerun. A trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip is `FAILED`, `trips` sends `LOCK` in case the vehicle did unlock, the pass stays inactive, and the reservation remains until it expires. If a `VehicleUnlocked` arrives later for that `FAILED` trip, `trips` sends `LOCK` again, so a vehicle is never left unlocked with no trip recorded. Because a pass holds at most one active reservation, the guest can retry on the same reservation or cancel it.
 
 ### Ending a trip
 
@@ -161,7 +165,9 @@ Starting immediately creates a reservation first, so there is one code path. A s
 
 A hub without a free slot rejects the end of the trip. The response lists the nearest hubs that have a free slot, ordered by straight-line distance from the hub's `position`, and the trip continues.
 
-Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip. The event registry retries it.
+Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip.
+
+The `PaymentGateway` port reports a failed charge as transient (network error, Stripe 5xx, rate limit) or permanent (card declined, `authentication_required`). Spring Modulith keeps a failed publication as incomplete but does not retry it on its own, so a scheduled job in `trips` resubmits incomplete overtime publications with backoff, up to a maximum number of attempts. A permanent failure, or the last failed attempt, is final: the `payment` row is `FAILED`, `trips` asks `passes` to take the overtime from the deposit, which is still held because the trip is not settled yet, and the case appears on the operator dashboard. Only then is the trip settled.
 
 ## 8. Vehicle lifecycle
 
@@ -191,7 +197,7 @@ Battery below 20 % blocks booking without changing the status. A fault during a 
 }
 ```
 
-The consumer ignores a repeated `messageId` and any message older than the vehicle's last state. Replacing the simulator means replacing the adapter in `telemetry`, with no change to the ports or to other modules.
+The consumer ignores a repeated `messageId` on both topics. Only telemetry is also checked for staleness: a telemetry message older than the vehicle's last state is ignored. Fault events are never dropped as stale, because MQTT does not order messages across topics, so a fault can arrive after a later telemetry message. Replacing the simulator means replacing the adapter in `telemetry`, with no change to the ports or to other modules.
 
 **Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
 
@@ -200,7 +206,7 @@ The consumer ignores a repeated `messageId` and any message older than the vehic
 ## 10. Security
 
 - The SPA uses Authorization Code with PKCE through keycloak-js and keeps tokens in memory. The backend validates JWTs against Keycloak's JWKS and authorizes by role.
-- The only public port is 443. Mosquitto, PostgreSQL and the backend are reachable only inside the Compose network, and Mosquitto requires credentials.
+- The only public port is 443. Mosquitto, PostgreSQL, Prometheus and the backend are reachable only inside the Compose network, and Mosquitto requires credentials. Grafana is reached only through nginx, with its own login.
 - The Stripe test key, Keycloak client secret, and database and MQTT credentials live in GitHub Secrets and a host-only `.env` file.
 - The password in the registration request is never stored by the backend or written to logs.
 - Seed data is synthetic.
@@ -216,13 +222,13 @@ The consumer ignores a repeated `messageId` and any message older than the vehic
 | E2E | Playwright against the Compose stack, not on every build |
 | Load | k6 on the book-and-start flow, against the SLOs in the Product Specification report |
 
-Technical metrics come from Micrometer inside the backend, with no extra monitoring container. Telemetry lag is `received_at` minus `emitted_at`.
+Technical metrics follow the QA Manual (section 4.3). Spring Boot Actuator and Micrometer expose them in Prometheus format: API latency and error rate per endpoint, JVM and connection pool health, telemetry lag (`received_at` minus `emitted_at`), active trips and bookings. Prometheus scrapes them, and the `backoffice` module reads the hotel manager's technical metrics (API latency, error rate, telemetry lag) from Prometheus' query API, so the dashboard and the alerts use the same numbers. Grafana holds the dashboards, versioned in `infra/` and provisioned on start, and alert rules on the SLOs, sent by email. nginx serves Grafana under `/grafana`, behind Grafana's own login, so the observability dashboard can be linked from the repository README.
 
 ## 12. Deployment and delivery
 
 ![Deployment](diagrams/09-deployment.drawio.svg)
 
-A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and updates the VM with `docker compose pull` and `up`. Migrations run when the backend starts. Representative data comes from a seed profile.
+A merge to `main` builds and tests in GitHub Actions, scans the images with Trivy and pushes them to GHCR. A self-hosted runner on the VM deploys them to the staging stack with `docker compose pull` and `up`. An iteration tag promotes the same images to the production stack after a manual approval ([ADR 0011](adr/0011-deployment.md)). Migrations run when the backend starts. Representative data comes from a seed profile.
 
 Planned repository layout:
 
@@ -230,7 +236,7 @@ Planned repository layout:
 backend/    Maven project, one package per module
 frontend/   React application
 simulator/  Python service
-infra/      compose.yaml, nginx, Mosquitto configuration, Keycloak realm export
+infra/      compose.yaml, nginx, Mosquitto configuration, Keycloak realm export, Prometheus and Grafana provisioning
 docs/       Reports and this proposal
 ```
 
@@ -238,11 +244,11 @@ docs/       Reports and this proposal
 
 | Item | Impact | Owner |
 |---|---|---|
-| The guidelines ask to "book a vehicle for a period", but a reservation only holds a vehicle for 15 min | Future bookings would need `startsAt` and `endsAt` on `Reservation` and an overlap check | Product Owner |
+| The guidelines ask to "book a vehicle for a period", but a reservation only holds a vehicle for 15 min | Future bookings would need `startsAt` and `endsAt` on `Reservation` and an overlap check per vehicle and per pass, replacing the one-active-reservation-per-pass index | Product Owner |
 | The guidelines list "who may use which vehicles" as a rule of use, which is not modelled | Could be allowed vehicle types per pass type, kept in `usage_rule` | Product Owner |
 | The guidelines list end users reporting problems, which has no flow | Could be a guest-sourced ticket opened through the `maintenance` public API | Product Owner |
-| University VM availability, and whether it is reachable only from the internal network | Internal-only access requires a self-hosted runner; public reachability for the teaching staff must be confirmed | DevOps Master |
-| Memory: the full stack is estimated at about 4 GB | Keycloak and the JVM may need limits | DevOps Master |
+| University VM availability, and public reachability for the teaching staff | Deploys use a self-hosted runner, so inbound access from GitHub is not needed; teaching staff access must still be confirmed | DevOps Master |
+| Memory: each stack, including Prometheus and Grafana, is estimated at about 4 GB, and staging and production share the VM | Keycloak and the JVM may need limits; if both stacks do not fit, monitoring is shared and staging stops between uses | DevOps Master |
 | Overtime grace period: the comment in the team document was resolved without changing the rule | Configured as 0 until confirmed | Product Owner |
 | 3-day pass: assumed to last 72 h after activation | Rule to confirm | Product Owner |
 | Whether 1-day and 3-day passes also end at check-out | Affects the overtime limit | Product Owner |
