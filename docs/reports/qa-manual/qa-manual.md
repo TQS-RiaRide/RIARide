@@ -292,7 +292,7 @@ Most tests are fast developer tests; fewer, slower tests cover acceptance, the U
 | Test kind | Tools | Runs |
 |---|---|---|
 | Unit | JUnit 5, Mockito, AssertJ; Vitest with React Testing Library; pytest | Every push |
-| Integration (API, persistence, adapters) | Spring Boot Test, Testcontainers, REST Assured, stripe-mock | Every push, after unit tests |
+| Integration (API, persistence, adapters) | Spring Boot Test, Testcontainers, REST Assured, WireMock | Every push, after unit tests |
 | Acceptance (BDD) | Cucumber JVM with REST Assured | Every push, with integration tests |
 | Contract (simulator messages) | JSON Schema, checked in Java and Python | Every push |
 | End-to-end and accessibility | Playwright, axe | Nightly on `main`, on demand, and before each tag |
@@ -321,7 +321,7 @@ Failing tests fail the job, and the failed job blocks the merge through the requ
 - **REST API:** controllers with the full Spring context and REST Assured, including authorization per role and error responses.
 - **Simulator adapter:** against Mosquitto in Testcontainers: telemetry messages update vehicle state; commands (lock, unlock) are published correctly.
 - **Simulator contract:** the MQTT message formats are defined as JSON Schemas in the repository. The simulator's tests validate what it emits, and the backend's tests validate what the adapter accepts. A replacement simulator only has to meet the same schemas.
-- **Payment adapter:** against [stripe-mock](https://github.com/stripe/stripe-mock) in Testcontainers, so CI needs no network or Stripe key. Webhook handling is tested with signed sample events. Stripe test mode is used in staging and end-to-end tests.
+- **Payment adapter:** against [WireMock](https://wiremock.org/) stubs of the Stripe API, so CI needs no network or Stripe key ([ADR 0008](../../architecture/adr/0008-stripe-test-mode.md)). The stubs cover success and the failures the adapter must classify: transient (network error, 5xx, rate limit) and permanent (card declined, `authentication_required`). stripe-mock was not chosen because it cannot return these failures. The MVP uses no webhooks. Stripe test mode is used in staging and end-to-end tests, which also catch stubs that drift from the real API.
 
 ### 5.3 Acceptance testing
 

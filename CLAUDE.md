@@ -93,7 +93,7 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 |-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | BDD         | Acceptance criteria of core stories in Gherkin, written at grooming and approved by the Product Owner; Cucumber JVM with REST Assured against the API                |
 | Unit        | All business logic, with boundary values; JUnit 5, Mockito, AssertJ / Vitest, React Testing Library / pytest. Business rules are developed test first (TDD)            |
-| Integration | `*IT.java`, run by Failsafe separately from Surefire unit tests. Testcontainers for PostgreSQL and Mosquitto; stripe-mock for payments; never an in-memory database     |
+| Integration | `*IT.java`, run by Failsafe separately from Surefire unit tests. Testcontainers for PostgreSQL and Mosquitto; WireMock for payments; never an in-memory database         |
 | Contract    | MQTT message formats are JSON Schemas in the repo, validated by the simulator's tests and the backend adapter's tests                                                 |
 | E2E         | Playwright (TypeScript) with axe accessibility checks, against the Compose stack; nightly on `main`, on demand and before tags, **not** on every build                 |
 | Load        | k6 on book-and-start: p95 < 500 ms and errors < 1 % at 50 virtual users; stress and soak before the final tag                                                         |
