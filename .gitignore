@@ -28,3 +28,4 @@ test-results/
 
 # Course assignment brief (not part of the submission)
 /TQS26-*.docx
+*.tsbuildinfo
