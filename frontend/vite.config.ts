@@ -1,5 +1,5 @@
-/// <reference types="vitest" />
-import { defineConfig, loadEnv } from 'vite';
+import { loadEnv } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
-        // Same mapping as nginx.conf: /api/v1/health -> Spring Boot Actuator
-        '/api/v1/health': {
+        // Same mapping as nginx.conf: exact match on /api/v1/health -> Actuator
+        '^/api/v1/health$': {
           target: backendUrl,
           rewrite: () => '/actuator/health',
         },

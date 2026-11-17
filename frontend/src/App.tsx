@@ -7,7 +7,15 @@ export default function App() {
   const [health, setHealth] = useState<HealthStatus | 'checking'>('checking');
 
   useEffect(() => {
-    void fetchHealth().then(setHealth);
+    // Ignore a result that arrives after unmount (or after StrictMode's
+    // extra mount and unmount in development)
+    let ignore = false;
+    void fetchHealth().then((status) => {
+      if (!ignore) setHealth(status);
+    });
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const toggleLanguage = () => {
