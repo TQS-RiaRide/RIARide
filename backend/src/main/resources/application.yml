@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: riaride-backend
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health # only health; prometheus comes later
+  endpoint:
+    health:
+      show-details: never # do not expose internal details publicly
