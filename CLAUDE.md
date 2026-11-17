@@ -19,6 +19,7 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | All tests and JaCoCo report | `./mvnw verify` |
 | Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
 | Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
+| Acceptance tests (Cucumber, Failsafe; needs Docker) | `./mvnw verify -DskipUnitTests=true -Dit.test=CucumberIT` (reports in `target/cucumber-reports/`; `@wip` scenarios are excluded) |
 | Run the app | `./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
 | Docker image | `docker build -t riaride-backend .` |
 
