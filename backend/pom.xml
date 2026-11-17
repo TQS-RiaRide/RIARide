@@ -23,6 +23,7 @@
 		<cucumber.version>8.1.0</cucumber.version>
 		<rest-assured.version>6.3.0</rest-assured.version>
 		<xray-junit-extensions.version>1.1.0</xray-junit-extensions.version>
+		<testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
 		<!-- Set to true to run only integration tests: ./mvnw verify -DskipUnitTests=true -->
 		<skipUnitTests>false</skipUnitTests>
 	</properties>
@@ -120,6 +121,13 @@
 			<artifactId>testcontainers-postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Keycloak in Testcontainers for the acceptance tests: real tokens from the realm in infra/keycloak. -->
+		<dependency>
+			<groupId>com.github.dasniko</groupId>
+			<artifactId>testcontainers-keycloak</artifactId>
+			<version>${testcontainers-keycloak.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
@@ -142,6 +150,19 @@
 	</dependencyManagement>
 
 	<build>
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<!-- The Keycloak realm used in the Compose stack, imported as-is by the acceptance tests. -->
+			<testResource>
+				<directory>${project.basedir}/../infra/keycloak</directory>
+				<includes>
+					<include>riaride-realm.json</include>
+				</includes>
+				<targetPath>keycloak</targetPath>
+			</testResource>
+		</testResources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
