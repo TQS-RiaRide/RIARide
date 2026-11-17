@@ -11,6 +11,14 @@ spring:
       ddl-auto: validate # Flyway owns the schema
   flyway:
     locations: classpath:db/migration
+  mvc:
+    problemdetails:
+      enabled: true # RFC 9457 problem details for Spring MVC errors
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/riaride}
 
 management:
   endpoints:
