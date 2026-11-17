@@ -4,6 +4,7 @@ import com.riaride.accounts.internal.application.HotelAccessDeniedException;
 import com.riaride.accounts.internal.application.HotelNotFoundException;
 import com.riaride.accounts.internal.application.StayCodeUnavailableException;
 import com.riaride.accounts.internal.domain.InvalidStayDatesException;
+import com.riaride.accounts.internal.domain.StayAlreadyEndedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,11 @@ class StayProblemHandler {
 	@ExceptionHandler(InvalidStayDatesException.class)
 	ProblemDetail invalidStayDates(InvalidStayDatesException exception) {
 		return problem(HttpStatus.UNPROCESSABLE_CONTENT, "Invalid stay dates", exception.getMessage());
+	}
+
+	@ExceptionHandler(StayAlreadyEndedException.class)
+	ProblemDetail stayAlreadyEnded(StayAlreadyEndedException exception) {
+		return problem(HttpStatus.UNPROCESSABLE_CONTENT, "Stay already ended", exception.getMessage());
 	}
 
 	@ExceptionHandler(StayCodeUnavailableException.class)

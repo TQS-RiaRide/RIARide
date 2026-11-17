@@ -5,6 +5,8 @@ import com.riaride.accounts.internal.domain.StayCode;
 import com.riaride.accounts.internal.domain.StayCodeGenerator;
 import com.riaride.accounts.internal.persistence.HotelRepository;
 import com.riaride.accounts.internal.persistence.StayRepository;
+import java.time.Clock;
+import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +19,14 @@ public class RegisterStayService {
 	private final HotelRepository hotels;
 	private final StayRepository stays;
 	private final StayCodeGenerator codes;
+	private final Clock clock;
 
-	public RegisterStayService(HotelRepository hotels, StayRepository stays, StayCodeGenerator codes) {
+	public RegisterStayService(HotelRepository hotels, StayRepository stays, StayCodeGenerator codes,
+		Clock clock) {
 		this.hotels = hotels;
 		this.stays = stays;
 		this.codes = codes;
+		this.clock = clock;
 	}
 
 	@Transactional
@@ -33,7 +38,7 @@ public class RegisterStayService {
 			throw new HotelNotFoundException(command.hotelId());
 		}
 		var stay = Stay.register(command.hotelId(), command.guestName(), freeCode(), command.checkIn(),
-			command.checkOut());
+			command.checkOut(), LocalDate.now(clock));
 		return stays.save(stay);
 	}
 

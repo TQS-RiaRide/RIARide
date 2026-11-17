@@ -59,10 +59,15 @@ public class Stay implements Persistable<UUID> {
 		this.isNew = true;
 	}
 
+	// today is the current date at the hotel. A stay may be registered late, after check-in,
+	// but not once it has ended; on the check-out day it is still active.
 	public static Stay register(UUID hotelId, String guestName, StayCode stayCode, LocalDate checkIn,
-		LocalDate checkOut) {
+		LocalDate checkOut, LocalDate today) {
 		if (!checkOut.isAfter(checkIn)) {
 			throw new InvalidStayDatesException();
+		}
+		if (today.isAfter(checkOut)) {
+			throw new StayAlreadyEndedException();
 		}
 		return new Stay(hotelId, guestName, stayCode, checkIn, checkOut);
 	}
