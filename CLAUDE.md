@@ -15,15 +15,30 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | Task | Command |
 |---|---|
 | Unit tests (Surefire, `*Test.java` / `*Tests.java`) | `./mvnw test` |
-| Integration tests only (Failsafe, `*IT.java`) | `./mvnw verify -DskipUnitTests=true` |
+| Integration tests only (Failsafe, `*IT.java`; need Docker for PostgreSQL and Keycloak containers) | `./mvnw verify -DskipUnitTests=true` |
 | All tests and JaCoCo report | `./mvnw verify` |
 | Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
 | Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
 | Acceptance tests (Cucumber, Failsafe; needs Docker) | `./mvnw verify -DskipUnitTests=true -Dit.test=CucumberIT` (reports in `target/cucumber-reports/`; `@wip` scenarios are excluded) |
-| Run the app | `./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
+| Run the app | Start `infra/compose.yaml` first (below), then `DB_PASSWORD=<POSTGRES_PASSWORD from infra/.env> ./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
 | Docker image | `docker build -t riaride-backend .` |
 
 To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds Surefire's `skipTests` to `skipUnitTests`, so `-DskipTests` does not skip them.
+
+The backend reads `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `KEYCLOAK_ISSUER_URI`; the defaults point at the local stack. Integration tests never use these: they start their own containers.
+
+### Local stack (PostgreSQL and Keycloak)
+
+Run from the repository root; details in [`infra/README.md`](infra/README.md).
+
+| Task | Command |
+|---|---|
+| First time | `cp infra/.env.example infra/.env`, then set every password |
+| Start | `docker compose -f infra/compose.yaml up -d` |
+| Create synthetic users (idempotent) | `infra/keycloak/create-dev-users.sh` |
+| Reset (re-imports the realm) | `docker compose -f infra/compose.yaml down -v` |
+
+The Keycloak realm is `infra/keycloak/riaride-realm.json`; the Cucumber tests import the same file. Hotel managers carry the hotel they manage in the `hotel_id` token claim.
 
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
