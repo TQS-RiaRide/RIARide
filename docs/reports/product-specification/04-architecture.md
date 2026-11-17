@@ -42,7 +42,7 @@ The backend is a modular monolith ([ADR 0001](../../architecture/adr/0001-modula
 
 ![Backend components](../../architecture/diagrams/11-backend-components.drawio.svg)
 
-Inside the backend, every module follows the same structure, shown in full for `trips`. Only the module's top-level package (its API facade, events and DTOs) is public. Under `internal`, REST controllers validate input and map DTOs, application services run the use cases in transactions and publish events, domain classes hold the business rules with time from an injected `Clock`, Spring Data repositories reach the module's own tables, listeners handle other modules' events after commit, and scheduled jobs expire reservations and retry overtime charges. Only the `keycloak`, `mqtt` and `stripe` adapters know the external systems. Spring Security, the RFC 9457 error handler, Actuator and the event publication registry are shared by all modules.
+Requests enter through the REST controllers, protected by Spring Security, and reach the business modules. Modules reach PostgreSQL through JPA repositories, and Keycloak, Mosquitto and Stripe only through their adapters. Inside, every module has the same layers: controller, service, domain and repository; only its top-level package is public.
 
 ## 4.3 Module interactions
 

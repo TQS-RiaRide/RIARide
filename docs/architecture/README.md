@@ -114,36 +114,16 @@ Only a module's top-level package is public. `ApplicationModules.of(...).verify(
 
 ![Backend components](diagrams/11-backend-components.drawio.svg)
 
-Every module has the same internal structure; the diagram shows `trips` in full and the others collapsed.
+Requests enter through the REST controllers, protected by Spring Security, and reach the business modules. Modules reach the outside only through the JPA repositories and the three adapters (Keycloak, MQTT, Stripe). Inside, every module has the same four layers:
 
-```text
-com.riaride
-├── RiaRideApplication
-├── config/                      Clock bean, Jackson, OpenAPI, security configuration
-├── accounts/                    AccountsApi, events, DTOs (public)
-│   └── internal/{web,application,domain,persistence,keycloak}
-├── fleet/                       FleetApi, events, DTOs (public)
-│   └── internal/{web,application,domain,persistence,events}
-├── trips/                       TripsApi, TripEnded, DTOs (public)
-│   └── internal/{web,application,domain,persistence,events,jobs}
-├── passes/ maintenance/ backoffice/   same layout
-├── telemetry/                   TelemetrySource, VehicleCommandGateway ports, events (public)
-│   └── internal/{application,persistence,mqtt}
-└── payments/                    PaymentGateway port, DTOs (public)
-    └── internal/{application,persistence,stripe}
-```
-
-| Component | Package | Responsibility |
+| Layer | Package | Responsibility |
 |---|---|---|
-| REST controllers | `<module>.internal.web` | Map `/api/v1` requests to the module's application service; Bean Validation; DTOs only, no business rules |
-| Public API | `<module>` (top level) | The facade, events and DTOs other modules may use; everything else is internal |
-| Application services | `<module>.internal.application` | Use cases and transactions; publish events |
-| Domain model | `<module>.internal.domain` | Entities and business rules (overtime, pass validity, lifecycle), with time from an injected `Clock` |
-| Repositories | `<module>.internal.persistence` | Spring Data JPA over the module's own tables |
-| Event listeners | `<module>.internal.events` | `@ApplicationModuleListener`s, run after commit |
-| Scheduled jobs | `<module>.internal.jobs` | Reservation expiry, trip start timeout, overtime retry |
-| Adapters | `accounts.internal.keycloak`, `telemetry.internal.mqtt`, `payments.internal.stripe` | The only classes that know Keycloak, MQTT or Stripe; they implement the module's port |
-| Cross-cutting | Spring Security, `@RestControllerAdvice`, Actuator, event publication registry | JWT validation and roles, RFC 9457 errors, metrics, durable events |
+| Controller | `<module>.internal.web` | Receives the request, validates input, maps DTOs |
+| Service | `<module>.internal.application` | Runs the use case in a transaction, publishes events |
+| Domain | `<module>.internal.domain` | Business rules, with time from an injected `Clock` |
+| Repository | `<module>.internal.persistence` | Spring Data JPA over the module's own tables |
+
+Only the module's top-level package (its API, events and DTOs) is public. Event listeners and scheduled jobs sit in `internal` too.
 
 **Communication rule.** A module calls another module's public API for queries and for commands whose result it needs now. A module publishes an event for side effects elsewhere, handled by an `@ApplicationModuleListener` after commit. Spring Modulith stores each publication in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge.
 
