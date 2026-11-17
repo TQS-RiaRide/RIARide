@@ -1,6 +1,6 @@
 # 2. Product concept and requirements
 
-> Draft for section 2 of the Product Specification report (RIA-16).
+> Draft for section 2.1 of the Product Specification report (RIA-16).
 
 ## 2.1 Vision statement
 
@@ -10,32 +10,4 @@ RiaRide connects the three parties. At check-in, the hotel registers the stay an
 
 Unlike public bike-sharing schemes, RiaRide is tied to a hotel stay: only guests with an active stay can ride, the stay pass follows the stay dates, and the hotel group, not the city, sets the rules. The concept was developed by the team; the Product Owner represents the client and operator perspectives.
 
-## 2.2 Personas and scenarios
-
-**Clara Weber, the guest.** Clara, 34, is a graphic designer from Munich on a five-night holiday at Marés Praia with her partner. She speaks English, not Portuguese, and does everything on her phone. She wants to see the salt pans and the old town at her own pace and dislikes queues and paperwork.
-
-*Scenario 1: a day along the coast.* At check-in, Clara receives her stay code. That evening she creates an account in English with her email, a password and the code, and buys a stay pass; the price and the deposit are charged to her card. The next morning she opens the app, sees two e-bikes with enough battery at the Marés Praia hub and books one. When she unlocks it, her first trip starts and the pass is activated. She follows the suggested route to Salinas and ends the trip at the Salinas hub, which has free slots. Her dashboard shows the trip and no extra charges.
-
-*Scenario 2: a long lunch.* Clara stops for lunch in the old town and keeps the bike for 3 h 20 min. When she ends the trip, the app shows an overtime charge for two 15-minute blocks, taken from the card she used to buy the pass.
-
-*Scenario 3: a full hub.* Back at Marés Praia, the hub has no free slot. The app refuses to end the trip, lists the nearest hubs with a free slot, and the trip continues until she parks at one of them.
-
-**Rui Tavares, the operator technician.** Rui, 41, works for RodaLeve Fleet Services and looks after the Vila Ria fleet. He starts each shift by checking which bikes need attention and moves vehicles between hubs when one fills up.
-
-*Scenario 4: a fault during a trip.* While a guest is riding bike VR-017, its telemetry reports a brake fault. The trip continues, a maintenance ticket with an SLA deadline is opened, and the bike is flagged so that it goes to maintenance when the trip ends. Rui sees the ticket on his dashboard, assigns it to himself, repairs the brake and resolves the ticket. Because the damage was caused by wear, not by the guest, the deposit is refunded normally, and the bike becomes available again.
-
-**Helena Marques, the hotel group manager.** Helena, 52, is the guest-experience manager of Grupo Hoteleiro Marés. She decides what the group offers and reports monthly to the board.
-
-*Scenario 5: preparing the summer season.* Helena opens the backoffice, raises the capacity of the Marés Praia hub, updates the base prices of the three pass types for July, and publishes a sunset route from Marés Centro along the coast and back. At the end of the month she checks utilization, trips per day, and how often RodaLeve met the repair SLA.
-
-## 2.3 Project roadmap and priorities
-
-The plan below follows the iteration focus of the assignment and the backend modules of the [architecture proposal](../../architecture/README.md#5-backend-modules). It will be replaced by the roadmap view from Jira once the epics are dated.
-
-| Iteration | Main deliverables |
-|---|---|
-| I1 (10 Nov) | Concept, personas and first stories; architecture proposal and ADRs; walking skeleton built by CI; this report as a draft |
-| I2 (17 Nov) | `accounts`: stays, stay codes and guest registration with Keycloak. `fleet` and `telemetry`: vehicles, hubs and the minimal simulator over MQTT. Blocking quality gate, Xray, SLOs, QA Manual v1 |
-| I3 (24 Nov) | `passes` and `payments`: buy a pass, deposit in Stripe test mode. `trips`: reserve, start and end a trip. Continuous delivery to the VM; integration tests |
-| I4 (1 Dec) | `maintenance`: tickets with SLA deadlines and technician assignment. `backoffice`: usage rules, hub capacity, KPIs. Overtime charges. k6 load test and end-to-end tests |
-| I5 (8 Dec) | Suggested routes, stabilization, final reports and AI analysis, tag `final_v1` |
+The personas and scenarios are in [section 2.2](02-personas-and-scenarios.md), and the user stories by iteration in [section 2.3](02-roadmap-and-priorities.md).
