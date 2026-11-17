@@ -1,0 +1,83 @@
+name: Xray import
+
+# Sends the test results of every CI run on main to Xray Cloud, so each
+# story's requirement coverage reflects the latest build (QA Manual, 2.3).
+# Each run creates at most two Test Executions in the iteration's Test Plan:
+# one for the JUnit XML reports and one for the Cucumber JSON reports. Xray
+# imports each format through its own endpoint, so they cannot share one.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  import:
+    name: Import results into Xray
+    # Import failed runs too: a failing test must show as failing in Xray.
+    # Skip cancelled or skipped runs, which have no complete reports.
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
+    runs-on: ubuntu-latest
+    steps:
+      # An unset secret or variable expands to an empty string, which would
+      # import without a Test Plan or fail with an unclear Xray error.
+      - name: Check Xray configuration
+        env:
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          XRAY_TEST_PLAN_KEY: ${{ vars.XRAY_TEST_PLAN_KEY }}
+        run: |
+          missing=""
+          [ -n "$XRAY_CLIENT_ID" ] || missing="$missing XRAY_CLIENT_ID (secret)"
+          [ -n "$XRAY_CLIENT_SECRET" ] || missing="$missing XRAY_CLIENT_SECRET (secret)"
+          [ -n "$XRAY_TEST_PLAN_KEY" ] || missing="$missing XRAY_TEST_PLAN_KEY (variable)"
+          if [ -n "$missing" ]; then
+            echo "::error::Xray import is not configured. Missing:$missing. See QA Manual, section 2.3."
+            exit 1
+          fi
+
+      # With a pattern, no matching artifact is not an error: nothing is
+      # downloaded and the import steps below are skipped.
+      - name: Download test reports from the CI run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: "*-test-reports"
+          path: reports
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Import JUnit results
+        if: hashFiles('reports/**/TEST-*.xml') != ''
+        uses: mikepenz/xray-action@f38a2e6b5b6d20a48597be7f5e5789186cda4af6 # v3.3.1
+        with:
+          username: ${{ secrets.XRAY_CLIENT_ID }}
+          password: ${{ secrets.XRAY_CLIENT_SECRET }}
+          xrayCloud: "true"
+          testFormat: junit
+          testPaths: "reports/**/TEST-*.xml"
+          combineInSingleTestExec: "true"
+          projectKey: RIA
+          testPlanKey: ${{ vars.XRAY_TEST_PLAN_KEY }}
+          # The action ignores import errors by default; fail the job instead.
+          failOnImportError: "true"
+
+      - name: Import Cucumber results
+        if: hashFiles('reports/**/cucumber*.json') != ''
+        uses: mikepenz/xray-action@f38a2e6b5b6d20a48597be7f5e5789186cda4af6 # v3.3.1
+        with:
+          username: ${{ secrets.XRAY_CLIENT_ID }}
+          password: ${{ secrets.XRAY_CLIENT_SECRET }}
+          xrayCloud: "true"
+          testFormat: cucumber
+          testPaths: "reports/**/cucumber*.json"
+          combineInSingleTestExec: "true"
+          projectKey: RIA
+          testPlanKey: ${{ vars.XRAY_TEST_PLAN_KEY }}
+          failOnImportError: "true"
