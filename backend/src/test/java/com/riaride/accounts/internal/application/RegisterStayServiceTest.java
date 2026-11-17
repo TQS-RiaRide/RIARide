@@ -11,12 +11,16 @@ import static org.mockito.Mockito.when;
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.accounts.internal.domain.InvalidStayDatesException;
 import com.riaride.accounts.internal.domain.Stay;
+import com.riaride.accounts.internal.domain.StayAlreadyEndedException;
 import com.riaride.accounts.internal.domain.StayCode;
 import com.riaride.accounts.internal.domain.StayCodeGenerator;
 import com.riaride.accounts.internal.domain.StayStatus;
 import com.riaride.accounts.internal.persistence.HotelRepository;
 import com.riaride.accounts.internal.persistence.StayRepository;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +36,8 @@ class RegisterStayServiceTest {
 	private static final UUID MARES_PRAIA = UUID.fromString("00000000-0000-0000-0000-000000000002");
 	private static final StayCode FIRST_CODE = new StayCode("K7M3Q9TX");
 	private static final StayCode SECOND_CODE = new StayCode("P4R8W2NZ");
+	// 30 November 2026, 10:00 in Vila Ria.
+	private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-30T10:00:00Z"), ZoneId.of("Europe/Lisbon"));
 
 	@Mock
 	private HotelRepository hotels;
@@ -46,7 +52,7 @@ class RegisterStayServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new RegisterStayService(hotels, stays, codes);
+		service = new RegisterStayService(hotels, stays, codes, CLOCK);
 	}
 
 	private static RegisterStayCommand stayAt(UUID hotelId) {
@@ -142,6 +148,18 @@ class RegisterStayServiceTest {
 
 		assertThatThrownBy(() -> service.register(command, manager)).isInstanceOf(StayCodeUnavailableException.class);
 		verify(codes, times(5)).next();
+		verify(stays, never()).save(any());
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldRefuseStayThatEndedBeforeTodayInVilaRia() {
+		when(hotels.existsById(MARES_PRAIA)).thenReturn(true);
+		when(codes.next()).thenReturn(FIRST_CODE);
+		var command = new RegisterStayCommand(MARES_PRAIA, "Rita Almeida", LocalDate.of(2026, 11, 25), LocalDate.of(2026, 11, 29));
+		var manager = StayRegistrar.managerOf(MARES_PRAIA);
+
+		assertThatThrownBy(() -> service.register(command, manager)).isInstanceOf(StayAlreadyEndedException.class);
 		verify(stays, never()).save(any());
 	}
 

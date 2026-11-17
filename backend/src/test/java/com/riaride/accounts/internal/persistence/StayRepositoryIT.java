@@ -26,6 +26,7 @@ class StayRepositoryIT {
 	private static final UUID MARES_PRAIA = UUID.fromString("00000000-0000-0000-0000-000000000002");
 	private static final LocalDate CHECK_IN = LocalDate.of(2026, 12, 1);
 	private static final LocalDate CHECK_OUT = LocalDate.of(2026, 12, 5);
+	private static final LocalDate TODAY = LocalDate.of(2026, 11, 30);
 
 	@Autowired
 	private StayRepository stays;
@@ -48,7 +49,7 @@ class StayRepositoryIT {
 	@Test
 	void shouldPersistStayAndFindItsCode() {
 		var code = new StayCode("K7M3Q9TX");
-		var stay = Stay.register(MARES_PRAIA, "Rita Almeida", code, CHECK_IN, CHECK_OUT);
+		var stay = Stay.register(MARES_PRAIA, "Rita Almeida", code, CHECK_IN, CHECK_OUT, TODAY);
 
 		stays.saveAndFlush(stay);
 
@@ -72,8 +73,8 @@ class StayRepositoryIT {
 	@Test
 	void shouldRejectSecondStayWithSameCode() {
 		var code = new StayCode("P4R8W2NZ");
-		stays.saveAndFlush(Stay.register(MARES_PRAIA, "Rita Almeida", code, CHECK_IN, CHECK_OUT));
-		var duplicate = Stay.register(MARES_PRAIA, "Tomás Ferreira", code, CHECK_IN, CHECK_OUT);
+		stays.saveAndFlush(Stay.register(MARES_PRAIA, "Rita Almeida", code, CHECK_IN, CHECK_OUT, TODAY));
+		var duplicate = Stay.register(MARES_PRAIA, "Tomás Ferreira", code, CHECK_IN, CHECK_OUT, TODAY);
 
 		assertThatThrownBy(() -> stays.saveAndFlush(duplicate)).isInstanceOf(DataIntegrityViolationException.class);
 	}
@@ -82,7 +83,7 @@ class StayRepositoryIT {
 	@Test
 	void shouldRejectStayWithUnknownHotel() {
 		var unknownHotel = UUID.fromString("00000000-0000-0000-0000-0000000000ff");
-		var stay = Stay.register(unknownHotel, "Rita Almeida", new StayCode("H5J6K7L8"), CHECK_IN, CHECK_OUT);
+		var stay = Stay.register(unknownHotel, "Rita Almeida", new StayCode("H5J6K7L8"), CHECK_IN, CHECK_OUT, TODAY);
 
 		assertThatThrownBy(() -> stays.saveAndFlush(stay)).isInstanceOf(DataIntegrityViolationException.class);
 	}
