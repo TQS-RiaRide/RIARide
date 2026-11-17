@@ -1,5 +1,6 @@
 package com.riaride.acceptance;
 
+import com.riaride.FixedClockConfiguration;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import io.cucumber.java.Before;
 import io.cucumber.spring.CucumberContextConfiguration;
@@ -7,6 +8,7 @@ import io.restassured.RestAssured;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -15,9 +17,11 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 // application on a random port, backed by PostgreSQL in Testcontainers
 // (never an in-memory database) and by Keycloak with the realm from
 // infra/keycloak, so tokens are real and validated against its JWKS.
-// The containers start once per JVM.
+// The containers start once per JVM. Today is fixed (FixedClockConfiguration),
+// so date rules do not depend on when the build runs.
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@Import(FixedClockConfiguration.class)
 public class CucumberSpringConfiguration {
 
 	static final String REALM = "riaride";

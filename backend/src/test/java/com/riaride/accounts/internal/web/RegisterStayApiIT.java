@@ -1,7 +1,9 @@
 package com.riaride.accounts.internal.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -10,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import com.riaride.FixedClockConfiguration;
 import com.riaride.TestcontainersConfiguration;
 import java.time.Instant;
 import java.util.List;
@@ -30,13 +33,14 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 // Integration test (Failsafe): POST /api/v1/stays through the real security filter chain,
 // with PostgreSQL in Testcontainers. Only the JwtDecoder is replaced, so the tests control
 // which roles and hotel the bearer token carries without a running Keycloak.
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, FixedClockConfiguration.class})
 class RegisterStayApiIT {
 
 	private static final String STAYS = "/api/v1/stays";
@@ -46,6 +50,7 @@ class RegisterStayApiIT {
 
 	private static final String MANAGER_PRAIA = "manager-praia-token";
 	private static final String MANAGER_NO_HOTEL = "manager-no-hotel-token";
+	private static final String MANAGER_BAD_HOTEL = "manager-bad-hotel-token";
 	private static final String ADMIN = "admin-token";
 	private static final String GUEST = "guest-token";
 	private static final String INVALID = "invalid-token";
@@ -63,6 +68,7 @@ class RegisterStayApiIT {
 	void setUpTokens() {
 		when(jwtDecoder.decode(MANAGER_PRAIA)).thenReturn(jwt(MANAGER_PRAIA, "HOTEL_MANAGER", MARES_PRAIA));
 		when(jwtDecoder.decode(MANAGER_NO_HOTEL)).thenReturn(jwt(MANAGER_NO_HOTEL, "HOTEL_MANAGER", null));
+		when(jwtDecoder.decode(MANAGER_BAD_HOTEL)).thenReturn(jwt(MANAGER_BAD_HOTEL, "HOTEL_MANAGER", "praia"));
 		when(jwtDecoder.decode(ADMIN)).thenReturn(jwt(ADMIN, "ADMIN", null));
 		when(jwtDecoder.decode(GUEST)).thenReturn(jwt(GUEST, "GUEST", null));
 		when(jwtDecoder.decode(INVALID)).thenThrow(new BadJwtException("signature does not match"));
@@ -216,6 +222,120 @@ class RegisterStayApiIT {
 		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Data Errada", "01/12/2026", "2026-12-05"))
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldOmitProblemTypeLikeEveryOtherProblemDetail() throws Exception {
+		postStay(null, body(MARES_PRAIA, "Sem Tipo", "2026-12-01", "2026-12-05"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.type").doesNotExist())
+			.andExpect(jsonPath("$.title").value("Unauthorized"));
+		postStay(GUEST, body(MARES_PRAIA, "Sem Tipo", "2026-12-01", "2026-12-05"))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.type").doesNotExist())
+			.andExpect(jsonPath("$.title").value("Forbidden"));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldAskForBearerTokenWithoutErrorWhenTokenIsMissing() throws Exception {
+		postStay(null, body(MARES_PRAIA, "Sem Token", "2026-12-01", "2026-12-05"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReportInvalidTokenInChallengeWhenTokenIsRejected() throws Exception {
+		postStay(INVALID, body(MARES_PRAIA, "Token Inválido", "2026-12-01", "2026-12-05"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, matchesPattern("^Bearer error=\"invalid_token\".*")));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn403ProblemWhenManagerTokenHasMalformedHotel() throws Exception {
+		postStay(MANAGER_BAD_HOTEL, body(MARES_PRAIA, "Hotel Mal Formado", "2026-12-01", "2026-12-05"))
+			.andExpect(status().isForbidden())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+
+		assertThat(staysFor("Hotel Mal Formado")).isZero();
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn400ProblemWithoutEchoingNameWhenItHasControlCharacters() throws Exception {
+		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Rita\\u0000Almeida", "2026-12-01", "2026-12-05"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+			.andExpect(content().string(not(containsString("Rita"))));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldAcceptGuestNameOf120Characters() throws Exception {
+		var name = "A".repeat(120);
+
+		postStay(MANAGER_PRAIA, body(MARES_PRAIA, name, "2026-12-01", "2026-12-05"))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.guestName").value(name));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn400ProblemWhenGuestNameHas121Characters() throws Exception {
+		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "B".repeat(121), "2026-12-01", "2026-12-05"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+
+		assertThat(staysFor("B".repeat(121))).isZero();
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn400ProblemWhenHotelIdIsNotUuid() throws Exception {
+		postStay(MANAGER_PRAIA, body("praia", "Hotel Inválido", "2026-12-01", "2026-12-05"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn400ProblemWhenBodyIsNotJson() throws Exception {
+		postStay(MANAGER_PRAIA, "{\"hotelId\": ")
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn415ProblemWhenContentTypeIsNotJson() throws Exception {
+		mvc.perform(post(STAYS)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + MANAGER_PRAIA)
+				.contentType(MediaType.TEXT_PLAIN)
+				.content("Rita Almeida"))
+			.andExpect(status().isUnsupportedMediaType())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn405ProblemForUnsupportedMethod() throws Exception {
+		mvc.perform(MockMvcRequestBuilders.delete(STAYS).header(HttpHeaders.AUTHORIZATION, "Bearer " + MANAGER_PRAIA))
+			.andExpect(status().isMethodNotAllowed())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+	}
+
+	@Requirement("RIA-50")
+	@Test
+	void shouldReturn422ProblemWhenStayHasAlreadyEnded() throws Exception {
+		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Estadia Terminada", "2026-11-25", "2026-11-29"))
+			.andExpect(status().isUnprocessableContent())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+			.andExpect(jsonPath("$.status").value(422));
+
+		assertThat(staysFor("Estadia Terminada")).isZero();
 	}
 
 }
