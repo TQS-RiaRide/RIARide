@@ -21,7 +21,7 @@ Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT` or `KEYCLOAK_PORT` in `.env`
 
 - `keycloak/riaride-realm.json` is the realm: roles `GUEST`, `OPERATOR`, `TECHNICIAN`, `HOTEL_MANAGER`, `ADMIN`; the public client `riaride-spa` (Authorization Code with PKCE); a user profile with the admin-only attribute `hotel_id`, which the token carries as the `hotel_id` claim. It contains no users and no secrets. Keycloak imports it on start only if the realm does not exist; to re-import, remove the volume (`docker compose -f infra/compose.yaml down -v`).
 - The backend's acceptance tests (Cucumber) import the same file into a Keycloak test container.
-- `keycloak/create-dev-users.sh` creates one manager per Marés hotel, an operator, a technician, an admin and a guest, all with `DEV_USER_PASSWORD`, plus the client `riaride-dev-cli`, which allows the password grant for local testing. Run it only against the local stack.
+- `keycloak/create-dev-users.sh` creates one manager per Marés hotel, an operator, a technician, an admin and a guest, all with `DEV_USER_PASSWORD`, plus the client `riaride-dev-cli`, which allows the password grant for local testing. It refuses to run when Docker points at a remote daemon, and passes passwords through stdin, never as command arguments.
 
 Hotel ids are fixed by the backend's Flyway migration `V1__accounts_hotel_and_stay.sql`:
 

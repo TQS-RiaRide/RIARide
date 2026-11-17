@@ -23,8 +23,24 @@ set +a
 : "${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in infra/.env}"
 : "${DEV_USER_PASSWORD:?set DEV_USER_PASSWORD in infra/.env}"
 
+# Only the local stack: refuse a Docker daemon reached over the network (DOCKER_HOST or a
+# remote context), so the script cannot create these users and client on a shared server.
+docker_endpoint="${DOCKER_HOST:-$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)}"
+case "$docker_endpoint" in
+  unix://* | npipe://* | "") ;;
+  *)
+    echo "Refusing to run: Docker endpoint '$docker_endpoint' is not local. This script is for the local stack only." >&2
+    exit 1
+    ;;
+esac
+
 kcadm() {
   docker compose -f "$INFRA_DIR/compose.yaml" exec -T keycloak /opt/keycloak/bin/kcadm.sh "$@"
+}
+
+json_escape() {
+  local value=${1//\\/\\\\}
+  printf '%s' "${value//\"/\\\"}"
 }
 
 echo "Waiting for Keycloak..."
@@ -79,13 +95,24 @@ for entry in "${USERS[@]}"; do
     echo "User $username exists, skipped"
     continue
   fi
-  args=(-s "username=$username" -s enabled=true -s "email=$username@example.test" -s emailVerified=true
-    -s "firstName=$first" -s "lastName=$last")
+  attributes="{}"
   if [[ -n "$hotel" ]]; then
-    args+=(-s "attributes.hotel_id=[\"$hotel\"]")
+    attributes="{\"hotel_id\": [\"$hotel\"]}"
   fi
-  kcadm create users -r "$REALM" "${args[@]}" >/dev/null
-  kcadm set-password -r "$REALM" --username "$username" --new-password "$DEV_USER_PASSWORD"
+  # The user, password included, goes through stdin, so the password never appears in a
+  # process's arguments (visible with ps).
+  kcadm create users -r "$REALM" -f - >/dev/null 2>&1 <<JSON
+{
+  "username": "$username",
+  "enabled": true,
+  "email": "$username@example.test",
+  "emailVerified": true,
+  "firstName": "$first",
+  "lastName": "$last",
+  "attributes": $attributes,
+  "credentials": [{"type": "password", "value": "$(json_escape "$DEV_USER_PASSWORD")", "temporary": false}]
+}
+JSON
   kcadm add-roles -r "$REALM" --uusername "$username" --rolename "$role"
   echo "Created $username ($role)"
 done
