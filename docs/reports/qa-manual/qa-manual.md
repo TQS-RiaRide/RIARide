@@ -80,9 +80,9 @@ Every member also develops stories.
 ### 2.3 Requirements coverage tracking
 
 - **Source of truth:** Gherkin scenarios live in the repository, never edited in Jira.
-- **Linking:** each scenario is tagged with its story key (`@RIA-31`), so Xray links the Test it creates to that story. JUnit tests that verify a story declare it with `@Requirement("RIA-31")` from the Xray JUnit extensions.
-- **Import:** on every run on `main`, CI sends the Cucumber JSON and JUnit XML reports to the Xray Cloud API, creating one Test Execution per run. The Xray client ID and secret are GitHub Secrets.
-- **Plans:** one Test Plan per iteration groups the Test Executions of that iteration.
+- **Linking:** each scenario is tagged with its story key (`@RIA-31`), so Xray links the Test it creates to that story. When a Test for the scenario already exists in Jira, the scenario also carries its key (`@TEST_RIA-147`), so the import updates that Test instead of creating a duplicate. JUnit tests that verify a story declare it with `@Requirement("RIA-31")` from the Xray JUnit extensions.
+- **Import:** after every CI run on `main`, the `Xray import` workflow sends the JUnit XML and Cucumber JSON reports to the Xray Cloud API. Xray imports each format through its own endpoint, so a run creates up to two Test Executions: one for JUnit and one for Cucumber. The workflow reads the organization secrets `XRAY_CLIENT_ID` and `XRAY_CLIENT_SECRET` and the organization variable `XRAY_TEST_PLAN_KEY`, and fails with a clear message if any of them is empty.
+- **Plans:** one Test Plan per iteration groups the Test Executions of that iteration. At the start of each iteration, the QA Engineer creates the new Test Plan and updates `XRAY_TEST_PLAN_KEY` to its key; until then, executions go to the previous iteration's plan.
 - **Coverage:** the Xray requirement coverage report is checked at each checkpoint. A story without linked tests is not *Done*; any exception is explained in the story.
 
 ## 3. Code quality management
