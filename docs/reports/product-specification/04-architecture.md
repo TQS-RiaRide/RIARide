@@ -13,7 +13,28 @@
 
 The [traceability table](../../architecture/README.md#traceability-to-the-assignment) maps each requirement of the assignment guidelines to where the architecture answers it. Three gaps are open questions for the Product Owner: booking for a period, who may use which vehicles, and problem reports by end users.
 
-## 4.2 Architectural view
+## 4.2 Non-functional requirements and SLOs
+
+*Proposed by the QA Engineer; pending team confirmation (RIA-163).*
+
+The SLOs cover what a guest notices first (booking speed and failures), what the fleet depends on (fresh telemetry) and whether the service is up. Each one is measured from the backend's own metrics, so the alerts and the tests use the same numbers.
+
+| ID | Objective | Metric and target | Verified by |
+|---|---|---|---|
+| SLO1 | Booking and starting a trip is fast at peak load | p95 latency of the book and start requests < 500 ms with 50 concurrent virtual users | k6 load scenario with thresholds, before each tag from I4 (QA Manual, section 5.4); Grafana alert in production |
+| SLO2 | The API rarely fails | Server errors (5xx) < 1 % of requests; business rejections (4xx) do not count | k6 `http_req_failed` threshold in the same run; Grafana alert in production |
+| SLO3 | Telemetry is processed promptly | p95 of the telemetry lag (`received_at` minus `emitted_at`) < 5 s with the simulator emitting 10 readings per second | Simulator run at that rate on staging, read from the Micrometer telemetry lag metric; Grafana alert in production |
+| SLO4 | The service is available | 99 % of health checks succeed per week | Prometheus probing `/actuator/health` on staging and production; Grafana uptime panel and alert |
+
+The alert rules for each SLO are in the QA Manual, section 4.3. SLO4 is measurable from the first deployment in I3; SLO1 to SLO3 need the k6 scripts and the simulator, so they are first measured in I4.
+
+Other non-functional requirements already have a fixed target and an automated check:
+
+- **Accessibility:** no `serious` or `critical` axe violations on the core pages, in both languages (Playwright suite).
+- **Security:** no unresolved HIGH or CRITICAL dependency finding (OWASP Dependency-Check failing at CVSS ≥ 7, `npm audit`, `pip-audit`, Trivy on images).
+- **Maintainability:** the SonarQube quality gate on new code (coverage ≥ 80 %, duplication ≤ 3 %, A ratings, all hotspots reviewed) blocks the merge.
+
+## 4.3 Architectural view
 
 ![System context](../../architecture/diagrams/01-system-context.drawio.svg)
 
@@ -36,7 +57,7 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 The backend is a modular monolith ([ADR 0001](../../architecture/adr/0001-modular-monolith.md)). Spring Modulith checks the allowed dependencies in a test that fails the build on a violation ([ADR 0002](../../architecture/adr/0002-spring-modulith.md)). Ports and adapters are used only at the external integrations: `telemetry` for MQTT, `payments` for Stripe and `accounts` for Keycloak.
 
-## 4.3 Module interactions
+## 4.4 Module interactions
 
 A module calls another module's public API for queries and for commands whose result it needs now. For side effects elsewhere, it publishes an event, handled after commit. Spring Modulith stores each event in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge. A pass closes, and its deposit is refunded, only when no trip is in progress or waiting for its overtime and no maintenance ticket linked to it is open.
 
@@ -54,13 +75,13 @@ A module calls another module's public API for queries and for commands whose re
 
 **Faults.** `maintenance` opens one ticket per fault. `fleet` takes the vehicle out of service, or flags it `maintenancePending` while a trip is in progress. `trips` cancels the vehicle's reservation, or attaches the trip to the ticket so that damage can be charged against the deposit. The deposit stays held until the ticket is resolved. Fault events are deduplicated by `messageId` but never dropped as stale, because MQTT does not order messages across topics.
 
-## 4.4 Deployment
+## 4.5 Deployment
 
 ![Deployment](../../architecture/diagrams/09-deployment.drawio.svg)
 
 A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and deploys them to a staging Compose stack on the university VM, through a self-hosted runner. An iteration tag promotes the same images to production after a manual approval ([ADR 0011](../../architecture/adr/0011-deployment.md)). The only public port is 443. Secrets come from GitHub Secrets and a host-only `.env` file.
 
-## 4.5 Integration contracts
+## 4.6 Integration contracts
 
 **MQTT** ([ADR 0006](../../architecture/adr/0006-mqtt-integration.md)). Both directions use QoS 1, and the consumer ignores repeated or out-of-order messages.
 
