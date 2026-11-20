@@ -25,7 +25,7 @@ Feature: Start a trip now
     And bike "EB-201" is "in use"
     And the guest's pass is active
 
-  @BR4 @BR11 @wip
+  @BR4 @BR11 @BR13 @wip
   Scenario: The trip fails when the unlock is not confirmed within 30 seconds
     Given the guest has a "starting" trip with bike "EB-201"
     When 30 seconds pass without telemetry confirming the unlock of bike "EB-201"

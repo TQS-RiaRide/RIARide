@@ -10,6 +10,7 @@ Feature: Find available bikes
       | EB-101 | available | 90      |
       | EB-102 | available | 55      |
       | EB-103 | available | 20      |
+      | EB-105 | available | 19      |
       | EB-104 | available | 15      |
     And a guest "Rita Almeida" with an active stay at "Marés Praia" is logged in
     When the guest lists the bikes at hub "Marés Praia"
