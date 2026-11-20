@@ -18,22 +18,28 @@ jobs:
     steps:
       # Labels come from the event payload through an environment variable,
       # never interpolated into the script, so a label name cannot inject code.
+      # Only the three exact labels count; any other ai:* label is a typo.
       - name: Check the ai:* labels
         env:
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          ai_labels=$(jq -r '.[] | select(startswith("ai:"))' <<<"$LABELS")
-          count=$(grep -c . <<<"$ai_labels" || true)
+          valid=$(jq -r '.[] | select(. == "ai:none" or . == "ai:assisted" or . == "ai:generated")' <<<"$LABELS")
+          unknown=$(jq -r '.[] | select(startswith("ai:")) | select(. != "ai:none" and . != "ai:assisted" and . != "ai:generated")' <<<"$LABELS")
+          count=$(grep -c . <<<"$valid" || true)
+          if [ -n "$unknown" ]; then
+            echo "::error::Unknown AI label: $(paste -sd ' ' - <<<"$unknown"). Use ai:none, ai:assisted or ai:generated."
+            exit 1
+          fi
           case "$count" in
             1)
-              echo "AI label: $ai_labels"
+              echo "AI label: $valid"
               ;;
             0)
               echo "::error::Add one AI label: ai:none, ai:assisted or ai:generated (QA Manual 6.2)."
               exit 1
               ;;
             *)
-              echo "::error::Keep only one AI label; found: $(paste -sd ' ' - <<<"$ai_labels")."
+              echo "::error::Keep only one AI label; found: $(paste -sd ' ' - <<<"$valid")."
               exit 1
               ;;
           esac
