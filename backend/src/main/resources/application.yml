@@ -2,6 +2,12 @@ spring:
   application:
     name: riaride-backend
 
+riaride:
+  payments:
+    # Stripe test mode (ADR 0008). The key is never committed: set STRIPE_SECRET_KEY.
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+
 management:
   endpoints:
     web:
