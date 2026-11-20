@@ -87,8 +87,9 @@ class StripeFailuresTest {
 	@Requirement("RIA-62")
 	@Test
 	void shouldClassifyReusedIdempotencyKeyAsPermanent() {
+		// Same key, different parameters: a programming error that a retry repeats.
 		var reused = new IdempotencyException("Keys for idempotent requests can only be used with the same parameters",
-			"req_7", "idempotency_key_in_use", 400);
+			"req_7", null, 400);
 
 		assertThat(StripeFailures.classify(reused)).isInstanceOf(PermanentPaymentException.class);
 	}
