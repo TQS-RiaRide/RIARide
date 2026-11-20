@@ -2,6 +2,11 @@ spring:
   application:
     name: riaride-backend
 
+riaride:
+  fleet:
+    # BR12: a vehicle below this battery cannot be booked. Moves to the backoffice usage rule later.
+    min-booking-battery-pct: 20
+
 management:
   endpoints:
     web:

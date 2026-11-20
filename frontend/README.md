@@ -4,7 +4,7 @@ Walking skeleton of the RiaRide web UI, following [ADR 0005](../docs/architectur
 
 ## Commands
 
-Requires Node.js 22.22.2 or later (24 LTS recommended), as declared in `package.json`.
+Requires Node.js 22.22.2 or later in the 22 line, or 24.15.0 or later (24 LTS recommended), as declared in `package.json`.
 
 ```bash
 npm install          # first time; commit the generated package-lock.json
