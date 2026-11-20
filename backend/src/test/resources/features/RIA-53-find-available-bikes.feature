@@ -3,7 +3,7 @@ Feature: Find available bikes
   As a guest, I want to see the bikes I can book at a hub,
   so that I can choose one for my trip.
 
-  @BR12 @wip
+  @TEST_RIA-150 @BR12 @wip
   Scenario: Only available bikes with enough battery are shown as bookable
     Given a hub "Marés Praia" with these bikes:
       | code   | status    | battery |
