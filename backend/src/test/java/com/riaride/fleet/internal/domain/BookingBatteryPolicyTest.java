@@ -1,6 +1,7 @@
 package com.riaride.fleet.internal.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,15 @@ class BookingBatteryPolicyTest {
 		var allowed = POLICY.allowsBooking(null);
 
 		assertThat(allowed).isFalse();
+	}
+
+	@Requirement("RIA-59")
+	@ParameterizedTest
+	@ValueSource(ints = { -1, 101 })
+	void shouldRejectMinimumBatteryOutside0To100Percent(int minimumPercent) {
+		assertThatThrownBy(() -> new BookingBatteryPolicy(minimumPercent))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining(String.valueOf(minimumPercent));
 	}
 
 }
