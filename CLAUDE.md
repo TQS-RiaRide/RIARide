@@ -22,6 +22,8 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | Run the app | `./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
 | Docker image | `docker build -t riaride-backend .` |
 
+Payments use Stripe test mode behind the `PaymentGateway` port (ADR 0008). The backend reads the secret key from `STRIPE_SECRET_KEY` and needs it only to make real sandbox calls. The tests stub Stripe with WireMock, so they need no key or network access.
+
 To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds Surefire's `skipTests` to `skipUnitTests`, so `-DskipTests` does not skip them.
 
 All repository content is written in English: code, documentation, reports, pull requests and commits.
