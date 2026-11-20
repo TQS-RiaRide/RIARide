@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,6 +22,7 @@ import com.riaride.payments.PaymentException;
 import com.riaride.payments.PermanentPaymentException;
 import com.riaride.payments.PurchaseRequest;
 import com.riaride.payments.RefundRequest;
+import com.riaride.payments.RefundResult;
 import com.riaride.payments.TransientPaymentException;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,9 +50,23 @@ class StripePaymentGatewayIT {
 		{"id": "pi_3ds", "object": "payment_intent", "status": "requires_action", "amount": 7500,
 		 "currency": "eur", "customer": "cus_rita", "payment_method": "pm_saved_card"}
 		""";
+	private static final String PROCESSING = """
+		{"id": "pi_processing", "object": "payment_intent", "status": "processing", "amount": 7500,
+		 "currency": "eur", "customer": "cus_rita", "payment_method": "pm_saved_card"}
+		""";
+	private static final String REQUIRES_PAYMENT_METHOD = """
+		{"id": "pi_refused", "object": "payment_intent", "status": "requires_payment_method", "amount": 7500,
+		 "currency": "eur", "customer": "cus_rita"}
+		""";
+	private static final String CANCELED = """
+		{"id": "pi_3ds", "object": "payment_intent", "status": "canceled"}
+		""";
 	private static final String REFUND = """
 		{"id": "re_deposit", "object": "refund", "status": "succeeded", "amount": 5000,
 		 "payment_intent": "pi_purchase"}
+		""";
+	private static final String SERVER_ERROR = """
+		{"error": {"type": "api_error", "message": "Something went wrong."}}
 		""";
 
 	@RegisterExtension
@@ -67,7 +83,7 @@ class StripePaymentGatewayIT {
 	}
 
 	private static PurchaseRequest purchase() {
-		return new PurchaseRequest(Money.euros(75, 0), "pm_card_visa", "Stay pass for Rita Almeida", "purchase-1");
+		return new PurchaseRequest(Money.euros(75, 0), "pm_card_visa", "pass-7f3c2a", "purchase-1");
 	}
 
 	private static String cardError(String code) {
@@ -145,10 +161,15 @@ class StripePaymentGatewayIT {
 	void shouldReportPurchaseThatNeedsAuthenticationAsPermanentFailure() {
 		givenCustomerIsCreated();
 		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(REQUIRES_ACTION)));
+		stripe.stubFor(post(PAYMENT_INTENTS + "/pi_3ds/cancel").willReturn(okJson(CANCELED)));
 
 		assertThatThrownBy(() -> gateway.purchase(purchase()))
-			.isInstanceOfSatisfying(PermanentPaymentException.class,
-				failure -> assertThat(failure.reason()).isEqualTo("authentication_required"));
+			.isInstanceOfSatisfying(PermanentPaymentException.class, failure -> {
+				assertThat(failure.reason()).isEqualTo("authentication_required");
+				assertThat(failure.paymentRef()).contains("pi_3ds");
+			});
+		// The intent is cancelled, so it does not stay open at Stripe.
+		stripe.verify(postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS + "/pi_3ds/cancel")));
 	}
 
 	@Requirement("RIA-62")
@@ -241,13 +262,142 @@ class StripePaymentGatewayIT {
 	void shouldRefundPartOfAPayment() {
 		stripe.stubFor(post(REFUNDS).willReturn(okJson(REFUND)));
 
-		var refundRef = gateway.refund(new RefundRequest("pi_purchase", Money.cents(5000), "deposit-refund-1"));
+		var refund = gateway.refund(new RefundRequest("pi_purchase", Money.cents(5000), "deposit-refund-1"));
 
-		assertThat(refundRef).isEqualTo("re_deposit");
+		assertThat(refund).isEqualTo(new RefundResult("re_deposit", false));
 		stripe.verify(postRequestedFor(urlPathEqualTo(REFUNDS))
 			.withHeader("Idempotency-Key", equalTo("deposit-refund-1"))
 			.withRequestBody(containing("payment_intent=pi_purchase"))
 			.withRequestBody(containing("amount=5000")));
+	}
+
+	// Only an opaque reference goes to Stripe, never a guest's name (QA Manual 3.1: personal data).
+	@Requirement("RIA-62")
+	@Test
+	void shouldSendOnlyTheOpaqueReferenceToStripe() {
+		givenCustomerIsCreated();
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(SUCCEEDED)));
+
+		gateway.purchase(purchase());
+
+		stripe.verify(postRequestedFor(urlPathEqualTo(CUSTOMERS)).withRequestBody(containing("pass-7f3c2a")));
+		stripe.verify(postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS)).withRequestBody(containing("pass-7f3c2a")));
+	}
+
+	// processing may still succeed: a caller that gave up and retried with a new key could charge
+	// twice. It is transient, so the caller retries with the same key, and it carries the intent.
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportProcessingPaymentAsTransientWithItsReference() {
+		givenCustomerIsCreated();
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(PROCESSING)));
+
+		assertThatThrownBy(() -> gateway.purchase(purchase()))
+			.isInstanceOfSatisfying(TransientPaymentException.class, failure -> {
+				assertThat(failure.reason()).isEqualTo("processing");
+				assertThat(failure.paymentRef()).contains("pi_processing");
+			});
+		stripe.verify(0, postRequestedFor(urlPathMatching(PAYMENT_INTENTS + "/.*/cancel")));
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldCancelAndReportPaymentLeftWaitingForAnotherCard() {
+		givenCustomerIsCreated();
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(REQUIRES_PAYMENT_METHOD)));
+		stripe.stubFor(post(PAYMENT_INTENTS + "/pi_refused/cancel").willReturn(okJson(CANCELED)));
+
+		assertThatThrownBy(() -> gateway.purchase(purchase()))
+			.isInstanceOfSatisfying(PermanentPaymentException.class,
+				failure -> assertThat(failure.reason()).isEqualTo("requires_payment_method"));
+		stripe.verify(postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS + "/pi_refused/cancel")));
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportCustomerCreationFailureWithoutChargingAnything() {
+		stripe.stubFor(post(CUSTOMERS).willReturn(aResponse().withStatus(500)
+			.withHeader("Content-Type", "application/json").withBody(SERVER_ERROR)));
+
+		assertThatThrownBy(() -> gateway.purchase(purchase())).isInstanceOf(TransientPaymentException.class);
+		stripe.verify(0, postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS)));
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportIdempotencyKeyInUseAsTransient() {
+		givenCustomerIsCreated();
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(aResponse().withStatus(409)
+			.withHeader("Content-Type", "application/json")
+			.withBody("{\"error\": {\"type\": \"idempotency_error\", \"code\": \"idempotency_key_in_use\", \"message\": \"There is currently another in-progress request using this key.\"}}")));
+
+		assertThatThrownBy(() -> gateway.purchase(purchase())).isInstanceOf(TransientPaymentException.class);
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportOffSessionServerErrorAsTransient() {
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(aResponse().withStatus(500)
+			.withHeader("Content-Type", "application/json").withBody(SERVER_ERROR)));
+		var charge = new OffSessionCharge("cus_rita", "pm_saved_card", Money.cents(250), "overtime-1");
+
+		assertThatThrownBy(() -> gateway.chargeOffSession(charge)).isInstanceOf(TransientPaymentException.class);
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportSlowOffSessionChargeAsTransient() {
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(SUCCEEDED).withFixedDelay(2_000)));
+		var charge = new OffSessionCharge("cus_rita", "pm_saved_card", Money.cents(250), "overtime-1");
+
+		assertThatThrownBy(() -> gateway.chargeOffSession(charge)).isInstanceOf(TransientPaymentException.class);
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportRefundOfUnknownPaymentAsPermanent() {
+		stripe.stubFor(post(REFUNDS).willReturn(aResponse().withStatus(404)
+			.withHeader("Content-Type", "application/json")
+			.withBody("{\"error\": {\"type\": \"invalid_request_error\", \"code\": \"resource_missing\", \"message\": \"No such payment_intent.\"}}")));
+		var refund = new RefundRequest("pi_unknown", Money.cents(5000), "deposit-refund-1");
+
+		assertThatThrownBy(() -> gateway.refund(refund))
+			.isInstanceOfSatisfying(PermanentPaymentException.class,
+				failure -> assertThat(failure.reason()).isEqualTo("resource_missing"));
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportRefundAboveThePaidAmountAsPermanent() {
+		stripe.stubFor(post(REFUNDS).willReturn(aResponse().withStatus(400)
+			.withHeader("Content-Type", "application/json")
+			.withBody("{\"error\": {\"type\": \"invalid_request_error\", \"code\": \"charge_exceeds_source_limit\", \"message\": \"Refund amount is greater than the charge.\"}}")));
+		var refund = new RefundRequest("pi_purchase", Money.cents(999_999), "deposit-refund-1");
+
+		assertThatThrownBy(() -> gateway.refund(refund)).isInstanceOf(PermanentPaymentException.class);
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportPendingRefundAsPending() {
+		stripe.stubFor(post(REFUNDS).willReturn(okJson(REFUND.replace("\"succeeded\"", "\"pending\""))));
+
+		var refund = gateway.refund(new RefundRequest("pi_purchase", Money.cents(5000), "deposit-refund-1"));
+
+		assertThat(refund).isEqualTo(new RefundResult("re_deposit", true));
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldReportFailedRefundAsPermanent() {
+		stripe.stubFor(post(REFUNDS).willReturn(okJson(REFUND.replace("\"succeeded\"", "\"failed\""))));
+		var refund = new RefundRequest("pi_purchase", Money.cents(5000), "deposit-refund-1");
+
+		assertThatThrownBy(() -> gateway.refund(refund))
+			.isInstanceOfSatisfying(PermanentPaymentException.class, failure -> {
+				assertThat(failure.reason()).isEqualTo("refund_failed");
+				assertThat(failure.paymentRef()).contains("re_deposit");
+			});
 	}
 
 	@Requirement("RIA-62")
@@ -259,7 +409,11 @@ class StripePaymentGatewayIT {
 
 		assertThatThrownBy(() -> gateway.purchase(purchase()))
 			.isInstanceOf(PaymentException.class)
-			.satisfies(failure -> assertThat(failure.getMessage()).doesNotContain(API_KEY));
+			.satisfies(failure -> {
+				for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+					assertThat(String.valueOf(cause.getMessage())).doesNotContain(API_KEY);
+				}
+			});
 	}
 
 }

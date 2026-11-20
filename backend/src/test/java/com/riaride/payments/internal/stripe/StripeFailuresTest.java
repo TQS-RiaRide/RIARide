@@ -93,12 +93,28 @@ class StripeFailuresTest {
 		assertThat(StripeFailures.classify(reused)).isInstanceOf(PermanentPaymentException.class);
 	}
 
+	// Stripe returns 409 while a request with the same key is still in flight; retrying with the
+	// same key is safe and returns the original result.
 	@Requirement("RIA-62")
 	@Test
-	void shouldKeepTheStripeErrorAsCause() {
-		var network = new ApiConnectionException("Connection reset");
+	void shouldClassifyIdempotencyKeyInUseAsTransient() {
+		var inFlight = new IdempotencyException("There is currently another in-progress request using this key",
+			"req_8", "idempotency_key_in_use", 409);
 
-		assertThat(StripeFailures.classify(network)).hasCause(network);
+		assertThat(StripeFailures.classify(inFlight)).isInstanceOf(TransientPaymentException.class);
+	}
+
+	// Stripe's own message can repeat the API key, so the Stripe exception is not kept as the cause:
+	// a logged stack trace would show it.
+	@Requirement("RIA-62")
+	@Test
+	void shouldNotKeepTheStripeErrorWhoseMessageMayRepeatTheKey() {
+		var badKey = new AuthenticationException("Invalid API Key provided: sk_test_secret", "req_9", null, 401);
+
+		var failure = StripeFailures.classify(badKey);
+
+		assertThat(failure.getCause()).isNull();
+		assertThat(failure.getMessage()).doesNotContain("sk_test_secret").contains("req_9").contains("401");
 	}
 
 }

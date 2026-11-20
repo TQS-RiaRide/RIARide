@@ -32,6 +32,30 @@ class MoneyTest {
 
 	@Requirement("RIA-62")
 	@Test
+	void shouldAcceptNinetyNineCents() {
+		assertThat(Money.euros(1, 99).cents()).isEqualTo(199);
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldRejectCentsAbove99() {
+		assertThatThrownBy(() -> Money.euros(1, 100)).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldRejectNegativeCents() {
+		assertThatThrownBy(() -> Money.euros(1, -50)).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Requirement("RIA-62")
+	@Test
+	void shouldRejectEurosThatOverflowWhenConvertedToCents() {
+		assertThatThrownBy(() -> Money.euros(Long.MAX_VALUE / 100 + 1, 0)).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Requirement("RIA-62")
+	@Test
 	void shouldRejectNegativeAmount() {
 		assertThatThrownBy(() -> Money.cents(-100)).isInstanceOf(IllegalArgumentException.class);
 	}
