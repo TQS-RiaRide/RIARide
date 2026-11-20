@@ -39,7 +39,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | Q4 | Peer code review | E | Partial | [PR template](../../../.github/pull_request_template.md), section 3.2; branch protection pending (section 4.1) |
 | Q5 | Contributor guidelines | E | Done | Section 3.1 |
 | Q6 | Container image scanning or added security testing | V | Decided (I4) | Section 3.4 |
-| D1 | Feature branches, protected main, merge by pull request | E | Partial | Branch per story in use; `main` protection pending (section 4.1) |
+| D1 | Feature branches, protected main, merge by pull request | E | Partial | Branch per story in use, merged into `dev` by pull request; `main` and `dev` protection pending (section 4.1) |
 | D2 | CI with quality gate, badge and failure notification | E | Partial | [`ci.yml`](../../../.github/workflows/ci.yml) runs the backend and frontend jobs and a summary job on every push and pull request. SonarQube, the simulator job and the badge are pending. Section 4.2 |
 | D3 | Infrastructure as code | E | Decided (I3) | Section 4.2 |
 | D4 | Continuous delivery with representative data | E | Decided (I3) | Section 4.2 |
@@ -124,7 +124,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 
 ### 3.2 Code review practice
 
-- **When:** every change to `main` goes through a pull request. No direct pushes.
+- **When:** every change to `dev` or `main` goes through a pull request. No direct pushes.
 - **Who approves:** at least one team member other than the author. The author merges after approval and a green CI. Agents never approve or merge.
 - **AI review:** each non-draft pull request receives an advisory review from Claude ([`docs/ai-review.md`](../../ai-review.md)), with findings tagged `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`. The author records each finding as accepted or rejected, with a reason, in the PR template's *AI review findings* table. The human reviewer checks that table before approving.
 
@@ -163,7 +163,7 @@ The gate applies to new code only, so old code improves as it is changed and the
 
 Coverage says which lines ran, not whether a test would catch a bug, and AI-generated tests can reach 80 % with weak assertions. Reviewers therefore check that tests assert behaviour (review checklist, section 3.2).
 
-**Blocking:** the SonarQube check is a required status check in the branch protection of `main`, so a failing gate blocks the merge. Evidence: a pull request that fails the gate and cannot be merged. *Link to be added in I2, with the dashboard link.*
+**Blocking:** the SonarQube check is a required status check in the branch protection of `main` and `dev`, so a failing gate blocks the merge. Evidence: a pull request that fails the gate and cannot be merged. *Link to be added in I2, with the dashboard link.*
 
 ### 3.4 Other rules in code inspection
 
@@ -203,22 +203,25 @@ The platform stores guests' email, password, stay and trip history, which is per
 
 **Coding workflow**
 
-The team follows GitHub flow: `main` is always deployable, and each story is developed in its own short-lived branch.
+The team works with two long-lived branches. `dev` is the integration branch: each story is developed in its own short-lived branch and merged into `dev`. `main` is the release branch: it is always deployable, and it receives `dev` through a pull request at the end of each iteration, before the iteration tag. From I3, every merge to `main` deploys to staging (section 4.2).
 
 1. Take a story from the sprint in Jira and move it to *In progress*.
-2. Create a branch from `main` named `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
+2. Create a branch from `dev` named `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
 3. Commit with [Conventional Commits](https://www.conventionalcommits.org/) and the story key: `feat: RIA-31 add booking endpoint`. For TDD components, commit the failing test before the implementation.
-4. Open a pull request with the template and the AI label. Use a draft while the work is incomplete; the AI review runs when it is marked ready.
+4. Open a pull request to `dev` with the template and the AI label. Use a draft while the work is incomplete; the AI review runs when it is marked ready.
 5. Address the CI results, the AI review and the human review.
-6. Merge with a **merge commit**, not squash, so that test-first commits stay visible in `main`'s history. Delete the branch.
+6. Merge with a **merge commit**, not squash, so that test-first commits stay visible in the history of `dev` and `main`. Delete the branch.
+7. At the end of the iteration, the DevOps Master opens a pull request from `dev` to `main`. It follows the same review and checks, and is also merged with a merge commit; the iteration tag is then set on `main`.
 
-**Branch protection on `main`** (set by the DevOps Master):
+**Branch protection on `main` and `dev`** (set by the DevOps Master; on `dev` it is still to be enabled):
 
 - pull request required, with at least one approval;
 - stale approvals dismissed when new commits are pushed;
 - required status checks: the CI summary job (section 4.2) and the SonarQube quality gate;
 - branch up to date before merging;
 - no force pushes, no deletions, no bypass for administrators.
+
+Nobody pushes directly to `dev` or `main`.
 
 **AI in the workflow:** see section 6.1.
 
@@ -302,7 +305,7 @@ Most tests are fast developer tests; fewer, slower tests cover acceptance, the U
 
 Failing tests fail the job, and the failed job blocks the merge through the required status checks.
 
-**TDD (T6):** business rules (pass validity and activation, pricing, deposit, overtime, booking hold, battery threshold, hub capacity) are developed test first. The failing test is committed before the implementation, and merge commits keep that order visible in `main`'s history.
+**TDD (T6):** business rules (pass validity and activation, pricing, deposit, overtime, booking hold, battery threshold, hub capacity) are developed test first. The failing test is committed before the implementation, and merge commits keep that order visible in the history of `dev` and `main`.
 
 **BDD (T1):** the acceptance criteria of core stories are Gherkin scenarios, written at grooming and automated with Cucumber (section 5.3).
 
@@ -385,7 +388,7 @@ The team uses AI assistants and agents on purpose, for production code, tests, d
 
 **Don't**
 
-- Never let an agent merge, approve a pull request or push to `main`.
+- Never let an agent merge, approve a pull request or push to `dev` or `main`.
 - Never give AI services secrets, credentials, tokens or personal data. Use synthetic data only.
 - Never weaken or delete a test, or lower a quality gate threshold, to make AI-generated code pass.
 - Never merge generated code that nobody on the team has reviewed line by line.
@@ -399,7 +402,7 @@ One declaration for the whole project, updated as tools are added.
 
 | Tool or agent (and model) | Used for | How the output was verified |
 |---|---|---|
-| Claude Code (Claude Opus) | Drafting the architecture proposal, ADRs, report sections and this manual; setting up the AI review workflow | Reviewed and edited by the author, then reviewed in a pull request by another member |
+| Claude Code (Claude Opus) | Drafting the architecture proposal, ADRs, report sections and this manual; setting up the AI review workflow; production code and tests (RIA-50, RIA-51, RIA-68) | Reviewed and edited by the author, then reviewed in a pull request by another member; code is also checked by its tests, CI and the quality gate |
 | Claude Code GitHub Action (`anthropics/claude-code-action`) | Advisory review of non-draft pull requests (practice AI3) | Each finding accepted or rejected by the author, and checked by the human reviewer |
 | GitHub Copilot code review | Review requested on PR #2; it produced no review (quota) | Not applicable |
 | Atlassian Rovo MCP server, used from Claude Code | Reading stories, acceptance criteria and Xray Tests from Jira; commenting on stories (section 6.4) | Comments are read by the story's owner; status changes to *Done* stay with the Product Owner |
@@ -409,7 +412,7 @@ One declaration for the whole project, updated as tools are added.
 
 ### 6.3 Agent instructions and coordination
 
-**Instructions.** The agent instructions are versioned in the repository: [`AGENTS.md`](../../../AGENTS.md) points to [`CLAUDE.md`](../../../CLAUDE.md), which covers the domain, the architecture constraints, the Git and Jira rules, the code style, the definition of done, the expected tests, the quality and CI rules and the AI rules. It also lists the backend build and test commands; the frontend and simulator commands are added when those projects land, and the limits of section 6.4 on what agents may do in Jira and SonarQube.
+**Instructions.** The agent instructions are versioned in the repository: [`AGENTS.md`](../../../AGENTS.md) points to [`CLAUDE.md`](../../../CLAUDE.md), which covers the domain, the architecture constraints, the Git and Jira rules, the code style, the definition of done, the expected tests, the quality and CI rules and the AI rules. It also lists the backend build and test commands (the frontend and simulator commands are added when those projects land) and the limits of section 6.4 on what agents may do in Jira and SonarQube.
 
 The QA Engineer maintains them. A pull request that changes a practice in this manual must update `CLAUDE.md` in the same pull request; the review checklist (section 3.2) checks it.
 
@@ -462,7 +465,7 @@ All agent jobs have permission only to read the code and comment on pull request
 
 *Written in I5*, from data collected on every pull request from now on:
 
-- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. The three labels do not exist in the repository yet, so no pull request up to #21 carries one: the QA Engineer creates them in I2 and labels the earlier pull requests from their declarations. A CI check that fails when a pull request has no label or more than one is planned for I2; until then, the reviewer checks the label. Dependabot pull requests are labelled `ai:none`.
+- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. `ai:assisted` exists and is in use (#21, #22, #23, #25, #26, #28, #29); the QA Engineer creates `ai:none` and `ai:generated` in I2 and labels the pull requests up to #20 from their declarations. A CI check that fails when a pull request has no label or more than one is planned for I2; until then, the reviewer checks the label. Dependabot pull requests are labelled `ai:none`.
 - **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so a script can count them.
 - **Agent actions in Jira and SonarQube:** agent comments on stories and fixes of SonarQube issues proposed by agents (section 6.4), and how many of those fixes needed human rework.
 - **Defects and rework traced to AI:** Jira bugs and follow-up pull requests that name the original pull request, and quality gate failures on AI-labelled pull requests.
