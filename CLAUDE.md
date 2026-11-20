@@ -26,7 +26,7 @@ To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds 
 
 ### Frontend commands
 
-Run from `frontend/`, with Node.js 22.22.2 or later (24 LTS recommended). Details in [`frontend/README.md`](frontend/README.md).
+Run from `frontend/`, with Node.js 22.22.2 or later in the 22 line, or 24.15.0 or later (24 LTS recommended). Details in [`frontend/README.md`](frontend/README.md).
 
 | Task | Command |
 |---|---|
