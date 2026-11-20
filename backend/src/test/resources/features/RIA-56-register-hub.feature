@@ -6,7 +6,7 @@ Feature: Register a hub
   Hubs are at hotels or at tourist spots, each with a capacity and a position
   (Product Specification 3.1; data model table "hub": name, kind, hotel_id null, capacity, position).
 
-  Endpoint: POST /api/hubs, allowed only for the operator role.
+  Endpoint: POST /api/v1/hubs, allowed only for the operator role.
   Request body fields:
     name        text, required, not blank
     kind        "HOTEL" or "TOURIST_SPOT", required
@@ -15,7 +15,7 @@ Feature: Register a hub
     latitude    decimal degrees, required, from -90 to 90
     longitude   decimal degrees, required, from -180 to 180
     capacity    whole number of bike slots, required, at least 1
-  Success: 201 Created, a Location header "/api/hubs/{id}", and a body with
+  Success: 201 Created, a Location header "/api/v1/hubs/{id}", and a body with
   id, name, kind, hotel, latitude, longitude, capacity, dockedBikes (0) and freeSlots (= capacity).
   Invalid input: 400 Bad Request with an RFC 9457 problem detail
   (Content-Type application/problem+json) naming the invalid field, and no hub is created.

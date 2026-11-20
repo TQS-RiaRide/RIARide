@@ -74,6 +74,7 @@ Product definitions and backlog:
 | BR10 | End of trip | Only at a hub with a free slot; capacity is defined by the client |
 | BR11 | Booking | Can be made in advance; the bike is held for 15 min |
 | BR12 | Battery | A vehicle below 20 % cannot be booked (value comes from telemetry) |
+| BR13 | Unlock timeout | A trip whose unlock is not confirmed by telemetry within 30 s fails; the pass stays inactive and the bike stays reserved until the booking expires (BR11) |
 
 Gherkin scenarios tag the rules they cover with these IDs (`@BR10`); hub capacity is part of BR10.
 
