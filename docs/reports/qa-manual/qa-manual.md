@@ -27,7 +27,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | T2 | Unit tests for business logic | E | Decided (I2) | Section 5.2 |
 | T3 | Integration tests, run separately | E | Decided (I2) | Section 5.2 |
 | T4 | End-to-end tests of the web UI | E | Decided (I4) | Section 5.3 |
-| T5 | SLOs checked by a k6 load test | E | Decided (I4) | Section 5.4 |
+| T5 | SLOs checked by a k6 load test | E | Decided (I4) | Section 5.4; SLOs in Product Specification section 4.2 |
 | T6 | Test-driven development | V | Decided (I2) | Section 5.1 |
 | T7 | Pairwise testing | V | Decided (I4) | Section 5.5 |
 | T8 | Automated accessibility checks | V | Decided (I4) | Sections 3.4 and 5.4 |
@@ -270,14 +270,14 @@ The workflow always starts, and every component job runs in parallel on every pu
 - **Dashboards:** Grafana, with dashboards versioned in the repository and provisioned on start. The hotel backoffice reads the technical metrics (API latency, error rate, telemetry lag) from the same source.
 - **Alerts:** Grafana alert rules on the SLOs, sent by email to the team through an SMTP account configured in the VM's `.env`.
 
-The SLOs below are the team's proposal. Practice T5 requires them in the Product Specification report, where they will be defined; this table is then kept in line with it.
+The SLOs, with their targets and the tests that check them, are defined in section 4.2 of the Product Specification report. Each has a Grafana alert rule:
 
-| SLO (proposed) | Target | Alert when |
-|---|---|---|
-| Book-and-start latency | p95 < 500 ms | p95 above target for 5 minutes |
-| API error rate | < 1 % of requests | above target for 5 minutes |
-| Availability | 99 % per week | health check failing for 2 minutes |
-| Telemetry lag | p95 < 5 s | p95 above target for 5 minutes |
+| SLO | Alert when |
+|---|---|
+| SLO1, book-and-start latency | p95 above target for 5 minutes |
+| SLO2, API error rate | above target for 5 minutes |
+| SLO3, telemetry lag | p95 above target for 5 minutes |
+| SLO4, availability | health check failing for 2 minutes |
 
 ### 4.4 Artifacts repository
 
