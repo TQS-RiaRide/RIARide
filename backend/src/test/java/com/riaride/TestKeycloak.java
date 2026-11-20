@@ -1,8 +1,11 @@
 package com.riaride;
 
-import dasniko.testcontainers.keycloak.KeycloakContainer;
 import static io.restassured.RestAssured.given;
 
+import dasniko.testcontainers.keycloak.KeycloakContainer;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -28,8 +31,35 @@ public final class TestKeycloak {
 	public static synchronized KeycloakContainer container() {
 		if (!CONTAINER.isRunning()) {
 			CONTAINER.start();
+			allowPlainHttpFromTheHost();
 		}
 		return CONTAINER;
+	}
+
+	// The realms require HTTPS for requests that Keycloak does not see as local (sslRequired
+	// "external"). Depending on the Docker setup, requests from the host to a published port can
+	// arrive with a non-local source address, and every login then fails with "HTTPS required".
+	// The test container is reached over plain HTTP only, so both realms accept it there. kcadm runs
+	// inside the container, where the request is local. The realm file itself is not changed.
+	private static void allowPlainHttpFromTheHost() {
+		try {
+			run("/opt/keycloak/bin/kcadm.sh", "config", "credentials", "--server", "http://localhost:8080",
+				"--realm", "master", "--user", CONTAINER.getAdminUsername(), "--password", CONTAINER.getAdminPassword());
+			run("/opt/keycloak/bin/kcadm.sh", "update", "realms/master", "-s", "sslRequired=NONE");
+			run("/opt/keycloak/bin/kcadm.sh", "update", "realms/" + REALM, "-s", "sslRequired=NONE");
+		} catch (IOException failure) {
+			throw new UncheckedIOException(failure);
+		} catch (InterruptedException interrupted) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(interrupted);
+		}
+	}
+
+	private static void run(String... command) throws IOException, InterruptedException {
+		var result = CONTAINER.execInContainer(command);
+		if (result.getExitCode() != 0) {
+			throw new IllegalStateException("kcadm failed in the Keycloak test container: " + result.getStderr());
+		}
 	}
 
 	public static RealmResource realm() {
@@ -38,6 +68,10 @@ public final class TestKeycloak {
 
 	// Keycloak generates the backend client's secret when it imports the realm.
 	public static String backendClientSecret() {
+		return readBackendClientSecret();
+	}
+
+	private static String readBackendClientSecret() {
 		var clients = realm().clients();
 		var id = clients.findByClientId(BACKEND_CLIENT).getFirst().getId();
 		return clients.get(id).getSecret().getValue();
