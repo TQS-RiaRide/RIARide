@@ -22,3 +22,4 @@ Author diagrams in draw.io and store them as `.drawio.svg`, with the source embe
 - Full layout control and one file per diagram.
 - Pull requests show images, not meaningful text diffs.
 - Reviewers must check that diagrams still match the text.
+- Notation shared by all diagrams: a Docker icon marks each box that runs as its own container; dashed boundaries group containers; dashed arrows are events or monitoring traffic.

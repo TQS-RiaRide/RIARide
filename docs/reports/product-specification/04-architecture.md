@@ -42,6 +42,8 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 ![Containers](../../architecture/diagrams/02-containers.drawio.svg)
 
+Each box with the Docker icon runs as its own container in the Compose stack; the browser and Stripe do not.
+
 | Container | Technology | Responsibility |
 |---|---|---|
 | Reverse proxy and SPA | nginx, React build | Single public origin, TLS, routes `/api/v1`, `/auth` and `/grafana` |
@@ -49,13 +51,19 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 | PostgreSQL | One server | Databases `riaride` and `keycloak` |
 | Keycloak | OIDC provider | Credentials, login pages, roles |
 | Mosquitto | MQTT broker | Telemetry and commands, internal network only |
-| Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
-| Prometheus | Metrics store | Scrapes the backend's Actuator metrics; the backoffice reads technical metrics from it |
-| Grafana | Dashboards and alerts | Dashboards and SLO alerts by email |
+| Simulator | Python, paho-mqtt | Stands in for the e-bikes: emits telemetry per vehicle, reacts to commands |
+| Prometheus *(monitoring)* | Metrics store | Scrapes the backend's Actuator metrics; the backoffice reads technical metrics from it |
+| Grafana *(monitoring)* | Dashboards and alerts | Dashboards and SLO alerts by email |
+
+Prometheus and Grafana run in the same Compose project but outside the system boundary: they observe RiaRide, and no user flow depends on them. If Prometheus is down, only the backoffice's technical metrics are unavailable.
 
 ![Backend modules](../../architecture/diagrams/03-backend-modules.drawio.svg)
 
 The backend is a modular monolith ([ADR 0001](../../architecture/adr/0001-modular-monolith.md)). Spring Modulith checks the allowed dependencies in a test that fails the build on a violation ([ADR 0002](../../architecture/adr/0002-spring-modulith.md)). Ports and adapters are used only at the external integrations: `telemetry` for MQTT, `payments` for Stripe and `accounts` for Keycloak.
+
+![Backend components](../../architecture/diagrams/11-backend-components.drawio.svg)
+
+Requests enter through the REST controllers, protected by Spring Security, and reach the business modules. Modules reach PostgreSQL through JPA repositories, and Keycloak, Mosquitto and Stripe only through their adapters. Inside, every module has the same layers: controller, service, domain and repository; only its top-level package is public.
 
 ## 4.4 Module interactions
 
