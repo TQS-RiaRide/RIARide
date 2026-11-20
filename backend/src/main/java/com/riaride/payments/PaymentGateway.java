@@ -10,7 +10,6 @@ public interface PaymentGateway {
 	// Returns the payment reference.
 	String chargeOffSession(OffSessionCharge charge);
 
-	// Returns the refund reference.
-	String refund(RefundRequest request);
+	RefundResult refund(RefundRequest request);
 
 }

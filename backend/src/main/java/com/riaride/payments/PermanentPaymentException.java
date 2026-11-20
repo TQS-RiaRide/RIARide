@@ -4,8 +4,8 @@ package com.riaride.payments;
 // required, invalid request or configuration).
 public final class PermanentPaymentException extends PaymentException {
 
-	public PermanentPaymentException(String reason, String message, Throwable cause) {
-		super(reason, message, cause);
+	public PermanentPaymentException(String reason, String message, String paymentRef) {
+		super(reason, message, paymentRef);
 	}
 
 }
