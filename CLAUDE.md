@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Group project for the TQS course: a *light-mobility fleet-as-a-service* platform, graded on both the product and the evidence that quality was built in from the start. A practice only counts if the QA Manual's compliance table links to evidence of it working.
 
-The backend walking skeleton exists (Spring Boot 4.1, Java 21, Spring Modulith, Maven). `frontend/` and `simulator/` are still empty; document their commands here when they land.
+The backend (Spring Boot 4.1, Java 21, Spring Modulith, Maven) and frontend (React, Vite, TypeScript) walking skeletons exist. `simulator/` is still empty; document its commands here when it lands.
 
 ### Backend commands
 
@@ -23,6 +23,22 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | Docker image | `docker build -t riaride-backend .` |
 
 To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds Surefire's `skipTests` to `skipUnitTests`, so `-DskipTests` does not skip them.
+
+### Frontend commands
+
+Run from `frontend/`, with Node.js 22.22.2 or later in the 22 line, or 24.15.0 or later (24 LTS recommended). Details in [`frontend/README.md`](frontend/README.md).
+
+| Task | Command |
+|---|---|
+| Install dependencies | `npm ci` |
+| Dev server (`/api/v1` forwarded to `http://localhost:8080`; `VITE_BACKEND_URL` overrides it) | `npm run dev` (at `http://localhost:5173`) |
+| Lint (typescript-eslint strict, react-hooks) | `npm run lint` |
+| Format / check formatting (Prettier) | `npm run format` / `npm run format:check` |
+| Unit tests (Vitest, React Testing Library) | `npm test` |
+| Tests with LCOV coverage (`coverage/`, read by SonarQube) | `npm run test:coverage` |
+| Single test file or test | `npx vitest run src/features/health/api.test.ts -t "unreachable"` |
+| Type check and production build (`dist/`) | `npm run build` |
+| Docker image | `docker build -t riaride-frontend .` |
 
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
