@@ -6,8 +6,12 @@ package com.riaride.fleet.internal.domain;
  */
 public record BookingBatteryPolicy(int minimumPercent) {
 
+	/**
+	 * Returns whether a vehicle with this battery level can be booked. A vehicle with no battery
+	 * reading yet (no telemetry received) cannot be booked.
+	 */
 	public boolean allowsBooking(BatteryLevel level) {
-		return level.percent() >= minimumPercent;
+		return level != null && level.percent() >= minimumPercent;
 	}
 
 }
