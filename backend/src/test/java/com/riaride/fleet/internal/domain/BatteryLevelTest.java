@@ -1,6 +1,7 @@
 package com.riaride.fleet.internal.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,6 +17,14 @@ class BatteryLevelTest {
 		var level = BatteryLevel.of(percent);
 
 		assertThat(level.percent()).isEqualTo(percent);
+	}
+
+	@Requirement("RIA-59")
+	@ParameterizedTest
+	@ValueSource(ints = { -1, 101 })
+	void shouldRejectBatteryLevelOutside0To100Percent(int percent) {
+		assertThatThrownBy(() -> BatteryLevel.of(percent)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining(String.valueOf(percent));
 	}
 
 }
