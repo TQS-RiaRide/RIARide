@@ -19,7 +19,11 @@ import com.riaride.TestKeycloak;
 import com.riaride.TestcontainersConfiguration;
 import com.riaride.accounts.internal.domain.Guest;
 import com.riaride.accounts.internal.persistence.GuestRepository;
+import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -79,11 +83,15 @@ class SignUpGuestApiIT {
 	}
 
 	private String givenStay(String code, String checkIn, String checkOut) {
+		return givenStay(code, checkIn, checkOut, "ACTIVE");
+	}
+
+	private String givenStay(String code, String checkIn, String checkOut, String status) {
 		var id = UUID.randomUUID().toString();
 		jdbc.update("""
 			insert into stay (id, hotel_id, guest_name, stay_code, check_in, check_out, status)
-			values (?::uuid, ?::uuid, 'Rita Almeida', ?, ?::date, ?::date, 'ACTIVE')
-			""", id, MARES_CENTRO, code, checkIn, checkOut);
+			values (?::uuid, ?::uuid, 'Rita Almeida', ?, ?::date, ?::date, ?)
+			""", id, MARES_CENTRO, code, checkIn, checkOut, status);
 		return id;
 	}
 
@@ -236,6 +244,52 @@ class SignUpGuestApiIT {
 
 		assertThat(guestRows()).isZero();
 		assertThat(TestKeycloak.usersWithEmail(EMAIL)).isEmpty();
+	}
+
+	// BR1: a stay the hotel has checked out early has ended, even before its planned check-out day.
+	@Requirement("RIA-51")
+	@Test
+	void shouldRefuseStayCheckedOutBeforeItsCheckOutDate() throws Exception {
+		givenStay(ACTIVE_CODE, "2026-11-28", "2026-12-02", "CHECKED_OUT");
+
+		signUp(body(EMAIL, PASSWORD, ACTIVE_CODE))
+			.andExpect(status().isUnprocessableContent())
+			.andExpect(jsonPath("$.title").value("Stay already ended"));
+
+		assertThat(TestKeycloak.usersWithEmail(EMAIL)).isEmpty();
+	}
+
+	// A double click sends the same sign-up twice at once: one account is created, and the guest
+	// can log in with it, whichever request wins.
+	@Requirement("RIA-51")
+	@Test
+	void shouldCreateOneUsableAccountWhenTheSameSignUpArrivesTwiceAtOnce() throws Exception {
+		givenActiveStay();
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		try {
+			var results = new ArrayList<Future<Integer>>();
+			for (int i = 0; i < 2; i++) {
+				results.add(executor.submit(() -> {
+					start.await();
+					return signUp(body(EMAIL, PASSWORD, ACTIVE_CODE)).andReturn().getResponse().getStatus();
+				}));
+			}
+			start.countDown();
+			var statuses = new ArrayList<Integer>();
+			for (var result : results) {
+				statuses.add(result.get());
+			}
+
+			assertThat(statuses).containsOnlyOnce(201);
+		} finally {
+			executor.shutdownNow();
+		}
+		assertThat(guestRows()).isEqualTo(1);
+		var keycloakId = jdbc.queryForObject("select keycloak_id from guest", String.class);
+		assertThat(TestKeycloak.usersWithEmail(EMAIL)).singleElement()
+			.satisfies(user -> assertThat(user.getId()).isEqualTo(keycloakId));
+		assertThat(TestKeycloak.canLogIn(EMAIL, PASSWORD)).isTrue();
 	}
 
 	@Requirement("RIA-51")

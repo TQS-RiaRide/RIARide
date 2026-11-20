@@ -3,6 +3,7 @@ package com.riaride.accounts.internal.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -41,6 +42,8 @@ class SignUpGuestServiceTest {
 	private static final String EMAIL = "rita.almeida@example.test";
 	private static final String PASSWORD = "Sunny-Ria-2026";
 	private static final String KEYCLOAK_ID = "8d1f7c52-3c1e-4a8e-9b0e-2f4f6d7a9c11";
+	private static final GuestUser CREATED_USER = new GuestUser(KEYCLOAK_ID, true);
+	private static final GuestUser REUSED_USER = new GuestUser(KEYCLOAK_ID, false);
 
 	@Mock
 	private StayRepository stays;
@@ -79,7 +82,7 @@ class SignUpGuestServiceTest {
 	void shouldCreateAccountLinkedToStayWhenStayIsActive() {
 		var stay = activeStay();
 		givenStayIsFreeToUse(stay);
-		when(identity.createGuestUser(any())).thenReturn(KEYCLOAK_ID);
+		when(identity.createGuestUser(any())).thenReturn(CREATED_USER);
 		when(guests.saveAndFlush(any(Guest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		var guest = service().signUp(signUpWith("K7M3Q9TX"));
@@ -94,7 +97,7 @@ class SignUpGuestServiceTest {
 	@Test
 	void shouldCreateKeycloakUserWithGuestNameFromStayAndGivenPassword() {
 		givenStayIsFreeToUse(activeStay());
-		when(identity.createGuestUser(any())).thenReturn(KEYCLOAK_ID);
+		when(identity.createGuestUser(any())).thenReturn(CREATED_USER);
 		when(guests.saveAndFlush(any(Guest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 		var user = ArgumentCaptor.forClass(NewGuestUser.class);
 
@@ -111,7 +114,7 @@ class SignUpGuestServiceTest {
 	@Test
 	void shouldNormalizeEmailAndStayCodeTypedByGuest() {
 		givenStayIsFreeToUse(activeStay());
-		when(identity.createGuestUser(any())).thenReturn(KEYCLOAK_ID);
+		when(identity.createGuestUser(any())).thenReturn(CREATED_USER);
 		when(guests.saveAndFlush(any(Guest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		var guest = service().signUp(new SignUpGuestCommand("  Rita.Almeida@Example.TEST ", PASSWORD, " k7m3q9tx ", "pt"));
@@ -123,7 +126,7 @@ class SignUpGuestServiceTest {
 	@Test
 	void shouldAcceptSignUpAtTheLastMinuteOfTheCheckOutDayInVilaRia() {
 		givenStayIsFreeToUse(activeStay());
-		when(identity.createGuestUser(any())).thenReturn(KEYCLOAK_ID);
+		when(identity.createGuestUser(any())).thenReturn(CREATED_USER);
 		when(guests.saveAndFlush(any(Guest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		var guest = serviceAt("2026-12-05T23:59:59Z").signUp(signUpWith("K7M3Q9TX"));
@@ -197,7 +200,7 @@ class SignUpGuestServiceTest {
 	@Test
 	void shouldDeleteKeycloakUserWhenSavingGuestFails() {
 		givenStayIsFreeToUse(activeStay());
-		when(identity.createGuestUser(any())).thenReturn(KEYCLOAK_ID);
+		when(identity.createGuestUser(any())).thenReturn(CREATED_USER);
 		var failure = new DataIntegrityViolationException("duplicate key");
 		when(guests.saveAndFlush(any(Guest.class))).thenThrow(failure);
 		var service = service();
@@ -205,6 +208,52 @@ class SignUpGuestServiceTest {
 
 		assertThatThrownBy(() -> service.signUp(command)).isSameAs(failure);
 		verify(identity).deleteUser(KEYCLOAK_ID);
+	}
+
+	// A reused user was not created by this sign-up, so it is not this sign-up's to delete.
+	@Requirement("RIA-51")
+	@Test
+	void shouldNotDeleteReusedKeycloakUserWhenSavingGuestFails() {
+		givenStayIsFreeToUse(activeStay());
+		when(identity.createGuestUser(any())).thenReturn(REUSED_USER);
+		when(guests.saveAndFlush(any(Guest.class))).thenThrow(new DataIntegrityViolationException("duplicate key"));
+		var service = service();
+		var command = signUpWith("K7M3Q9TX");
+
+		assertThatThrownBy(() -> service.signUp(command)).isInstanceOf(DataIntegrityViolationException.class);
+		verify(identity, never()).deleteUser(any());
+	}
+
+	// Two identical sign-ups at the same time: the one that stored its guest keeps its user.
+	@Requirement("RIA-51")
+	@Test
+	void shouldNotDeleteKeycloakUserThatAStoredGuestReferences() {
+		givenStayIsFreeToUse(activeStay());
+		when(identity.createGuestUser(any())).thenReturn(CREATED_USER);
+		when(guests.saveAndFlush(any(Guest.class))).thenThrow(new DataIntegrityViolationException("duplicate key"));
+		when(guests.existsByKeycloakId(KEYCLOAK_ID)).thenReturn(true);
+		var service = service();
+		var command = signUpWith("K7M3Q9TX");
+
+		assertThatThrownBy(() -> service.signUp(command)).isInstanceOf(DataIntegrityViolationException.class);
+		verify(identity, never()).deleteUser(any());
+	}
+
+	@Requirement("RIA-51")
+	@Test
+	void shouldKeepTheOriginalErrorWhenTheCompensationFails() {
+		givenStayIsFreeToUse(activeStay());
+		when(identity.createGuestUser(any())).thenReturn(CREATED_USER);
+		var failure = new DataIntegrityViolationException("duplicate key");
+		when(guests.saveAndFlush(any(Guest.class))).thenThrow(failure);
+		var cleanup = new IdentityProviderUnavailableException("Keycloak is down", null);
+		doThrow(cleanup).when(identity).deleteUser(KEYCLOAK_ID);
+		var service = service();
+		var command = signUpWith("K7M3Q9TX");
+
+		assertThatThrownBy(() -> service.signUp(command))
+			.isSameAs(failure)
+			.satisfies(thrown -> assertThat(thrown.getSuppressed()).containsExactly(cleanup));
 	}
 
 	@Requirement("RIA-51")

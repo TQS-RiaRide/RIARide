@@ -6,7 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.TestKeycloak;
 import com.riaride.accounts.internal.application.EmailAlreadyRegisteredException;
+import com.riaride.accounts.internal.application.IdentityRejectedException;
 import com.riaride.accounts.internal.application.NewGuestUser;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,15 +27,25 @@ class KeycloakIdentityProviderIT {
 	private static final String EMAIL = "marta.sousa@example.test";
 	private static final String PASSWORD = "Salt-Pans-2026";
 
+	private KeycloakAdminProperties properties;
 	private KeycloakIdentityProvider identity;
 
 	@BeforeEach
 	void setUp() {
 		var keycloak = TestKeycloak.container();
-		var properties = new KeycloakAdminProperties(keycloak.getAuthServerUrl(), TestKeycloak.REALM,
+		properties = new KeycloakAdminProperties(keycloak.getAuthServerUrl(), TestKeycloak.REALM,
 			TestKeycloak.BACKEND_CLIENT, TestKeycloak.backendClientSecret());
-		identity = new KeycloakIdentityProvider(RestClient.builder(), properties);
+		identity = identityAt(Clock.systemUTC());
 		TestKeycloak.deleteUsersWithEmail(EMAIL);
+	}
+
+	private KeycloakIdentityProvider identityAt(Clock clock) {
+		return new KeycloakIdentityProvider(RestClient.builder(), properties, clock);
+	}
+
+	// Later than any sign-up still in progress, so a guest-only user left in Keycloak is an orphan.
+	private KeycloakIdentityProvider identityLater() {
+		return identityAt(Clock.offset(Clock.systemUTC(), KeycloakIdentityProvider.ORPHAN_MIN_AGE.plus(Duration.ofMinutes(1))));
 	}
 
 	@AfterEach
@@ -71,8 +84,10 @@ class KeycloakIdentityProviderIT {
 	@Requirement("RIA-51")
 	@Test
 	void shouldCreateEnabledUserWithGuestRoleAndNames() {
-		var id = identity.createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa"));
+		var created = identity.createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa"));
 
+		assertThat(created.created()).isTrue();
+		var id = created.id();
 		var user = TestKeycloak.realm().users().get(id).toRepresentation();
 		assertThat(user.getEmail()).isEqualTo(EMAIL);
 		assertThat(user.getUsername()).isEqualTo(EMAIL);
@@ -96,9 +111,10 @@ class KeycloakIdentityProviderIT {
 	void shouldReuseExistingGuestOnlyUserWithNewPassword() {
 		var orphan = createUserWithRole("GUEST");
 
-		var id = identity.createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa"));
+		var reused = identityLater().createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa"));
 
-		assertThat(id).isEqualTo(orphan);
+		assertThat(reused.id()).isEqualTo(orphan);
+		assertThat(reused.created()).isFalse();
 		assertThat(TestKeycloak.usersWithEmail(EMAIL)).hasSize(1);
 		assertThat(TestKeycloak.canLogIn(EMAIL, PASSWORD)).isTrue();
 	}
@@ -108,16 +124,62 @@ class KeycloakIdentityProviderIT {
 	void shouldRefuseEmailOfUserWithAnotherRole() {
 		var operator = createUserWithRole("OPERATOR");
 		var user = new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa");
+		var later = identityLater();
 
-		assertThatThrownBy(() -> identity.createGuestUser(user)).isInstanceOf(EmailAlreadyRegisteredException.class);
+		assertThatThrownBy(() -> later.createGuestUser(user)).isInstanceOf(EmailAlreadyRegisteredException.class);
 		assertThat(realmRolesOf(operator)).doesNotContain("GUEST");
 		assertThat(TestKeycloak.canLogIn(EMAIL, PASSWORD)).isFalse();
+	}
+
+	// A guest-only user created moments ago may belong to a sign-up still in progress
+	// (a double click): it is not taken over, and its password is left as it is.
+	@Requirement("RIA-51")
+	@Test
+	void shouldRefuseRecentGuestUserThatMayBeAnotherSignUpInProgress() {
+		createUserWithRole("GUEST");
+		var user = new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa");
+
+		assertThatThrownBy(() -> identity.createGuestUser(user)).isInstanceOf(EmailAlreadyRegisteredException.class);
+		assertThat(TestKeycloak.canLogIn(EMAIL, "Old-Password-1")).isTrue();
+		assertThat(TestKeycloak.canLogIn(EMAIL, PASSWORD)).isFalse();
+	}
+
+	// Only users the sign-up flow left behind carry GUEST; a user created by hand has no app role.
+	@Requirement("RIA-51")
+	@Test
+	void shouldRefuseUserWithoutTheGuestRole() {
+		createUserWithRole(null);
+		var user = new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa");
+		var later = identityLater();
+
+		assertThatThrownBy(() -> later.createGuestUser(user)).isInstanceOf(EmailAlreadyRegisteredException.class);
+		assertThat(TestKeycloak.canLogIn(EMAIL, PASSWORD)).isFalse();
+	}
+
+	// For example a password policy added to the realm later: a client error, not an outage.
+	@Requirement("RIA-51")
+	@Test
+	void shouldReportAccountThatKeycloakRejectsAsRejectedNotUnavailable() {
+		var realm = TestKeycloak.realm();
+		var representation = realm.toRepresentation();
+		var previousPolicy = representation.getPasswordPolicy();
+		representation.setPasswordPolicy("length(20)");
+		realm.update(representation);
+		try {
+			var user = new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa");
+
+			assertThatThrownBy(() -> identity.createGuestUser(user)).isInstanceOf(IdentityRejectedException.class);
+			assertThat(TestKeycloak.usersWithEmail(EMAIL)).isEmpty();
+		} finally {
+			representation.setPasswordPolicy(previousPolicy == null ? "" : previousPolicy);
+			realm.update(representation);
+		}
 	}
 
 	@Requirement("RIA-51")
 	@Test
 	void shouldDeleteUser() {
-		var id = identity.createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa"));
+		var id = identity.createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa")).id();
 
 		identity.deleteUser(id);
 
@@ -127,7 +189,7 @@ class KeycloakIdentityProviderIT {
 	@Requirement("RIA-51")
 	@Test
 	void shouldIgnoreDeletingUserThatNoLongerExists() {
-		var id = identity.createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa"));
+		var id = identity.createGuestUser(new NewGuestUser(EMAIL, PASSWORD, "Marta", "Sousa")).id();
 		identity.deleteUser(id);
 
 		identity.deleteUser(id);
