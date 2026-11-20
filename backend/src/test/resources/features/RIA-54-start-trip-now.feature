@@ -8,7 +8,7 @@ Feature: Start a trip now
     And a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
     And the guest has a valid "stay" pass
 
-  @BR6 @wip
+  @TEST_RIA-151 @BR6 @wip
   Scenario: Starting a trip reserves the bike and sends the unlock command
     Given the guest has no trip in progress
     When the guest starts a trip with bike "EB-201"

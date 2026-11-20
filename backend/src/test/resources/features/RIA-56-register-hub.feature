@@ -21,7 +21,7 @@ Feature: Register a hub
   (Content-Type application/problem+json) naming the invalid field, and no hub is created.
   A user without the operator role: 403 Forbidden with a problem detail, and no hub is created.
 
-  @BR10 @wip
+  @TEST_RIA-153 @BR10 @wip
   Scenario: The operator registers a hub with capacity for 10 bikes
     Given an operator is logged in
     When the user registers a hub with:

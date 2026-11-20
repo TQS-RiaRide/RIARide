@@ -7,7 +7,7 @@ Feature: End a trip at a hub
     Given a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
     And the guest has a trip in progress with bike "EB-301"
 
-  @BR10 @wip
+  @TEST_RIA-152 @BR10 @wip
   Scenario: The guest ends the trip at a hub with a free slot
     Given a hub "Marés Praia" with capacity 10 and 9 bikes docked
     When the guest ends the trip at hub "Marés Praia"
