@@ -72,9 +72,10 @@ public class Stay implements Persistable<UUID> {
 		return new Stay(hotelId, guestName, stayCode, checkIn, checkOut);
 	}
 
-	// BR1: the stay code can be used to sign up until the end of the check-out day.
+	// BR1: the stay code can be used to sign up until the end of the check-out day, unless the
+	// hotel has already checked the guest out.
 	public boolean hasEndedOn(LocalDate today) {
-		return today.isAfter(checkOut);
+		return status == StayStatus.CHECKED_OUT || today.isAfter(checkOut);
 	}
 
 	@Override

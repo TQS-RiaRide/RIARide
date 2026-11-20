@@ -2,6 +2,7 @@ package com.riaride.accounts.internal.web;
 
 import com.riaride.accounts.internal.application.EmailAlreadyRegisteredException;
 import com.riaride.accounts.internal.application.IdentityProviderUnavailableException;
+import com.riaride.accounts.internal.application.IdentityRejectedException;
 import com.riaride.accounts.internal.application.InvalidStayCodeException;
 import com.riaride.accounts.internal.domain.StayAlreadyEndedException;
 import org.slf4j.Logger;
@@ -46,9 +47,19 @@ class GuestProblemHandler {
 			"The account conflicts with another sign-up made at the same time. Try again.");
 	}
 
+	@ExceptionHandler(IdentityRejectedException.class)
+	ProblemDetail identityRejected(IdentityRejectedException exception) {
+		log.warn("Guest sign-up rejected by Keycloak: {}", exception.getMessage());
+		return problem(HttpStatus.UNPROCESSABLE_CONTENT, "Account details rejected",
+			"The email or password was not accepted. Check them and try again.");
+	}
+
+	// The message holds the HTTP status or says Keycloak was unreachable; the cause's class tells
+	// a timeout from a refused connection. Response bodies are never logged.
 	@ExceptionHandler(IdentityProviderUnavailableException.class)
 	ProblemDetail identityProviderUnavailable(IdentityProviderUnavailableException exception) {
-		log.error("Guest sign-up failed: {}", exception.getMessage());
+		var cause = exception.getCause() == null ? "none" : exception.getCause().getClass().getSimpleName();
+		log.error("Guest sign-up failed: {} (cause: {})", exception.getMessage(), cause);
 		return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable",
 			"The account could not be created right now. Try again later.");
 	}

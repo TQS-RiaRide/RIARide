@@ -1,10 +1,15 @@
 package com.riaride.accounts.internal.keycloak;
 
 import com.riaride.accounts.internal.application.EmailAlreadyRegisteredException;
+import com.riaride.accounts.internal.application.GuestUser;
 import com.riaride.accounts.internal.application.IdentityProvider;
 import com.riaride.accounts.internal.application.IdentityProviderUnavailableException;
+import com.riaride.accounts.internal.application.IdentityRejectedException;
 import com.riaride.accounts.internal.application.NewGuestUser;
 import java.net.URI;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,9 +17,12 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 // Adapter for the Keycloak Admin API (ADR 0010), authenticated with the backend's service client
 // (client credentials). It never logs request bodies, so passwords do not reach the logs.
@@ -22,36 +30,49 @@ class KeycloakIdentityProvider implements IdentityProvider {
 
 	static final String GUEST_ROLE = "GUEST";
 
+	// A sign-up takes seconds. A guest-only user younger than this may belong to a sign-up still
+	// in progress (a double click), so it is never taken over.
+	static final Duration ORPHAN_MIN_AGE = Duration.ofMinutes(2);
+
+	private static final Logger log = LoggerFactory.getLogger(KeycloakIdentityProvider.class);
+
 	private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_OF_OBJECTS =
 		new ParameterizedTypeReference<>() {
 		};
 
 	private final RestClient rest;
 	private final KeycloakAdminProperties properties;
+	private final Clock clock;
 
-	KeycloakIdentityProvider(RestClient.Builder builder, KeycloakAdminProperties properties) {
+	KeycloakIdentityProvider(RestClient.Builder builder, KeycloakAdminProperties properties, Clock clock) {
 		this.rest = builder.baseUrl(properties.baseUrl()).build();
 		this.properties = properties;
+		this.clock = clock;
 	}
 
 	@Override
-	public String createGuestUser(NewGuestUser user) {
+	public GuestUser createGuestUser(NewGuestUser user) {
 		try {
 			var token = accessToken();
 			var existing = findUserByEmail(token, user.email());
 			if (existing.isPresent()) {
-				return reuseOrphanGuest(token, existing.get(), user);
+				return new GuestUser(reuseOrphanGuest(token, existing.get(), user), false);
 			}
 			var id = createUser(token, user);
 			try {
 				assignGuestRole(token, id);
 			} catch (RuntimeException failure) {
-				delete(token, id);
+				deleteQuietly(token, id, failure);
 				throw failure;
 			}
-			return id;
+			return new GuestUser(id, true);
+		} catch (HttpClientErrorException.BadRequest rejected) {
+			throw new IdentityRejectedException("Keycloak rejected the user (HTTP 400)", rejected);
+		} catch (RestClientResponseException failure) {
+			throw new IdentityProviderUnavailableException(
+				"The Keycloak Admin API answered HTTP " + failure.getStatusCode().value(), failure);
 		} catch (RestClientException failure) {
-			throw new IdentityProviderUnavailableException("The Keycloak Admin API request failed", failure);
+			throw new IdentityProviderUnavailableException("The Keycloak Admin API could not be reached", failure);
 		}
 	}
 
@@ -64,13 +85,17 @@ class KeycloakIdentityProvider implements IdentityProvider {
 		}
 	}
 
-	// A user left behind by a sign-up that failed locally has no role beyond GUEST and the
-	// realm defaults. Any other user with this email (an operator, say) is never taken over.
-	private String reuseOrphanGuest(String token, String userId, NewGuestUser user) {
-		var onlyGuest = realmRoles(token, userId).stream()
+	// An orphan is a user left behind by a sign-up that failed locally: it has the GUEST role and
+	// nothing beyond the realm defaults, and it is old enough that no sign-up is still creating it.
+	// Any other user with this email (an operator, a user created by hand, a sign-up in progress)
+	// is never taken over, and its password is left as it is.
+	private String reuseOrphanGuest(String token, Map<String, Object> existing, NewGuestUser user) {
+		var userId = (String) existing.get("id");
+		var roles = realmRoles(token, userId);
+		var onlyGuest = roles.contains(GUEST_ROLE) && roles.stream()
 			.allMatch(role -> GUEST_ROLE.equals(role) || role.startsWith("default-roles-")
 				|| "offline_access".equals(role) || "uma_authorization".equals(role));
-		if (!onlyGuest) {
+		if (!onlyGuest || !isOldEnough(existing)) {
 			throw new EmailAlreadyRegisteredException();
 		}
 		rest.put()
@@ -80,8 +105,15 @@ class KeycloakIdentityProvider implements IdentityProvider {
 			.body(password(user.password()))
 			.retrieve()
 			.toBodilessEntity();
-		assignGuestRole(token, userId);
 		return userId;
+	}
+
+	private boolean isOldEnough(Map<String, Object> user) {
+		if (!(user.get("createdTimestamp") instanceof Number createdMillis)) {
+			return false;
+		}
+		var created = Instant.ofEpochMilli(createdMillis.longValue());
+		return !created.plus(ORPHAN_MIN_AGE).isAfter(clock.instant());
 	}
 
 	private String accessToken() {
@@ -102,13 +134,13 @@ class KeycloakIdentityProvider implements IdentityProvider {
 		return token;
 	}
 
-	private Optional<String> findUserByEmail(String token, String email) {
+	private Optional<Map<String, Object>> findUserByEmail(String token, String email) {
 		var users = rest.get()
 			.uri(usersPath() + "?email={email}&exact=true", email)
 			.headers(headers -> headers.setBearerAuth(token))
 			.retrieve()
 			.body(LIST_OF_OBJECTS);
-		return users == null ? Optional.empty() : users.stream().map(user -> (String) user.get("id")).findFirst();
+		return users == null ? Optional.empty() : users.stream().findFirst();
 	}
 
 	private String createUser(String token, NewGuestUser user) {
@@ -170,6 +202,17 @@ class KeycloakIdentityProvider implements IdentityProvider {
 			.body(List.of(guestRole.get()))
 			.retrieve()
 			.toBodilessEntity();
+	}
+
+	// Compensation inside the adapter: a failed delete is attached to the original error.
+	private void deleteQuietly(String token, String userId, RuntimeException failure) {
+		try {
+			delete(token, userId);
+		} catch (RuntimeException cleanup) {
+			failure.addSuppressed(cleanup);
+			log.warn("Could not delete Keycloak user {} after a failed role assignment ({})", userId,
+				cleanup.getClass().getSimpleName());
+		}
 	}
 
 	private void delete(String token, String userId) {
