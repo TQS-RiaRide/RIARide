@@ -20,7 +20,6 @@ set -a
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 set +a
-: "${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in infra/.env}"
 : "${DEV_USER_PASSWORD:?set DEV_USER_PASSWORD in infra/.env}"
 
 # Only the local stack: refuse a Docker daemon reached over the network (DOCKER_HOST or a
@@ -38,6 +37,14 @@ kcadm() {
   docker compose -f "$INFRA_DIR/compose.yaml" exec -T keycloak /opt/keycloak/bin/kcadm.sh "$@"
 }
 
+# Logs in with the admin credentials from the container's own environment (compose.yaml). The
+# password reaches kcadm through KC_CLI_PASSWORD, never as a process argument (visible with ps):
+# the single quotes keep the host's arguments to the variable names, expanded in the container.
+kcadm_login() {
+  docker compose -f "$INFRA_DIR/compose.yaml" exec -T keycloak sh -c \
+    'KC_CLI_PASSWORD="$KC_BOOTSTRAP_ADMIN_PASSWORD" exec /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME"'
+}
+
 json_escape() {
   local value=${1//\\/\\\\}
   printf '%s' "${value//\"/\\\"}"
@@ -45,8 +52,7 @@ json_escape() {
 
 echo "Waiting for Keycloak..."
 for _ in $(seq 1 60); do
-  if kcadm config credentials --server http://localhost:8080 --realm master \
-      --user "${KEYCLOAK_ADMIN_USERNAME:-admin}" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null 2>&1; then
+  if kcadm_login >/dev/null 2>&1; then
     break
   fi
   sleep 2
@@ -100,8 +106,8 @@ for entry in "${USERS[@]}"; do
     attributes="{\"hotel_id\": [\"$hotel\"]}"
   fi
   # The user, password included, goes through stdin, so the password never appears in a
-  # process's arguments (visible with ps).
-  kcadm create users -r "$REALM" -f - >/dev/null 2>&1 <<JSON
+  # process's arguments (visible with ps). Errors stay on stderr, so a failure shows its reason.
+  kcadm create users -r "$REALM" -i -f - >/dev/null <<JSON
 {
   "username": "$username",
   "enabled": true,
