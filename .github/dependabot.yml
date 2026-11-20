@@ -1,24 +1,29 @@
 version: 2
 # Dependabot pull requests involve no AI, so each one gets ai:none (QA Manual 6.2).
 # Setting `labels` replaces Dependabot's default labels, so they are listed too.
+# Pull requests target dev, like every other change (QA Manual 4.1).
 updates:
   - package-ecosystem: maven
     directory: /backend
     schedule: { interval: weekly }
+    target-branch: dev
     labels: ["dependencies", "java", "ai:none"]
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly }
+    target-branch: dev
     labels: ["dependencies", "javascript", "ai:none"]
   # Keeps pinned action SHAs (checkout, claude-code-action) up to date.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    target-branch: dev
     commit-message:
       prefix: ci
     labels: ["dependencies", "github_actions", "ai:none"]
   - package-ecosystem: pip
     directory: /simulator
     schedule: { interval: weekly }
+    target-branch: dev
     labels: ["dependencies", "ai:none"]
