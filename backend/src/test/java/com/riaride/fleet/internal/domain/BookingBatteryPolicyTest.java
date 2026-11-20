@@ -3,6 +3,7 @@ package com.riaride.fleet.internal.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -26,6 +27,14 @@ class BookingBatteryPolicyTest {
 	@ValueSource(ints = { 0, 18, 19 })
 	void shouldBlockBookingWhenBatteryBelow20Percent(int percent) {
 		var allowed = POLICY.allowsBooking(BatteryLevel.of(percent));
+
+		assertThat(allowed).isFalse();
+	}
+
+	@Requirement("RIA-59")
+	@Test
+	void shouldBlockBookingWhenNoBatteryReadingYet() {
+		var allowed = POLICY.allowsBooking(null);
 
 		assertThat(allowed).isFalse();
 	}
