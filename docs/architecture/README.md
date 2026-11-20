@@ -69,16 +69,27 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 ![Containers](diagrams/02-containers.drawio.svg)
 
+Every box with the Docker icon is one service in `infra/compose.yaml` and runs as its own container. The web browser and Stripe are not containers.
+
+**RiaRide system**
+
 | Container | Technology | Responsibility |
 |---|---|---|
 | Reverse proxy and SPA | nginx, static React build | Single public origin, TLS, routes `/api/v1`, `/auth` and `/grafana` |
-| Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server |
+| Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server (components in section 5) |
 | PostgreSQL | One server, databases `riaride` and `keycloak` | Durable state |
 | Keycloak | OIDC provider | Credentials, login pages, roles; realm exported to the repository |
 | Mosquitto | MQTT broker | Telemetry and commands, internal network only |
-| Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
+| Simulator | Python, paho-mqtt | Stands in for the e-bikes: emits telemetry per vehicle, reacts to commands |
+
+**Monitoring (supporting)**
+
+| Container | Technology | Responsibility |
+|---|---|---|
 | Prometheus | Metrics store | Scrapes the backend's Actuator endpoint; queried by the backoffice for technical metrics |
 | Grafana | Dashboards and alerts | Versioned dashboards, SLO alert rules sent by email |
+
+Prometheus and Grafana run in the same Compose project but sit outside the system boundary: they observe and operate RiaRide, and no guest, operator or hotel flow depends on them. If Prometheus is down, the backoffice shows the technical metrics as unavailable and every other feature keeps working. Dashed arrows in the diagram are monitoring traffic.
 
 Dashboards poll the REST API. A push channel is not justified by the MVP.
 
@@ -98,6 +109,21 @@ Dashboards poll the REST API. A push channel is not justified by the MVP.
 | `backoffice` | Suggested routes, KPIs, technical metrics | read access to all of the above |
 
 Only a module's top-level package is public. `ApplicationModules.of(...).verify()` runs as a test and fails the build on a cycle or a reach into another module's internals.
+
+### Components inside the backend
+
+![Backend components](diagrams/11-backend-components.drawio.svg)
+
+Requests enter through the REST controllers, protected by Spring Security, and reach the business modules. Modules reach the outside only through the JPA repositories and the three adapters (Keycloak, MQTT, Stripe). Inside, every module has the same four layers:
+
+| Layer | Package | Responsibility |
+|---|---|---|
+| Controller | `<module>.internal.web` | Receives the request, validates input, maps DTOs |
+| Service | `<module>.internal.application` | Runs the use case in a transaction, publishes events |
+| Domain | `<module>.internal.domain` | Business rules, with time from an injected `Clock` |
+| Repository | `<module>.internal.persistence` | Spring Data JPA over the module's own tables |
+
+Only the module's top-level package (its API, events and DTOs) is public. Event listeners and scheduled jobs sit in `internal` too.
 
 **Communication rule.** A module calls another module's public API for queries and for commands whose result it needs now. A module publishes an event for side effects elsewhere, handled by an `@ApplicationModuleListener` after commit. Spring Modulith stores each publication in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge.
 
