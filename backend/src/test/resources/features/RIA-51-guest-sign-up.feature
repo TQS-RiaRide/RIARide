@@ -13,6 +13,15 @@ Feature: Guest sign-up with a stay code
     Then the response status is 201
     And an account exists for "rita.almeida@example.test" linked to that stay
 
+  # BR1: the stay is still active on its check-out day.
+  @BR1
+  Scenario: A guest can still sign up on the check-out day
+    Given a stay at "Marés Centro" for guest "Rita Almeida" from "2026-11-27" to "2026-11-30"
+    And today is "2026-11-30"
+    When a guest signs up with email "rita.almeida@example.test", password "Sunny-Ria-2026" and that stay code
+    Then the response status is 201
+    And an account exists for "rita.almeida@example.test" linked to that stay
+
   @BR1
   Scenario: A guest with a stay code for an ended stay cannot sign up
     Given a stay at "Marés Centro" for guest "Rita Almeida" from "2026-11-25" to "2026-11-29"
