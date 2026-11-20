@@ -35,4 +35,12 @@ class FleetConfigurationTest {
 				.hasRootCauseInstanceOf(BindValidationException.class));
 	}
 
+	@Requirement("RIA-59")
+	@Test
+	void shouldFailStartupWhenMinimumBatteryIsMissing() {
+		contextRunner.run(context -> assertThat(context).hasFailed()
+			.getFailure()
+			.hasRootCauseInstanceOf(BindValidationException.class));
+	}
+
 }
