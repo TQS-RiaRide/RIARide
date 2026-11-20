@@ -143,7 +143,7 @@ A story is done when: acceptance criteria met (Gherkin + Cucumber for core stori
 - Do not give AI services secrets, credentials or personal data. Use synthetic data only.
 - AI review on pull requests, recording accepted and rejected findings (see `.github/pull_request_template.md`).
 - At least two stories must be agent-generated from Gherkin or an OpenSpec proposal and delivered as pull requests.
-- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`; a CI check to enforce it is planned (I2), and until then the reviewer checks it.
+- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`. The `AI label` check (`.github/workflows/ai-label.yml`) fails a pull request with none or more than one; Dependabot pull requests get `ai:none` automatically.
 - Agent-generated stories follow test author → implementer → reviewer, with a human checkpoint after each step; the implementer must not edit the tests written in the first step.
 - These instructions must stay consistent with the QA Manual (style, definition of done, test rules, build commands).
 
