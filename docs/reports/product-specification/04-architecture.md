@@ -22,7 +22,7 @@ The SLOs cover what a guest notices first (booking speed and failures), what the
 | ID | Objective | Metric and target | Verified by |
 |---|---|---|---|
 | SLO1 | Booking and starting a trip is fast at peak load | p95 latency of the book and start requests < 500 ms with 50 concurrent virtual users | k6 load scenario with thresholds, before each tag from I4 (QA Manual, section 5.4); Grafana alert in production |
-| SLO2 | The API rarely fails | Server errors (5xx) < 1 % of requests; business rejections (4xx) do not count | k6 `http_req_failed` threshold in the same run; Grafana alert in production |
+| SLO2 | The API rarely fails | Server errors (5xx) < 1 % of requests; business rejections (4xx) do not count | k6 `http_req_failed` threshold in the same run, with `http.setResponseCallback(http.expectedStatuses({ min: 200, max: 499 }))` so only 5xx count as failed; Grafana alert on the 5xx rate in production |
 | SLO3 | Telemetry is processed promptly | p95 of the telemetry lag (`received_at` minus `emitted_at`) < 5 s with the simulator emitting 10 readings per second | Simulator run at that rate on staging, read from the Micrometer telemetry lag metric; Grafana alert in production |
 | SLO4 | The service is available | 99 % of health checks succeed per week | Prometheus probing `/actuator/health` on staging and production; Grafana uptime panel and alert |
 
