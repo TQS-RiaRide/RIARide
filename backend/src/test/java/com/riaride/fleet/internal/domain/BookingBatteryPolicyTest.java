@@ -21,4 +21,13 @@ class BookingBatteryPolicyTest {
 		assertThat(allowed).isTrue();
 	}
 
+	@Requirement("RIA-59")
+	@ParameterizedTest
+	@ValueSource(ints = { 0, 18, 19 })
+	void shouldBlockBookingWhenBatteryBelow20Percent(int percent) {
+		var allowed = POLICY.allowsBooking(BatteryLevel.of(percent));
+
+		assertThat(allowed).isFalse();
+	}
+
 }
