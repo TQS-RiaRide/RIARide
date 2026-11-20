@@ -20,6 +20,7 @@
 		<java.version>21</java.version>
 		<spring-modulith.version>2.1.2</spring-modulith.version>
 		<jacoco.version>0.8.16</jacoco.version>
+		<xray-junit-extensions.version>1.1.0</xray-junit-extensions.version>
 		<!-- Set to true to run only integration tests: ./mvnw verify -DskipUnitTests=true -->
 		<skipUnitTests>false</skipUnitTests>
 	</properties>
@@ -60,6 +61,13 @@
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
 			<artifactId>spring-modulith-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Links JUnit tests to Jira stories in Xray: @Requirement("RIA-n") (QA Manual 2.3). -->
+		<dependency>
+			<groupId>app.getxray</groupId>
+			<artifactId>xray-junit-extensions</artifactId>
+			<version>${xray-junit-extensions.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
