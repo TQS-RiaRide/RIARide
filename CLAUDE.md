@@ -96,11 +96,11 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 
 ### Git and Jira
 
-- One feature branch per story; protected `main`; merges only through a pull request approved by another member.
+- One feature branch per story, created from `dev` and merged into `dev`; merges only through a pull request approved by another member. `main` is the release branch: `dev` is merged into it by a pull request at the end of each iteration, before the tag. Nobody pushes directly to `dev` or `main`.
 - The Jira key (for example, `RIA-12`) must appear in the branch name, the commits and the pull request.
 - Branch names: `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`.
 - Commits: Conventional Commits with the key, for example `feat: RIA-31 add booking endpoint`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
-- Merge with a merge commit, never squash, so test-first (TDD) commits stay in `main`'s history. For TDD components, commit the failing test before the implementation.
+- Merge with a merge commit, never squash, so test-first (TDD) commits stay in the history of `dev` and `main`. For TDD components, commit the failing test before the implementation.
 - Tags at the end of each iteration: `iter1`, `iter2`, ..., `final_v1`. At each tag, a PDF of each report goes in `docs/`.
 
 ### Expected tests
@@ -145,6 +145,8 @@ A story is done when: acceptance criteria met (Gherkin + Cucumber for core stori
 - At least two stories must be agent-generated from Gherkin or an OpenSpec proposal and delivered as pull requests.
 - Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`; a CI check to enforce it is planned (I2), and until then the reviewer checks it.
 - Agent-generated stories follow test author → implementer → reviewer, with a human checkpoint after each step; the implementer must not edit the tests written in the first step.
+- Jira (Atlassian MCP): read the story, acceptance criteria and Xray Tests before writing code or tests; you may comment with the PR link and move a story to *In progress* or *In review*. Never move a story to *Done*, create, split or estimate stories, or edit Gherkin in Jira (QA Manual 6.4).
+- SonarQube (MCP and `sonar-*` skills): read the quality gate, new issues, coverage gaps and duplications, and fix issues in code. Never mark a hotspot as reviewed, accept or close an issue, or change the quality gate, quality profile or coverage exclusions (QA Manual 6.4).
 - These instructions must stay consistent with the QA Manual (style, definition of done, test rules, build commands).
 
 ### Reports
