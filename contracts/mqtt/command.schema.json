@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://riaride.example/contracts/mqtt/command.schema.json",
+  "title": "Vehicle command",
+  "description": "Published by the platform on riaride/vehicles/{vehicleId}/commands, QoS 1. UNLOCK starts a ride; LOCK ends it at hubId. The simulator answers every accepted command with a telemetry message, which is how the platform confirms an unlock.",
+  "type": "object",
+  "required": ["messageId", "emittedAt", "command"],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": { "type": "string", "format": "uuid" },
+    "emittedAt": { "type": "string", "format": "date-time" },
+    "command": { "enum": ["UNLOCK", "LOCK"] },
+    "hubId": { "type": ["string", "null"], "minLength": 1 }
+  }
+}

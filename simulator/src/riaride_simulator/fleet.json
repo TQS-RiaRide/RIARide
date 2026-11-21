@@ -1,0 +1,97 @@
+{
+  "_comment": "Synthetic demo fleet. Hub ids must match the platform's seed data; vehicle ids are the vehicle codes used in the MQTT topics.",
+  "hubs": [
+    {
+      "id": "ded64655-0ca3-5c5c-9dd8-c641407a63c5",
+      "name": "Marés Centro",
+      "lat": 40.6443,
+      "lon": -8.6455
+    },
+    {
+      "id": "3249f7af-8922-558b-be13-7de56e9b83d4",
+      "name": "Marés Praia",
+      "lat": 40.6405,
+      "lon": -8.7538
+    },
+    {
+      "id": "b4739d07-b5ff-5a7d-8f4f-2b8ee06ae7fe",
+      "name": "Marés Salinas",
+      "lat": 40.651,
+      "lon": -8.682
+    },
+    {
+      "id": "a2ff5b85-17ec-5a42-b41f-b28472ce98e9",
+      "name": "Historic centre",
+      "lat": 40.6412,
+      "lon": -8.6538
+    },
+    {
+      "id": "ffe00f04-7df3-5623-ad22-945760eec5f0",
+      "name": "Lighthouse",
+      "lat": 40.643,
+      "lon": -8.748
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "EB-101",
+      "hubId": "ded64655-0ca3-5c5c-9dd8-c641407a63c5",
+      "batteryPct": 92
+    },
+    {
+      "id": "EB-102",
+      "hubId": "3249f7af-8922-558b-be13-7de56e9b83d4",
+      "batteryPct": 78
+    },
+    {
+      "id": "EB-103",
+      "hubId": "b4739d07-b5ff-5a7d-8f4f-2b8ee06ae7fe",
+      "batteryPct": 64
+    },
+    {
+      "id": "EB-104",
+      "hubId": "a2ff5b85-17ec-5a42-b41f-b28472ce98e9",
+      "batteryPct": 45
+    },
+    {
+      "id": "EB-105",
+      "hubId": "ffe00f04-7df3-5623-ad22-945760eec5f0",
+      "batteryPct": 30
+    },
+    {
+      "id": "EB-106",
+      "hubId": "ded64655-0ca3-5c5c-9dd8-c641407a63c5",
+      "batteryPct": 21
+    },
+    {
+      "id": "EB-107",
+      "hubId": "3249f7af-8922-558b-be13-7de56e9b83d4",
+      "batteryPct": 19
+    },
+    {
+      "id": "EB-108",
+      "hubId": "b4739d07-b5ff-5a7d-8f4f-2b8ee06ae7fe",
+      "batteryPct": 88
+    },
+    {
+      "id": "EB-109",
+      "hubId": "a2ff5b85-17ec-5a42-b41f-b28472ce98e9",
+      "batteryPct": 70
+    },
+    {
+      "id": "EB-110",
+      "hubId": "ffe00f04-7df3-5623-ad22-945760eec5f0",
+      "batteryPct": 55
+    },
+    {
+      "id": "EB-111",
+      "hubId": "ded64655-0ca3-5c5c-9dd8-c641407a63c5",
+      "batteryPct": 12
+    },
+    {
+      "id": "EB-112",
+      "hubId": "3249f7af-8922-558b-be13-7de56e9b83d4",
+      "batteryPct": 99
+    }
+  ]
+}
