@@ -61,6 +61,10 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 		var options = new MqttConnectOptions();
 		options.setCleanSession(false);
 		options.setAutomaticReconnect(true);
+		if (properties.hasCredentials()) {
+			options.setUserName(properties.username());
+			options.setPassword(properties.password() == null ? new char[0] : properties.password().toCharArray());
+		}
 		try {
 			client.connect(options);
 		} catch (MqttException unreachable) {
@@ -81,9 +85,16 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 		}
 	}
 
+	// An exception here would make Paho drop the connection, and the broker would redeliver the same
+	// message on every reconnection. A message that cannot be handled is logged, without its
+	// payload, and dropped; the next reading of the same vehicle brings the state up to date.
 	@Override
 	public void messageArrived(String topic, MqttMessage message) {
-		handler.handle(topic, message.getPayload());
+		try {
+			handler.handle(topic, message.getPayload());
+		} catch (RuntimeException failed) {
+			log.error("Telemetry message on {} dropped: {}", topic, failed.getClass().getSimpleName());
+		}
 	}
 
 	@Override
