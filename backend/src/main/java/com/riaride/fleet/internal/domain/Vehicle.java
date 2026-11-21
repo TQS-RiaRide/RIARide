@@ -79,7 +79,12 @@ public class Vehicle implements Persistable<UUID> {
 		return status == VehicleStatus.AVAILABLE && policy.allowsBooking(battery());
 	}
 
+	// A reading older than the last one is ignored: with QoS 1, a redelivered or late message must
+	// never make a low-battery bike bookable again (BR12). It never changes the status.
 	public void recordBattery(BatteryLevel level, Instant readAt) {
+		if (lastTelemetryAt != null && readAt.isBefore(lastTelemetryAt)) {
+			return;
+		}
 		this.batteryPct = level.percent();
 		this.lastTelemetryAt = readAt;
 	}
