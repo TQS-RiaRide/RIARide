@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -391,6 +392,72 @@ class RegisterHubApiIT {
 			.andExpect(jsonPath("$.title").value("Hub name already in use"));
 
 		assertThat(hubs()).isEqualTo(1);
+	}
+
+	// A no-break space (U+00A0) at the ends of a name is removed like any other space, so a name
+	// that only looks blank is rejected and a trailing one cannot bypass name uniqueness.
+
+	@Requirement("RIA-56")
+	@Test
+	void shouldReturn400ProblemNamingNameWhenNameIsOnlyNoBreakSpaces() throws Exception {
+		assertRejectedField(hotelHubWith("name", "\"\\u00A0\\u00A0\""), "name");
+	}
+
+	@Requirement("RIA-56")
+	@Test
+	void shouldReturn409ProblemWhenNameIsInUseOnceTrailingNoBreakSpaceIsRemoved() throws Exception {
+		postHub(OPERATOR, validHotelHub()).andExpect(status().isCreated());
+
+		postHub(OPERATOR, hotelHubWith("name", "\"" + NAME + "\\u00A0\""))
+			.andExpect(status().isConflict())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+			.andExpect(jsonPath("$.title").value("Hub name already in use"));
+
+		assertThat(hubs()).isEqualTo(1);
+	}
+
+	// A blank hotel name counts as no hotel: a hotel hub gets "must name the hotel" rather than
+	// "no such hotel", and a tourist spot hub is registered without a hotel.
+
+	@Requirement("RIA-56")
+	@ParameterizedTest(name = "hotel = {0}")
+	@ValueSource(strings = { "\"\"", "\"   \"", "\"\\u00A0\"" })
+	void shouldReturn400ProblemAskingForHotelWhenHotelHubHasBlankHotel(String blankHotel) throws Exception {
+		var json = hotelHubWith("hotel", blankHotel);
+
+		assertRejectedField(json, "hotel");
+		postHub(OPERATOR, json)
+			.andExpect(jsonPath("$['invalid-params'][?(@.name == 'hotel')].reason",
+				hasItem(containsString("must name the hotel"))));
+	}
+
+	@Requirement("RIA-56")
+	@ParameterizedTest(name = "hotel = {0}")
+	@ValueSource(strings = { "\"\"", "\"   \"", "\"\\u00A0\"" })
+	void shouldRegisterTouristSpotHubWithoutHotelWhenHotelIsBlank(String blankHotel) throws Exception {
+		postHub(OPERATOR, hotelHubWith("name", "\"Miradouro das Salinas\"", "kind", "\"TOURIST_SPOT\"", "hotel",
+			blankHotel))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.hotel").doesNotExist());
+
+		assertThat(jdbc.queryForObject("select count(*) from hub where hotel_id is null", Integer.class))
+			.isEqualTo(1);
+	}
+
+	// The Location header points at the new hub, without the query string of the request.
+	@Requirement("RIA-56")
+	@Test
+	void shouldReturnLocationWithoutQueryStringOfRequest() throws Exception {
+		var result = mvc.perform(post(HUBS + "?source=test")
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(validHotelHub())
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + OPERATOR))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse();
+
+		String id = JsonPath.read(result.getContentAsString(), "$.id");
+		assertThat(result.getHeader(HttpHeaders.LOCATION)).endsWith("/api/v1/hubs/" + id);
 	}
 
 	// Decided by the Product Owner: names are compared exactly, so names that differ only in
