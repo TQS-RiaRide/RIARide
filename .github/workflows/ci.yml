@@ -30,8 +30,6 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # full history, needed by SonarQube later
 
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
@@ -59,6 +57,20 @@ jobs:
             backend/target/xray-reports/
           if-no-files-found: ignore
 
+      # JaCoCo merges the unit and integration test runs into one report
+      # (target/jacoco.exec is appended to, not replaced). SonarQube needs
+      # the report and the compiled classes it describes.
+      - name: Upload coverage for SonarQube
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-coverage
+          path: |
+            backend/target/classes/
+            backend/target/test-classes/
+            backend/target/site/jacoco/jacoco.xml
+          if-no-files-found: error
+          retention-days: 1
+
       # Checks that the Dockerfile builds; the image is not pushed here.
       - name: Build Docker image
         run: docker build -t riaride-backend:ci .
@@ -82,8 +94,74 @@ jobs:
       - run: npm ci
       - run: npm run lint --if-present
       - run: npm run format:check --if-present
-      - run: npm test --if-present
+      # Runs the tests with coverage: coverage/lcov.info is imported by SonarQube.
+      - run: npm run test:coverage
       - run: npm run build
+
+      - name: Upload coverage for SonarQube
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 1
+
+  # SonarQube Cloud analysis of the backend and frontend, with JaCoCo and
+  # Vitest LCOV coverage (QA Manual, section 3.3). It runs after the build
+  # jobs, from their compiled classes and coverage reports.
+  #
+  # Not part of "CI result": SonarQube Cloud reports the quality gate as its
+  # own check ("SonarCloud Code Analysis"), which branch protection requires
+  # separately (RIA-160, RIA-161). Automatic Analysis must be off in the
+  # SonarQube Cloud project, or this scan fails.
+  sonar:
+    name: SonarQube analysis
+    needs: [backend, frontend]
+    # The token is not available to pull requests from forks or Dependabot.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history, for new code detection and blame
+
+      - name: Download backend classes and coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: backend-coverage
+          path: backend/target
+
+      - name: Download frontend coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+
+      # Vitest writes paths relative to frontend/ (SF:src/App.tsx); SonarQube
+      # resolves them from the repository root, so they need the prefix.
+      - name: Make LCOV paths relative to the repository root
+        run: sed -i 's|^SF:src/|SF:frontend/src/|' frontend/coverage/lcov.info
+
+      # An unset secret expands to an empty string, which would fail later
+      # with an unclear authentication error.
+      - name: Check SonarQube configuration
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::SonarQube is not configured. Missing: SONAR_TOKEN (secret). See QA Manual, section 3.3."
+            exit 1
+          fi
+
+      # Project settings are in sonar-project.properties at the repository root.
+      - name: SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   result:
     name: CI result
