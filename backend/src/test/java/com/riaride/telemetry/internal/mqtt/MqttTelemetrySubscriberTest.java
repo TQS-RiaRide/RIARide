@@ -28,4 +28,14 @@ class MqttTelemetrySubscriberTest {
 			.doesNotThrowAnyException();
 	}
 
+	@Requirement("RIA-59")
+	@Test
+	void shouldStopCleanlyWhenItNeverStarted() {
+		var subscriber = new MqttTelemetrySubscriber(
+			new TelemetryMqttProperties(true, "tcp://localhost:1883", "riaride-backend", null, null),
+			mock(TelemetryMessageHandler.class));
+
+		assertThatCode(subscriber::stop).doesNotThrowAnyException();
+	}
+
 }
