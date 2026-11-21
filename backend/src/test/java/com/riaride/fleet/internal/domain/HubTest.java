@@ -146,6 +146,44 @@ class HubTest {
 		assertThat(hub.getName()).isEqualTo(name);
 	}
 
+	// Name: no invisible characters, that is, no C0 or C1 control character (Unicode category Cc)
+	// and no format character (category Cf), such as the right-to-left override U+202E.
+
+	@Requirement("RIA-56")
+	@ParameterizedTest(name = "U+{0}")
+	@ValueSource(strings = { "0000", "001F", "007F", "0080", "0085", "009F", "200B", "200D", "202E", "2066", "FEFF" })
+	void shouldRejectHubNameWithControlOrFormatCharacter(String codePoint) {
+		var character = Character.toString(Integer.parseInt(codePoint, 16));
+
+		assertRejectsField(() -> Hub.register("Marés" + character + "Praia", HubKind.HOTEL, MARES_PRAIA, LATITUDE,
+			LONGITUDE, 10), "name");
+	}
+
+	@Requirement("RIA-56")
+	@Test
+	void shouldRejectHubNameWithNextLineCharacter() {
+		assertRejectsField(
+			() -> Hub.register("Marés Praia\u0085Beach Front", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10),
+			"name");
+	}
+
+	@Requirement("RIA-56")
+	@Test
+	void shouldRejectHubNameWithRightToLeftOverride() {
+		assertRejectsField(
+			() -> Hub.register("Marés Praia‮tnorF hcaeB", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10),
+			"name");
+	}
+
+	// Visible letters, accents and punctuation outside ASCII stay valid.
+	@Requirement("RIA-56")
+	@Test
+	void shouldAcceptHubNameWithAccentsAndDashes() {
+		var name = "Marés Salinas – Jardim das Gaivotas · Ponte Nova";
+
+		assertThat(Hub.register(name, HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10).getName()).isEqualTo(name);
+	}
+
 	// Kind and hotel: a hotel hub belongs to a hotel; a tourist spot hub to none.
 
 	@Requirement("RIA-56")

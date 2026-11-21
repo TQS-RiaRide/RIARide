@@ -1,7 +1,10 @@
 package com.riaride.fleet.internal.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -281,6 +284,46 @@ class RegisterHubApiIT {
 	@Test
 	void shouldReturn400ProblemNamingHotelWhenTouristSpotHasHotel() throws Exception {
 		assertRejectedField(hotelHubWith("kind", "\"TOURIST_SPOT\""), "hotel");
+	}
+
+	// The kind decides whether a hotel is allowed before the hotel name is looked up: a tourist spot
+	// hub with a hotel that is not in the group gets the tourist spot reason, not "no such hotel".
+	@Requirement("RIA-56")
+	@Test
+	void shouldReturn400ProblemWithTouristSpotReasonWhenTouristSpotHasUnknownHotel() throws Exception {
+		var json = hotelHubWith("name", "\"Miradouro das Salinas\"", "kind", "\"TOURIST_SPOT\"", "hotel",
+			"\"Hotel Inexistente\"");
+
+		assertRejectedField(json, "hotel");
+		postHub(OPERATOR, json)
+			.andExpect(jsonPath("$['invalid-params'][?(@.name == 'hotel')].reason",
+				hasItem(containsString("must not belong to a hotel"))))
+			.andExpect(jsonPath("$['invalid-params'][*].reason",
+				everyItem(not(containsString("No hotel of the group has this name")))));
+	}
+
+	// Invisible characters (Unicode categories Cc and Cf) are not allowed in a hub name.
+	@Requirement("RIA-56")
+	@Test
+	void shouldReturn400ProblemNamingNameWhenNameHasRightToLeftOverride() throws Exception {
+		assertRejectedField(hotelHubWith("name", "\"Marés Praia\\u202EtnorF hcaeB\""), "name");
+	}
+
+	// Decided by the Product Owner: the hotel name gets the same rule as the hub name, so invisible
+	// characters (Unicode categories Cc and Cf) are rejected as such, before the hotel is looked up,
+	// and not reported as an unknown hotel.
+	@Requirement("RIA-56")
+	@ParameterizedTest(name = "U+{0}")
+	@CsvSource({ "202E", "0085" })
+	void shouldReturn400ProblemNamingHotelWhenHotelNameHasControlOrFormatCharacter(String codePoint)
+		throws Exception {
+		var json = hotelHubWith("hotel", "\"Marés\\u" + codePoint + "Praia\"");
+
+		assertRejectedField(json, "hotel");
+		postHub(OPERATOR, json)
+			.andExpect(jsonPath("$['invalid-params'][?(@.name == 'hotel')].reason",
+				everyItem(not(containsString("No hotel of the group has this name")))));
+		assertThat(hubs()).isZero();
 	}
 
 	@Requirement("RIA-56")
