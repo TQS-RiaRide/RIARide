@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.riaride.TestMosquitto;
+import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -29,7 +30,9 @@ public class FleetSteps {
 	}
 
 	// Before the hubs are removed (HubSteps, default order): vehicles reference hubs.
+	// Also after each scenario, so no vehicle is left to block a later "delete from hub".
 	@Before(order = 7000)
+	@After
 	public void removeVehicles() {
 		jdbc.update("delete from vehicle");
 	}
