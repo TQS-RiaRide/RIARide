@@ -15,7 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 // checked.
 class TelemetryMessageMapper {
 
-	private static final Pattern TOPIC = Pattern.compile("riaride/vehicles/([^/]+)/telemetry");
+	private static final Pattern TOPIC = Pattern.compile("riaride/vehicles/([A-Za-z0-9-]{1,32})/telemetry");
 	private static final int MIN_BATTERY = 0;
 	private static final int MAX_BATTERY = 100;
 
