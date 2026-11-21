@@ -416,7 +416,7 @@ One declaration for the whole project, updated as tools are added.
 
 The QA Engineer maintains them. A pull request that changes a practice in this manual must update `CLAUDE.md` in the same pull request; the review checklist (section 3.2) checks it.
 
-**Coordination (AI6).** Agent-generated stories use three agents with separate roles, defined in [`.claude/agents/`](../../../.claude/agents/) ([`test-author.md`](../../../.claude/agents/test-author.md), [`implementer.md`](../../../.claude/agents/implementer.md) and [`reviewer.md`](../../../.claude/agents/reviewer.md)), with a human checkpoint after each handoff. Each definition lists the tools the agent may use, including its Jira and SonarQube access:
+**Coordination (AI6).** Agent-generated stories use three agents with separate roles, defined as `test-author.md`, `implementer.md` and `reviewer.md` in `.claude/agents/` with the first generated story (the folder does not exist yet), with a human checkpoint after each handoff. Each definition lists the tools the agent may use, including its Jira and SonarQube access:
 
 | Step | Agent | Input | Output | Human checkpoint |
 |---|---|---|---|---|

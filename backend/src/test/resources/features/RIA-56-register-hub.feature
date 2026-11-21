@@ -6,9 +6,10 @@ Feature: Register a hub
   Hubs are at hotels or at tourist spots, each with a capacity and a position
   (Product Specification 3.1; data model table "hub": name, kind, hotel_id null, capacity, position).
 
-  Endpoint: POST /api/v1/hubs, allowed only for the operator role.
+  Endpoint: POST /api/v1/hubs, allowed for the operator and admin roles.
   Request body fields:
-    name        text, required, not blank
+    name        text, required, not blank, at most 120 characters, unique among hubs (exact match);
+                leading and trailing spaces are removed before it is checked and stored
     kind        "HOTEL" or "TOURIST_SPOT", required
     hotel       name of the hotel the hub belongs to; required when kind is HOTEL,
                 must be absent when kind is TOURIST_SPOT
@@ -19,9 +20,10 @@ Feature: Register a hub
   id, name, kind, hotel, latitude, longitude, capacity, dockedBikes (0) and freeSlots (= capacity).
   Invalid input: 400 Bad Request with an RFC 9457 problem detail
   (Content-Type application/problem+json) naming the invalid field, and no hub is created.
-  A user without the operator role: 403 Forbidden with a problem detail, and no hub is created.
+  A name already used by another hub: 409 Conflict with a problem detail, and no hub is created.
+  Any other role (technician, hotel manager, guest): 403 Forbidden with a problem detail, and no hub is created.
 
-  @TEST_RIA-153 @BR10 @wip
+  @TEST_RIA-153 @BR10
   Scenario: The operator registers a hub with capacity for 10 bikes
     Given an operator is logged in
     When the user registers a hub with:
@@ -41,7 +43,27 @@ Feature: Register a hub
     And the response field "freeSlots" is "10"
     And the fleet lists hub "Marés Praia – Beach Front" with 10 slots
 
-  @BR10 @wip
+  @BR10
+  Scenario: The operator cannot register a hub with a name already in use
+    Given an operator is logged in
+    And the user registers a hub with:
+      | name      | Marés Praia – Beach Front |
+      | kind      | HOTEL                     |
+      | hotel     | Marés Praia               |
+      | latitude  | 40.6405                   |
+      | longitude | -8.7538                   |
+      | capacity  | 10                        |
+    When the user registers a hub with:
+      | name      | Marés Praia – Beach Front |
+      | kind      | HOTEL                     |
+      | hotel     | Marés Praia               |
+      | latitude  | 40.6410                   |
+      | longitude | -8.7540                   |
+      | capacity  | 6                         |
+    Then the response is a problem detail with status 409
+    And the fleet lists hub "Marés Praia – Beach Front" with 10 slots
+
+  @BR10
   Scenario: The operator cannot register a hub with capacity 0
     Given an operator is logged in
     When the user registers a hub with:
@@ -55,7 +77,6 @@ Feature: Register a hub
     And the problem detail reports an invalid field "capacity"
     And the fleet does not list hub "Marés Praia – Beach Front"
 
-  @wip
   Scenario: A guest cannot register a hub
     Given a guest "Tomás Ferreira" is logged in
     When the user registers a hub with:
