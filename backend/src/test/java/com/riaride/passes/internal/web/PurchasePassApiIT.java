@@ -208,8 +208,10 @@ class PurchasePassApiIT {
 		var payment = jdbc.queryForMap("select kind, amount_cents, status, provider_ref, idempotency_key, customer_ref, payment_method_ref from payment where pass_id = ?::uuid", id);
 		assertThat(payment).containsEntry("kind", "PURCHASE").containsEntry("amount_cents", 7500L)
 			.containsEntry("status", "SUCCEEDED").containsEntry("provider_ref", "pi_purchase")
-			.containsEntry("idempotency_key", "purchase-1").containsEntry("customer_ref", "cus_rita")
+			.containsEntry("customer_ref", "cus_rita")
 			.containsEntry("payment_method_ref", "pm_saved_card");
+		// The key is stored scoped by guest, so another guest's key can never match it.
+		assertThat((String) payment.get("idempotency_key")).matches("[0-9a-f-]{36}:purchase-1");
 	}
 
 	// Seeded provisional base prices (Product Owner decision, until RIA-121): 1-day 10 EUR, 3-day 25 EUR, deposit 50 EUR.
