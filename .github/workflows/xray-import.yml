@@ -54,14 +54,16 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Import JUnit results
-        if: hashFiles('reports/**/TEST-*.xml') != ''
+        # The Xray JUnit reports: every JUnit result, with the @Requirement links (QA Manual 2.3).
+        # The plain Surefire and Failsafe reports hold the same results without the links.
+        if: hashFiles('reports/**/xray-reports/TEST-junit-jupiter-*.xml') != ''
         uses: mikepenz/xray-action@f38a2e6b5b6d20a48597be7f5e5789186cda4af6 # v3.3.1
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
           password: ${{ secrets.XRAY_CLIENT_SECRET }}
           xrayCloud: "true"
           testFormat: junit
-          testPaths: "reports/**/TEST-*.xml"
+          testPaths: "reports/**/xray-reports/TEST-junit-jupiter-*.xml"
           combineInSingleTestExec: "true"
           projectKey: RIA
           testPlanKey: ${{ vars.XRAY_TEST_PLAN_KEY }}
