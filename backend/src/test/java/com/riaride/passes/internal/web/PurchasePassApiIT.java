@@ -49,6 +49,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -471,6 +472,67 @@ class PurchasePassApiIT {
 		buy(GUEST_TOKEN, body("STAY"), "purchase-1")
 			.andExpect(status().isPaymentRequired())
 			.andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("new Idempotency-Key")));
+	}
+
+	// A retry with the same key while the first request is still running: one pass, and a purchase
+	// that succeeded is never refunded (review of #36). WireMock answers both charges, as Stripe's
+	// idempotency would replay the cached success.
+	@Requirement("RIA-52")
+	@Test
+	void shouldNeverRefundWhenTwoRequestsWithTheSameKeyArriveAtOnce() throws Exception {
+		givenStripeAcceptsTheCard();
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		var bodies = new ArrayList<String>();
+		var statuses = new ArrayList<Integer>();
+		try {
+			var results = new ArrayList<Future<MockHttpServletResponse>>();
+			for (int i = 0; i < 2; i++) {
+				results.add(executor.submit(() -> {
+					start.await();
+					return buy(GUEST_TOKEN, body("STAY"), "purchase-1").andReturn().getResponse();
+				}));
+			}
+			start.countDown();
+			for (var result : results) {
+				var response = result.get();
+				statuses.add(response.getStatus());
+				bodies.add(response.getContentAsString());
+			}
+		} finally {
+			executor.shutdownNow();
+		}
+
+		stripe.verify(0, postRequestedFor(urlPathEqualTo("/v1/refunds")));
+		assertThat(rows("pass")).isEqualTo(1);
+		assertThat(rows("payment")).isEqualTo(1);
+		assertThat(jdbc.queryForObject("select status from pass", String.class)).isEqualTo("INACTIVE");
+		assertThat(statuses).contains(201).allMatch(code -> code == 201 || code == 409 || code == 503);
+		var id = jdbc.queryForObject("select id::text from pass", String.class);
+		for (int i = 0; i < statuses.size(); i++) {
+			if (statuses.get(i) == 201) {
+				assertThat(JsonPath.<String>read(bodies.get(i), "$.id")).isEqualTo(id);
+			}
+		}
+	}
+
+	// The key is stored scoped by guest (37 more characters) and must fit Stripe's 255-character limit.
+	@Requirement("RIA-52")
+	@Test
+	void shouldRefuseAnIdempotencyKeyLongerThan200Characters() throws Exception {
+		buy(GUEST_TOKEN, body("STAY"), "k".repeat(201))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+
+		stripe.verify(0, postRequestedFor(urlPathEqualTo("/v1/payment_intents")));
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldAcceptAnIdempotencyKeyOf200Characters() throws Exception {
+		givenStripeAcceptsTheCard();
+
+		buy(GUEST_TOKEN, body("STAY"), "k".repeat(200)).andExpect(status().isCreated());
 	}
 
 	@Requirement("RIA-52")

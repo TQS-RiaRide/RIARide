@@ -17,6 +17,7 @@ import com.riaride.passes.internal.domain.Pass;
 import com.riaride.passes.internal.domain.PassPrice;
 import com.riaride.passes.internal.domain.PassStatus;
 import com.riaride.passes.internal.domain.PassType;
+
 import com.riaride.passes.internal.persistence.PassPriceRepository;
 import com.riaride.passes.internal.persistence.PassRepository;
 import com.riaride.payments.PaymentGateway;
@@ -87,6 +88,46 @@ class PurchasePassServiceTest {
 		when(guests.findActiveGuest(KEYCLOAK_ID)).thenReturn(Optional.of(ACTIVE_GUEST));
 		when(prices.findById(type)).thenReturn(Optional.of(new PassPrice(type, priceCents, depositCents)));
 		when(passes.existsByGuestIdAndStatusIn(GUEST, PassStatus.OPEN)).thenReturn(false);
+	}
+
+	// A concurrent request with the same key already confirmed the pass: this request's confirm
+	// fails, but the purchase is recorded, so it returns that pass and refunds nothing (review of #36).
+	@Requirement("RIA-52")
+	@Test
+	void shouldReturnThePassAndNotRefundWhenTheSameKeyWasConfirmedConcurrently() {
+		givenGuestCanBuy(PassType.STAY, 2500, 5000);
+		when(gateway.purchase(any())).thenReturn(PAID);
+		doThrow(new IllegalStateException("Only a pending pass can be confirmed")).when(book).confirm(any(Pass.class), any(), any());
+		var confirmed = Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY);
+		when(ledger.findPurchase(SCOPED_KEY)).thenReturn(Optional.empty(),
+			Optional.of(new RecordedPurchase(confirmed.getId(), "pi_purchase")));
+		when(passes.findById(confirmed.getId())).thenReturn(Optional.empty(), Optional.of(confirmed));
+
+		var pass = service.purchase(buy(PassType.STAY));
+
+		assertThat(pass).isSameAs(confirmed);
+		verify(gateway, never()).refund(any());
+		verify(book, never()).releasePending(any());
+	}
+
+	// A request that found the reservation already there (a retry while the first request runs)
+	// did not create it, so it must not release it when its own payment attempt fails.
+	@Requirement("RIA-52")
+	@Test
+	void shouldNotReleaseAReservationThatAnotherRequestCreated() {
+		var reserved = Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY);
+		when(guests.findGuestId(KEYCLOAK_ID)).thenReturn(Optional.of(GUEST));
+		when(ledger.findPurchase(SCOPED_KEY)).thenReturn(Optional.empty());
+		when(guests.findActiveGuest(KEYCLOAK_ID)).thenReturn(Optional.of(ACTIVE_GUEST));
+		when(prices.findById(PassType.STAY)).thenReturn(Optional.of(new PassPrice(PassType.STAY, 2500, 5000)));
+		when(passes.findById(reserved.getId())).thenReturn(Optional.of(reserved));
+		var inProgress = new TransientPaymentException("idempotency_key_in_use", "Stripe request failed", null);
+		when(gateway.purchase(any())).thenThrow(inProgress);
+		var command = buy(PassType.STAY);
+
+		assertThatThrownBy(() -> service.purchase(command)).isSameAs(inProgress);
+		verify(book, never()).reserve(any());
+		verify(book, never()).releasePending(any());
 	}
 
 	@Requirement("RIA-52")
@@ -178,7 +219,7 @@ class PurchasePassServiceTest {
 		var command = buy(PassType.STAY);
 
 		assertThatThrownBy(() -> service.purchase(command)).isSameAs(declined);
-		verify(book).release(any(Pass.class));
+		verify(book).releasePending(any(Pass.class));
 		verify(book, never()).confirm(any(), any(), any());
 	}
 
@@ -191,7 +232,7 @@ class PurchasePassServiceTest {
 		var command = buy(PassType.STAY);
 
 		assertThatThrownBy(() -> service.purchase(command)).isSameAs(timeout);
-		verify(book).release(any(Pass.class));
+		verify(book).releasePending(any(Pass.class));
 	}
 
 	// The card was charged but the pass could not be stored: refund it, so no charge is left
