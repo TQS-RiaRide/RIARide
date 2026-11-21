@@ -6,6 +6,7 @@ import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 // Unit test (Surefire): BR12 applied to a vehicle. A vehicle can be booked only when it is
@@ -36,6 +37,16 @@ class VehicleTest {
 	@ValueSource(ints = { 18, 19 })
 	void shouldNotBeBookableWhenBatteryBelow20Percent(int percent) {
 		var vehicle = availableWithBattery(percent);
+
+		assertThat(vehicle.isBookable(POLICY)).isFalse();
+	}
+
+	@Requirement("RIA-59")
+	@ParameterizedTest
+	@EnumSource(value = VehicleStatus.class, names = "AVAILABLE", mode = EnumSource.Mode.EXCLUDE)
+	void shouldNotBeBookableWhenNotAvailableEvenWithFullBattery(VehicleStatus status) {
+		var vehicle = Vehicle.withStatus("EB-601", VehicleType.E_BIKE, HUB, status);
+		vehicle.recordBattery(BatteryLevel.of(100), READ_AT);
 
 		assertThat(vehicle.isBookable(POLICY)).isFalse();
 	}
