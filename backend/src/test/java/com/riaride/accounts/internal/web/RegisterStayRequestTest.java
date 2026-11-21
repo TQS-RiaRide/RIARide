@@ -65,7 +65,7 @@ class RegisterStayRequestTest {
 	@Requirement("RIA-50")
 	@ParameterizedTest
 	@ValueSource(strings = {
-		"Inês Gomes",
+		"Mónica Ferreira",
 		"João D'Almeida-Gonçalves",
 		"Zahra\u200CAhmadi", // ZWNJ is part of Persian spelling
 		"Ελένη Παπαδοπούλου"
