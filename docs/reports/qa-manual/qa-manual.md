@@ -138,7 +138,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 - [ ] No secrets, credentials or personal data; test data is synthetic.
 - [ ] Security hotspots raised by SonarQube on this change are reviewed.
 - [ ] The AI review findings table is filled in, and the reasons for rejections are sound.
-- [ ] The pull request has its AI label (section 6.7).
+- [ ] The pull request has its AI label (section 6.7); the `AI label` check fails without it.
 - [ ] Documentation that the change affects is updated (API documentation, `CLAUDE.md`, this manual).
 - [ ] The reviewer can explain the change; anyone may be asked to explain any merged code.
 
@@ -465,7 +465,7 @@ All agent jobs have permission only to read the code and comment on pull request
 
 *Written in I5*, from data collected on every pull request from now on:
 
-- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. `ai:assisted` exists and is in use (#21, #22, #23, #25, #26, #28, #29); the QA Engineer creates `ai:none` and `ai:generated` in I2 and labels the pull requests up to #20 from their declarations. A CI check that fails when a pull request has no label or more than one is planned for I2; until then, the reviewer checks the label. Dependabot pull requests are labelled `ai:none`.
+- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. The `AI label` check ([`ai-label.yml`](../../../.github/workflows/ai-label.yml)) fails a pull request with none of the three, more than one, or an unknown `ai:*` label; it blocks the merge once it is a required check in the branch protection of `dev` and `main` (DevOps Master). Dependabot pull requests get `ai:none` automatically. The earlier pull requests that have no label (#3 to #14, #17 and #20) will be labelled by the QA Engineer from their template declarations before the I5 analysis.
 - **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so a script can count them.
 - **Agent actions in Jira and SonarQube:** agent comments on stories and fixes of SonarQube issues proposed by agents (section 6.4), and how many of those fixes needed human rework.
 - **Defects and rework traced to AI:** Jira bugs and follow-up pull requests that name the original pull request, and quality gate failures on AI-labelled pull requests.
