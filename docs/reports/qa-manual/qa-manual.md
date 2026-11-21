@@ -120,7 +120,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 
 - Arrange, act, assert, with names that state the behaviour: `shouldRejectBookingWhenBatteryBelow20Percent`.
 - One behaviour per test; no logic or sleeps in tests. Use deterministic waits and fixed clocks for time rules.
-- Gherkin scenarios are tagged with the story key and the business rule they cover, for example `@RIA-31 @BR1`.
+- Gherkin scenarios are tagged with the story key and the business rule they cover, for example `@RIA-31 @BR1`. The rule IDs (BR1 to BR13) are in the business rules table of [`CLAUDE.md`](../../../CLAUDE.md).
 
 ### 3.2 Code review practice
 
