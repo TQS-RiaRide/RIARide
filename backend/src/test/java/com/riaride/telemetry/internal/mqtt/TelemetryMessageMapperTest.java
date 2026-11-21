@@ -1,11 +1,14 @@
 package com.riaride.telemetry.internal.mqtt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.json.JsonMapper;
 
 // Unit test (Surefire): a telemetry message (topic riaride/vehicles/{code}/telemetry, payload as in
@@ -45,6 +48,38 @@ class TelemetryMessageMapperTest {
 		var event = mapper.map("riaride/vehicles/EB-601/telemetry", payload(riding));
 
 		assertThat(event.hubId()).isNull();
+	}
+
+	@Requirement("RIA-59")
+	@ParameterizedTest
+	@ValueSource(strings = { "riaride/vehicles/EB-601/events", "riaride/vehicles//telemetry", "other/EB-601/telemetry" })
+	void shouldRejectATopicThatIsNotAVehicleTelemetryTopic(String topic) {
+		assertThatThrownBy(() -> mapper.map(topic, payload(DOCKED_READING)))
+			.isInstanceOf(InvalidTelemetryMessageException.class);
+	}
+
+	@Requirement("RIA-59")
+	@ParameterizedTest
+	@ValueSource(strings = {
+		"not json",
+		"{}",
+		"{\"messageId\": \"m1\", \"emittedAt\": \"2026-11-30T10:00:05Z\", \"lockState\": \"LOCKED\"}",
+		"{\"messageId\": \"m1\", \"emittedAt\": \"yesterday\", \"batteryPct\": 50, \"lockState\": \"LOCKED\"}",
+		"{\"messageId\": \"m1\", \"emittedAt\": \"2026-11-30T10:00:05Z\", \"batteryPct\": \"high\", \"lockState\": \"LOCKED\"}"
+	})
+	void shouldRejectAPayloadThatIsNotAValidReading(String json) {
+		assertThatThrownBy(() -> mapper.map("riaride/vehicles/EB-601/telemetry", payload(json)))
+			.isInstanceOf(InvalidTelemetryMessageException.class);
+	}
+
+	@Requirement("RIA-59")
+	@ParameterizedTest
+	@ValueSource(ints = { -1, 101 })
+	void shouldRejectABatteryOutside0To100Percent(int percent) {
+		var reading = DOCKED_READING.replace("\"batteryPct\": 18", "\"batteryPct\": " + percent);
+
+		assertThatThrownBy(() -> mapper.map("riaride/vehicles/EB-601/telemetry", payload(reading)))
+			.isInstanceOf(InvalidTelemetryMessageException.class);
 	}
 
 }
