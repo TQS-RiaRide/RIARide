@@ -108,6 +108,8 @@ Dashboards poll the REST API. A push channel is not justified by the MVP.
 | `trips` | Reservations, trips, overtime | `passes`, `fleet`, `maintenance`, `telemetry`, `payments` |
 | `backoffice` | Suggested routes, KPIs, technical metrics | read access to all of the above |
 
+The Java code of a module reaches another module only through its public API, but some tables keep a database foreign key across modules for integrity: `hub.hotel_id` (fleet) references `hotel.id` (accounts). Changing or dropping a referenced table therefore needs a migration in the referencing module too.
+
 Only a module's top-level package is public. `ApplicationModules.of(...).verify()` runs as a test and fails the build on a cycle or a reach into another module's internals.
 
 ### Components inside the backend
@@ -227,7 +229,7 @@ The consumer ignores a repeated `messageId` on both topics. Only telemetry is al
 
 **Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
 
-**REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details.
+**REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details. Request bodies are strict for the whole API: a JSON number with a fraction in a whole-number field is rejected with a 400 (`spring.jackson.deserialization.accept-float-as-int: false`), so `1.5` and `1.0` are both refused instead of being truncated.
 
 ## 10. Security
 
