@@ -12,6 +12,8 @@ public class ScenarioContext {
 
 	private Response lastResponse;
 
+	private String accessToken;
+
 	public Response lastResponse() {
 		if (lastResponse == null) {
 			throw new IllegalStateException("No request was sent in this scenario");
@@ -21,6 +23,17 @@ public class ScenarioContext {
 
 	public void setLastResponse(Response response) {
 		this.lastResponse = response;
+	}
+
+	public String accessToken() {
+		if (accessToken == null) {
+			throw new IllegalStateException("No user is logged in in this scenario");
+		}
+		return accessToken;
+	}
+
+	public void setAccessToken(String accessToken) {
+		this.accessToken = accessToken;
 	}
 
 }
