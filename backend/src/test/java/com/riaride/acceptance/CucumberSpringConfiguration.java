@@ -1,8 +1,8 @@
 package com.riaride.acceptance;
 
-import com.riaride.FixedClockConfiguration;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.riaride.FixedClockConfiguration;
 import com.riaride.TestKeycloak;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import io.cucumber.java.Before;
