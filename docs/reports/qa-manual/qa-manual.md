@@ -1,6 +1,6 @@
 # RiaRide: quality manual
 
-Maria Mané (125102), Inês Gomes (125895), Martim Gil (124833), Tomás Xavier (125438)  
+Maria Mané (125102), Inês Lourenço (125895), Martim Gil (124833), Tomás Xavier (125438)  
 v2026-11-17
 
 > Version 1 (iteration I2, RIA-70). This manual tells a new team member which QA practices the team follows and why, and links each one to its evidence. The practices are decided from the start; the evidence links are added as each practice starts working.
@@ -36,10 +36,10 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | Q1 | Static analysis and coverage dashboard | E | Decided (I2) | Section 3.3; the SonarQube step is not in [`ci.yml`](../../../.github/workflows/ci.yml) yet. Agents read its results (section 6.4) |
 | Q2 | Blocking quality gate on new code | E | Decided (I2) | Section 3.3 |
 | Q3 | Dependency vulnerability scanning | E | Partial | [`dependabot.yml`](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/dependabot.yml) on `main` for Maven, npm, pip and GitHub Actions. Updates for a component fail until its manifest exists. Per-build scan: section 3.4 |
-| Q4 | Peer code review | E | Done | [PR template](../../../.github/pull_request_template.md) and section 3.2; branch protection requires one approval. [PR #20](https://github.com/TQS-RiaRide/RIARide/pull/20): changes requested, fixed, then approved before the merge |
+| Q4 | Peer code review | E | Done | [PR template](../../../.github/pull_request_template.md) and section 3.2; branch protection on `main` and `dev` requires one approval. [PR #20](https://github.com/TQS-RiaRide/RIARide/pull/20): changes requested, fixed, then approved before the merge |
 | Q5 | Contributor guidelines | E | Done | Section 3.1 |
 | Q6 | Container image scanning or added security testing | V | Decided (I4) | Section 3.4 |
-| D1 | Feature branches, protected main, merge by pull request | E | Done | Branch per story, merged into `dev` by pull request; `main` protected with a pull request, one approval and the `CI result` check required, also for administrators ([PR #20](https://github.com/TQS-RiaRide/RIARide/pull/20)); `dev` protection pending. Section 4.1 |
+| D1 | Feature branches, protected main, merge by pull request | E | Done | Branch per story, merged into `dev` by pull request; `main` and `dev` protected with a pull request, one approval and the `CI result` check required, also for administrators ([PR #20](https://github.com/TQS-RiaRide/RIARide/pull/20)). Section 4.1 |
 | D2 | CI with quality gate, badge and failure notification | E | Partial | [`ci.yml`](../../../.github/workflows/ci.yml) runs the backend and frontend jobs and a summary job on every push and pull request. SonarQube, the simulator job and the badge are pending. Section 4.2 |
 | D3 | Infrastructure as code | E | Decided (I3) | Section 4.2 |
 | D4 | Continuous delivery with representative data | E | Decided (I3) | Section 4.2 |
@@ -60,7 +60,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | Role | Team member |
 |---|---|
 | Team Coordinator | Maria Mané |
-| Product Owner | Inês Gomes |
+| Product Owner | Inês Lourenço |
 | QA Engineer | Martim Gil |
 | DevOps Master | Tomás Xavier |
 
@@ -213,12 +213,13 @@ The team works with two long-lived branches. `dev` is the integration branch: ea
 6. Merge with a **merge commit**, not squash, so that test-first commits stay visible in the history of `dev` and `main`. Delete the branch.
 7. At the end of the iteration, the DevOps Master opens a pull request from `dev` to `main`. It follows the same review and checks, and is also merged with a merge commit; the iteration tag is then set on `main`.
 
-**Branch protection on `main` and `dev`** (set by the DevOps Master; on `dev` it is still to be enabled):
+**Branch protection on `main` and `dev`** (set by the DevOps Master; both branches have the same rules):
 
 - pull request required, with at least one approval;
 - stale approvals dismissed when new commits are pushed;
 - required status checks: the CI summary job, `CI result` (section 4.2), and the SonarQube quality gate, added once the gate runs in CI (Q2);
 - branch up to date before merging;
+- conversations resolved before merging;
 - no force pushes, no deletions, no bypass for administrators.
 
 Nobody pushes directly to `dev` or `main`.
@@ -400,15 +401,14 @@ The team uses AI assistants and agents on purpose, for production code, tests, d
 
 One declaration for the whole project, updated as tools are added.
 
-| Tool or agent (and model) | Used for | How the output was verified |
-|---|---|---|
-| Claude Code (Claude Opus) | Drafting the architecture proposal, ADRs, report sections and this manual; setting up the CI and AI review workflows; production code and tests (RIA-50, RIA-51, RIA-68) | Reviewed and edited by the author, then reviewed in a pull request by another member; code is also checked by its tests, CI and the quality gate |
-| Claude Code GitHub Action (`anthropics/claude-code-action`) | Advisory review of non-draft pull requests (practice AI3) | Each finding accepted or rejected by the author, and checked by the human reviewer |
-| GitHub Copilot code review | Review requested on PR #2; it produced no review (quota) | Not applicable |
-| Atlassian Rovo MCP server, used from Claude Code | Reading stories, acceptance criteria and Xray Tests from Jira; commenting on stories (section 6.4) | Comments are read by the story's owner; status changes to *Done* stay with the Product Owner |
-| SonarQube MCP server and `sonar-*` skills, used from Claude Code | Reading the quality gate, issues, coverage gaps and duplications of a pull request; proposing fixes (section 6.4) | Each fix goes through the normal pull request review; the gate is re-run by CI |
+| Tool or agent (and model) | Member | Used for | How the output was verified |
+|---|---|---|---|
+| Claude Code (Claude Opus) | All | Drafting the architecture proposal, ADRs, report sections (including Product Specification sections 1 and 2, RIA-16) and this manual; setting up the CI and AI review workflows; the frontend walking skeleton (RIA-13); production code and tests (RIA-50, RIA-51, RIA-68) | Reviewed and edited by the author, then reviewed in a pull request by another member; code is also checked by its tests, CI and the quality gate |
+| Claude Code GitHub Action (`anthropics/claude-code-action`) | All | Advisory review of non-draft pull requests (practice AI3) | Each finding accepted or rejected by the author, and checked by the human reviewer |
+| Atlassian Rovo MCP server, used from Claude Code | All | Reading stories, acceptance criteria and Xray Tests from Jira; commenting on stories (section 6.4) | Comments are read by the story's owner; status changes to *Done* stay with the Product Owner |
+| SonarQube MCP server and `sonar-*` skills, used from Claude Code | All | Reading the quality gate, issues, coverage gaps and duplications of a pull request; proposing fixes (section 6.4) | Each fix goes through the normal pull request review; the gate is re-run by CI |
 
-*Each member adds the tools they use.*
+*Each member adds the tools they use. All four members use the tools above; a tool used by only some members names them in the* Member *column.*
 
 ### 6.3 Agent instructions and coordination
 
