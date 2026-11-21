@@ -1,42 +1,18 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchHealth, type HealthStatus } from './features/health/api';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import HealthStatus from './features/health/HealthStatus';
 
 export default function App() {
-  const { t, i18n } = useTranslation();
-  const [health, setHealth] = useState<HealthStatus | 'checking'>('checking');
-
-  useEffect(() => {
-    // Ignore a result that arrives after unmount (or after StrictMode's
-    // extra mount and unmount in development)
-    let ignore = false;
-    void fetchHealth().then((status) => {
-      if (!ignore) setHealth(status);
-    });
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const toggleLanguage = () => {
-    void i18n.changeLanguage(i18n.language === 'en' ? 'pt' : 'en');
-  };
+  const { t } = useTranslation();
 
   return (
     <main className="app">
       <header>
-        <h1>RiaRide</h1>
-        <button type="button" onClick={toggleLanguage}>
-          {t('switchLang')}
-        </button>
+        <h1>{t('appName')}</h1>
+        <LanguageSwitcher />
       </header>
       <p className="tagline">{t('tagline')}</p>
-      <section aria-live="polite">
-        <span>{t('backendStatus')}: </span>
-        <strong data-testid="health" className={`status status-${health}`}>
-          {t(health)}
-        </strong>
-      </section>
+      <HealthStatus />
     </main>
   );
 }

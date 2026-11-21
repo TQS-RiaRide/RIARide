@@ -1,10 +1,10 @@
 # RiaRide frontend
 
-Walking skeleton of the RiaRide web UI, following [ADR 0005](../docs/architecture/adr/0005-react-frontend.md): React, Vite and TypeScript, with react-i18next for Portuguese and English (texts in `src/locales/*.json`) and Vitest for unit tests. It shows whether the backend is reachable and switches language.
+Walking skeleton of the RiaRide web UI, following [ADR 0005](../docs/architecture/adr/0005-react-frontend.md): React, Vite and TypeScript, with react-i18next for Portuguese and English (texts in `src/locales/<language>/<namespace>.json`; see [`src/i18n/README.md`](src/i18n/README.md)) and Vitest for unit tests. It shows whether the backend is reachable and switches language.
 
 ## Commands
 
-Requires Node.js 22.22.2 or later (24 LTS recommended), as declared in `package.json`.
+Requires Node.js 22.22.2 or later in the 22 line, or 24.15.0 or later (24 LTS recommended), as declared in `package.json`.
 
 ```bash
 npm install          # first time; commit the generated package-lock.json
