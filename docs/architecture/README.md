@@ -102,7 +102,7 @@ Dashboards poll the REST API. A push channel is not justified by the MVP.
 | `accounts` | Stays, stay codes, guests, link to Keycloak | none |
 | `payments` | `PaymentGateway` port, Stripe adapter, charges and refunds | none |
 | `telemetry` | `TelemetrySource` and `VehicleCommandGateway` ports, MQTT adapter, event history | none |
-| `fleet` | Vehicles, hubs, lifecycle, hub capacity, latest vehicle state | `telemetry` |
+| `fleet` | Vehicles, hubs, lifecycle, hub capacity, latest vehicle state | `accounts` (`HotelDirectory`, to link a hub to its hotel), `telemetry` |
 | `maintenance` | Tickets, SLA deadlines, technician assignment | `fleet`, `telemetry` |
 | `passes` | Pass types, base price, usage rules, activation, deposit | `accounts`, `payments`, `maintenance` |
 | `trips` | Reservations, trips, overtime | `passes`, `fleet`, `maintenance`, `telemetry`, `payments` |
