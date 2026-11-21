@@ -21,6 +21,13 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/riaride}
 
 riaride:
+  keycloak:
+    # Service client for the Admin API, used by guest sign-up (ADR 0010).
+    admin:
+      base-url: ${KEYCLOAK_ADMIN_URL:http://localhost:8180}
+      realm: riaride
+      client-id: riaride-backend
+      client-secret: ${KEYCLOAK_BACKEND_CLIENT_SECRET:}
   payments:
     # Stripe test mode (ADR 0008). The key is never committed: set STRIPE_SECRET_KEY.
     stripe:
