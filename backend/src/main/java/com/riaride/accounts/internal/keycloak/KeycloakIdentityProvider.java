@@ -66,8 +66,6 @@ class KeycloakIdentityProvider implements IdentityProvider {
 				throw failure;
 			}
 			return new GuestUser(id, true);
-		} catch (HttpClientErrorException.BadRequest rejected) {
-			throw new IdentityRejectedException("Keycloak rejected the user (HTTP 400)", rejected);
 		} catch (RestClientResponseException failure) {
 			throw new IdentityProviderUnavailableException(
 				"The Keycloak Admin API answered HTTP " + failure.getStatusCode().value(), failure);
@@ -163,6 +161,10 @@ class KeycloakIdentityProvider implements IdentityProvider {
 			return idFrom(response.getHeaders().getLocation());
 		} catch (HttpClientErrorException.Conflict concurrentSignUp) {
 			throw new EmailAlreadyRegisteredException();
+		} catch (HttpClientErrorException.BadRequest rejected) {
+			// Only here does a 400 mean Keycloak refused the user's details (for example a password
+			// policy). A 400 on any other call is a misconfiguration and stays a 503.
+			throw new IdentityRejectedException("Keycloak rejected the user (HTTP 400)", rejected);
 		}
 	}
 
