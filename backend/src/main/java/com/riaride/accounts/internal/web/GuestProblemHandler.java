@@ -37,7 +37,7 @@ class GuestProblemHandler {
 	}
 
 	// In practice, a concurrent sign-up took the same stay code or email between the checks and
-	// the insert; the Keycloak user was already deleted. The SQL message holds the values, so it
+	// the insert; a Keycloak user this sign-up created and no stored guest uses was already deleted. The SQL message holds the values, so it
 	// is neither returned nor logged.
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	ProblemDetail dataIntegrityViolation(DataIntegrityViolationException exception) {
