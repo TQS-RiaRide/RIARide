@@ -34,7 +34,7 @@ class VehicleTelemetryListenerTest {
 	@Test
 	void shouldRecordTheReportedBatteryAndKeepTheStatus() {
 		var vehicle = Vehicle.register("EB-601", VehicleType.E_BIKE, UUID.randomUUID());
-		vehicle.recordBattery(BatteryLevel.of(80), EMITTED_AT.minusSeconds(5));
+		vehicle.recordBattery(BatteryLevel.of(80), EMITTED_AT.minusSeconds(5), EMITTED_AT.minusSeconds(5));
 		when(vehicles.findByCode("EB-601")).thenReturn(Optional.of(vehicle));
 
 		listener.on(reading("EB-601", 18));

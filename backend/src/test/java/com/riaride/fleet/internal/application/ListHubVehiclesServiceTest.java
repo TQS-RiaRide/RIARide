@@ -31,7 +31,7 @@ class ListHubVehiclesServiceTest {
 
 	private static Vehicle withBattery(String code, int percent) {
 		var vehicle = Vehicle.register(code, VehicleType.E_BIKE, HUB);
-		vehicle.recordBattery(BatteryLevel.of(percent), READ_AT);
+		vehicle.recordBattery(BatteryLevel.of(percent), READ_AT, READ_AT);
 		return vehicle;
 	}
 

@@ -53,7 +53,7 @@ class VehicleRepositoryIT {
 	@Test
 	void shouldPersistBatteryReadingAndFindVehicleByCode() {
 		var vehicle = Vehicle.register("EB-601", VehicleType.E_BIKE, hubId);
-		vehicle.recordBattery(BatteryLevel.of(18), READ_AT);
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT, READ_AT);
 
 		vehicles.saveAndFlush(vehicle);
 
