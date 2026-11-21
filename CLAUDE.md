@@ -19,8 +19,11 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | All tests and JaCoCo report | `./mvnw verify` |
 | Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
 | Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
+| Acceptance tests (Cucumber, Failsafe; needs Docker) | `./mvnw verify -DskipUnitTests=true -Dit.test=CucumberIT` (reports in `target/cucumber-reports/`; `@wip` scenarios are excluded) |
 | Run the app | `./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
 | Docker image | `docker build -t riaride-backend .` |
+
+Payments use Stripe test mode behind the `PaymentGateway` port (ADR 0008). The backend reads the secret key from `STRIPE_SECRET_KEY` and fails at startup if the key is missing or is not a test mode key (`sk_test_...`). To run the app without making payments, any `sk_test_` value works. The tests stub Stripe with WireMock and use a dummy key from `src/test/resources/config/application.yml`, so they need no real key or network access.
 
 To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds Surefire's `skipTests` to `skipUnitTests`, so `-DskipTests` does not skip them.
 
@@ -59,20 +62,23 @@ Product definitions and backlog:
 
 ### Business rules (draft)
 
-| Rule | Proposal |
-|---|---|
-| Access | Only guests with an active stay can register and book |
-| Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
-| Pricing | One base price, used by all hotels in the group |
-| Activation | On the first trip, not at purchase |
-| Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |
-| One bike at a time | Each pass can only have one vehicle in use |
-| Maximum trip duration | 3 h; beyond that, overtime is charged per 15 min |
-| Pass expires during a trip | The trip continues; time after expiry is charged as overtime |
-| Check-out | The stay pass ends at check-out; if the bike was not returned, the extra time is overtime |
-| End of trip | Only at a hub with a free slot; capacity is defined by the client |
-| Booking | Can be made in advance; the bike is held for 15 min |
-| Battery | A vehicle below 20 % cannot be booked (value comes from telemetry) |
+| ID | Rule | Proposal |
+|---|---|---|
+| BR1 | Access | Only guests with an active stay can register and book |
+| BR2 | Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
+| BR3 | Pricing | One base price, used by all hotels in the group |
+| BR4 | Activation | On the first trip, not at purchase |
+| BR5 | Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |
+| BR6 | One bike at a time | Each pass can only have one vehicle in use |
+| BR7 | Maximum trip duration | 3 h; beyond that, overtime is charged per 15 min |
+| BR8 | Pass expires during a trip | The trip continues; time after expiry is charged as overtime |
+| BR9 | Check-out | The stay pass ends at check-out; if the bike was not returned, the extra time is overtime |
+| BR10 | End of trip | Only at a hub with a free slot; capacity is defined by the client |
+| BR11 | Booking | Can be made in advance; the bike is held for 15 min |
+| BR12 | Battery | A vehicle below 20 % cannot be booked (value comes from telemetry) |
+| BR13 | Unlock timeout | A trip whose unlock is not confirmed by telemetry within 30 s fails; the pass stays inactive and the bike stays reserved until the booking expires (BR11) |
+
+Gherkin scenarios tag the rules they cover with these IDs (`@BR10`); hub capacity is part of BR10.
 
 Payments are always made by the guest. Invoicing the hotel is out of scope.
 
@@ -159,7 +165,7 @@ A story is done when: acceptance criteria met (Gherkin + Cucumber for core stori
 - Do not give AI services secrets, credentials or personal data. Use synthetic data only.
 - AI review on pull requests, recording accepted and rejected findings (see `.github/pull_request_template.md`).
 - At least two stories must be agent-generated from Gherkin or an OpenSpec proposal and delivered as pull requests.
-- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`; a CI check to enforce it is planned (I2), and until then the reviewer checks it.
+- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`. The `AI label` check (`.github/workflows/ai-label.yml`) fails a pull request with none, more than one, or an unknown `ai:*` label. It blocks the merge once it is a required check in branch protection (pending, DevOps Master). Dependabot pull requests get `ai:none` automatically.
 - Agent-generated stories follow test author → implementer → reviewer, with a human checkpoint after each step; the implementer must not edit the tests written in the first step. The three agents are defined in `.claude/agents/` (`test-author`, `implementer`, `reviewer`).
 - Jira (Atlassian MCP): read the story, acceptance criteria and Xray Tests before writing code or tests; you may comment with the PR link and move a story to *In progress* or *In review*. Never move a story to *Done*, create, split or estimate stories, or edit Gherkin in Jira (QA Manual 6.4).
 - SonarQube (MCP and `sonar-*` skills): read the quality gate, new issues, coverage gaps and duplications, and fix issues in code. Never mark a hotspot as reviewed, accept or close an issue, or change the quality gate, quality profile or coverage exclusions (QA Manual 6.4).
