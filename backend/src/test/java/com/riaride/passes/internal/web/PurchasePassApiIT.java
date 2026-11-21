@@ -11,7 +11,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -44,6 +43,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 // Integration test (Failsafe): POST /api/v1/passes through the real security filter chain, with
 // PostgreSQL in Testcontainers and the Stripe API stubbed by WireMock (ADR 0008). Only the
@@ -148,7 +148,7 @@ class PurchasePassApiIT {
 	}
 
 	private ResultActions buy(String token, String json, String idempotencyKey) throws Exception {
-		var request = post(PASSES).contentType(MediaType.APPLICATION_JSON).content(json);
+		var request = MockMvcRequestBuilders.post(PASSES).contentType(MediaType.APPLICATION_JSON).content(json);
 		if (token != null) {
 			request.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
 		}
@@ -189,7 +189,7 @@ class PurchasePassApiIT {
 			.containsEntry("price_cents", 2500).containsEntry("deposit_cents", 5000)
 			.containsEntry("deposit_status", "HELD").containsEntry("activated_at", null);
 		var payment = jdbc.queryForMap("select kind, amount_cents, status, provider_ref, idempotency_key, customer_ref, payment_method_ref from payment where pass_id = ?::uuid", id);
-		assertThat(payment).containsEntry("kind", "PURCHASE").containsEntry("amount_cents", 7500)
+		assertThat(payment).containsEntry("kind", "PURCHASE").containsEntry("amount_cents", 7500L)
 			.containsEntry("status", "SUCCEEDED").containsEntry("provider_ref", "pi_purchase")
 			.containsEntry("idempotency_key", "purchase-1").containsEntry("customer_ref", "cus_rita")
 			.containsEntry("payment_method_ref", "pm_saved_card");
