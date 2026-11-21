@@ -50,7 +50,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | AI3 | AI-assisted code review | E | Partial | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Its first runs posted no review; evidence is a PR with AI comments and a filled findings table |
 | AI4 | Specification-driven generation (≥ 2 stories) | E | Decided (I2) | Section 6.5 |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.7; data collected from every PR from now on |
-| AI6 | Coordination of several agents | V | Decided (I2) | Section 6.3; the agents are defined with the first generated story (AI4) and use the Jira and SonarQube integrations of section 6.4 |
+| AI6 | Coordination of several agents | V | Decided (I2) | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), and the `Agent boundaries` CI check enforces their roles |
 | AI7 | Agents in the CI pipeline | V | Decided (I3) | Section 6.6: PR summary and failure triage. The AI review job counts as AI3, not here |
 
 ## 2. Project management
@@ -416,15 +416,17 @@ One declaration for the whole project, updated as tools are added.
 
 The QA Engineer maintains them. A pull request that changes a practice in this manual must update `CLAUDE.md` in the same pull request; the review checklist (section 3.2) checks it.
 
-**Coordination (AI6).** Agent-generated stories use three agents with separate roles, defined as `test-author.md`, `implementer.md` and `reviewer.md` in `.claude/agents/` with the first generated story (the folder does not exist yet), with a human checkpoint after each handoff. Each definition lists the tools the agent may use, including its Jira and SonarQube access:
+**Coordination (AI6).** Agent-generated stories use three agents with separate roles, defined in [`.claude/agents/`](../../../.claude/agents/) ([`test-author.md`](../../../.claude/agents/test-author.md), [`implementer.md`](../../../.claude/agents/implementer.md) and [`reviewer.md`](../../../.claude/agents/reviewer.md)), with a human checkpoint after each handoff. Each definition lists the tools the agent may use, including its Jira and SonarQube access:
 
 | Step | Agent | Input | Output | Human checkpoint |
 |---|---|---|---|---|
-| 1 | Test author | Approved Gherkin scenarios or OpenSpec proposal, read from the Jira story | Step definitions and unit tests that fail | Developer checks that the tests express the criteria, then commits them |
+| 1 | Test author | Approved Gherkin scenarios or OpenSpec proposal, read from the Jira story | Step definitions, unit tests and integration tests that fail | Developer checks that the tests express the criteria, then commits them |
 | 2 | Implementer | Failing tests; SonarQube issues and coverage gaps on the branch | Implementation that makes them pass, without changing the tests | Developer reviews the diff and runs CI |
 | 3 | Reviewer | Pull request diff, quality gate status | Review findings | Developer records findings; another member approves |
 
 The implementer must not edit the tests written in step 1; any needed change goes back to step 1.
+
+**How the roles are enforced.** The developer commits each agent step with a trailer naming the agent (`Agent: test-author` or `Agent: implementer`). On a pull request labelled `ai:generated`, the [`Agent boundaries`](../../../.github/workflows/agent-boundaries.yml) check fails when an implementer commit touches `backend/src/test/` or a test-author commit touches `backend/src/main/`. The reviewer agent's tools allow only read-only commands, so it cannot comment, approve, merge or push. The agents need the claude.ai Atlassian connector for Jira; without it, the test author stops instead of guessing the criteria.
 
 ### 6.4 Agent integration with Jira and SonarQube
 
@@ -439,7 +441,7 @@ How they fit the workflow:
 
 - **Before coding**, the agent reads the story from Jira instead of a copy pasted into the prompt, so the tests follow the acceptance criteria approved by the Product Owner. Gherkin scenarios stay in the repository (section 2.3); the agent never edits them in Jira.
 - **While coding**, when the quality gate fails on a pull request, the agent lists the new issues and uncovered lines and proposes fixes. The fix is a commit like any other, and CI runs the gate again: the agent cannot make the gate pass by changing it.
-- **At review**, the reviewer agent (section 6.3) reads the gate status with the diff, and the human reviewer still reviews every hotspot (review checklist, section 3.2).
+- **At review**, the reviewer agent (section 6.3) reads the gate status through the pull request's checks (`gh pr checks`), with the diff, and the human reviewer still reviews every hotspot (review checklist, section 3.2).
 - **Data:** stories and code are synthetic and fictional (section 3.1), so sending them to the AI service exposes no personal data. Tokens are never pasted into prompts or committed.
 
 *Evidence (to be linked in I2): a Jira story with an agent comment that links its pull request, and a pull request where an agent fixed a SonarQube issue that failed the gate.*
