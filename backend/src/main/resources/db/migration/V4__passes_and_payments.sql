@@ -29,13 +29,14 @@ create table pass (
     expires_at     timestamptz,
     created_at     timestamptz not null default now(),
     constraint ck_pass_type check (pass_type in ('ONE_DAY', 'THREE_DAY', 'STAY')),
-    constraint ck_pass_status check (status in ('INACTIVE', 'ACTIVE', 'CLOSED')),
+    constraint ck_pass_status check (status in ('PENDING', 'INACTIVE', 'ACTIVE', 'CLOSED')),
     constraint ck_pass_deposit_status check (deposit_status in ('HELD')),
     constraint ck_pass_amounts check (price_cents > 0 and deposit_cents > 0)
 );
 
--- One open pass per guest (Product Owner decision, RIA-52); the final guard against a concurrent purchase.
-create unique index uq_pass_open_per_guest on pass (guest_id) where status in ('INACTIVE', 'ACTIVE');
+-- One open pass per guest (Product Owner decision, RIA-52). PENDING counts, since a pass is reserved
+-- before its card is charged: a concurrent purchase is refused before any money moves.
+create unique index uq_pass_open_per_guest on pass (guest_id) where status in ('PENDING', 'INACTIVE', 'ACTIVE');
 
 create table payment (
     id                 uuid primary key,
