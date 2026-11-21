@@ -2,7 +2,7 @@ package com.riaride.passes.internal.web;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -171,7 +171,7 @@ class PurchasePassApiIT {
 
 	private List<String> referencesSentToStripe() {
 		return stripe.findAll(postRequestedFor(urlPathEqualTo("/v1/payment_intents"))).stream()
-			.map(request -> request.getBodyAsString().replaceAll(".*metadata%5Breference%5D=([^&]+).*", "$1"))
+			.map(request -> request.getBodyAsString().replaceAll(".*metadata(?:\\[|%5B)reference(?:\\]|%5D)=([^&]+).*", "$1"))
 			.toList();
 	}
 
@@ -197,7 +197,7 @@ class PurchasePassApiIT {
 
 		var id = JsonPath.<String>read(result.getResponse().getContentAsString(), "$.id");
 		stripe.verify(1, postRequestedFor(urlPathEqualTo("/v1/payment_intents"))
-			.withHeader("Idempotency-Key", equalTo("purchase-1"))
+			.withHeader("Idempotency-Key", matching("[0-9a-f-]{36}:purchase-1"))
 			.withRequestBody(containing("amount=7500"))
 			.withRequestBody(containing("currency=eur"))
 			.withRequestBody(containing("pass-" + id)));
@@ -383,7 +383,9 @@ class PurchasePassApiIT {
 		doThrow(new IllegalStateException("simulated failure")).when(ledger).recordPurchase(any(), any(), any(), any());
 
 		buy(GUEST_TOKEN, body("STAY"), "purchase-1")
-			.andExpect(status().isInternalServerError());
+			.andExpect(status().isInternalServerError())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+			.andExpect(jsonPath("$.title").value("Pass not created"));
 
 		stripe.verify(1, postRequestedFor(urlPathEqualTo("/v1/refunds"))
 			.withRequestBody(containing("payment_intent=pi_purchase"))
