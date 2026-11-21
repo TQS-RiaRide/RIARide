@@ -13,11 +13,22 @@ class PassTest {
 
 	private static final UUID GUEST = UUID.fromString("5b7f0c2e-0d1a-4a7e-9a55-3c2d1e0f4a11");
 	private static final PassPrice STAY_PRICE = new PassPrice(PassType.STAY, 2500, 5000);
+	private static final String KEY = GUEST + ":purchase-1";
+
+	// The pass is reserved (PENDING) before the card is charged, so the one-open-pass index guards
+	// concurrent purchases before any money moves.
+	@Requirement("RIA-52")
+	@Test
+	void shouldStartAsAPendingReservation() {
+		assertThat(Pass.purchase(GUEST, STAY_PRICE, KEY).getStatus()).isEqualTo(PassStatus.PENDING);
+	}
 
 	@Requirement("RIA-52")
 	@Test
-	void shouldCreatePassThatIsNotActiveYet() {
-		var pass = Pass.purchase(GUEST, STAY_PRICE);
+	void shouldBecomeAPassThatIsNotActiveYetOnceItIsPaid() {
+		var pass = Pass.purchase(GUEST, STAY_PRICE, KEY);
+
+		pass.confirmPayment();
 
 		assertThat(pass.getStatus()).isEqualTo(PassStatus.INACTIVE);
 		assertThat(pass.getActivatedAt()).isNull();
@@ -27,7 +38,7 @@ class PassTest {
 	@Requirement("RIA-52")
 	@Test
 	void shouldCopyPriceAndDepositOfItsType() {
-		var pass = Pass.purchase(GUEST, STAY_PRICE);
+		var pass = Pass.purchase(GUEST, STAY_PRICE, KEY);
 
 		assertThat(pass.getGuestId()).isEqualTo(GUEST);
 		assertThat(pass.getPassType()).isEqualTo(PassType.STAY);
@@ -39,7 +50,7 @@ class PassTest {
 	@Requirement("RIA-52")
 	@Test
 	void shouldChargePriceAndDepositTogether() {
-		var pass = Pass.purchase(GUEST, STAY_PRICE);
+		var pass = Pass.purchase(GUEST, STAY_PRICE, KEY);
 
 		assertThat(pass.amountToCharge().cents()).isEqualTo(7500);
 	}
@@ -49,7 +60,7 @@ class PassTest {
 	@Test
 	void shouldKeepItsAmountsWhenTheBasePriceChangesLater() {
 		var price = new PassPrice(PassType.ONE_DAY, 1000, 5000);
-		var pass = Pass.purchase(GUEST, price);
+		var pass = Pass.purchase(GUEST, price, KEY);
 
 		price.change(1200, 6000);
 
@@ -57,21 +68,37 @@ class PassTest {
 		assertThat(pass.getDepositCents()).isEqualTo(5000);
 	}
 
+	// The id comes from the guest-scoped idempotency key, so a retry sends Stripe the same reference
+	// and gets its cached result instead of a parameter mismatch.
 	@Requirement("RIA-52")
 	@Test
-	void shouldGiveEachPassItsOwnId() {
-		assertThat(Pass.purchase(GUEST, STAY_PRICE).getId()).isNotEqualTo(Pass.purchase(GUEST, STAY_PRICE).getId());
+	void shouldDeriveTheSameIdFromTheSameKey() {
+		assertThat(Pass.purchase(GUEST, STAY_PRICE, KEY).getId()).isEqualTo(Pass.purchase(GUEST, STAY_PRICE, KEY).getId());
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldDeriveDifferentIdsFromDifferentKeys() {
+		assertThat(Pass.purchase(GUEST, STAY_PRICE, KEY).getId())
+			.isNotEqualTo(Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-2").getId());
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldRequireAnIdempotencyKey() {
+		assertThatThrownBy(() -> Pass.purchase(GUEST, STAY_PRICE, " ")).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Requirement("RIA-52")
 	@Test
 	void shouldRequireAGuest() {
-		assertThatThrownBy(() -> Pass.purchase(null, STAY_PRICE)).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> Pass.purchase(null, STAY_PRICE, KEY)).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Requirement("RIA-52")
 	@Test
 	void shouldBeOpenUntilClosed() {
+		assertThat(PassStatus.PENDING.isOpen()).isTrue();
 		assertThat(PassStatus.INACTIVE.isOpen()).isTrue();
 		assertThat(PassStatus.ACTIVE.isOpen()).isTrue();
 		assertThat(PassStatus.CLOSED.isOpen()).isFalse();
