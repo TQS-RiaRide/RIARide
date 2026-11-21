@@ -13,15 +13,17 @@ import jakarta.validation.constraints.Size;
 record RegisterHubRequest(
 	String name,
 	HubKind kind,
-	// No control characters: PostgreSQL rejects NUL, and none belongs in a name.
+	// The same rule as the hub name: no control or format characters (Unicode categories Cc and
+	// Cf). PostgreSQL rejects NUL, and no invisible character belongs in a name.
 	@Size(max = Hub.MAX_NAME_LENGTH, message = "No hotel of the group has a name this long.")
-	@Pattern(regexp = NO_CONTROL_CHARACTERS, message = "A hotel name must not contain control characters.")
+	@Pattern(regexp = NO_INVISIBLE_CHARACTERS,
+		message = "A hotel name must not contain control or format characters.")
 	String hotel,
 	@NotNull(message = "The latitude is required.") Double latitude,
 	@NotNull(message = "The longitude is required.") Double longitude,
 	@NotNull(message = "The capacity is required.") Integer capacity) {
 
-	static final String NO_CONTROL_CHARACTERS = "^\\P{Cntrl}*$";
+	static final String NO_INVISIBLE_CHARACTERS = "^[^\\p{Cc}\\p{Cf}]*$";
 
 	RegisterHubCommand toCommand() {
 		return new RegisterHubCommand(name, kind, hotel == null ? null : hotel.strip(), latitude, longitude, capacity);

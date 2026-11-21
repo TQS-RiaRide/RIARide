@@ -24,8 +24,10 @@ public class Hub implements Persistable<UUID> {
 	static final double MAX_LATITUDE = 90.0;
 	static final double MAX_LONGITUDE = 180.0;
 
-	// PostgreSQL rejects NUL, and no control character belongs in a name.
-	private static final Pattern CONTROL_CHARACTER = Pattern.compile("\\p{Cntrl}");
+	// No invisible character belongs in a name: no C0 or C1 control character (Unicode category
+	// Cc, which includes the NUL that PostgreSQL rejects) and no format character (category Cf, such
+	// as the zero-width space or the right-to-left override).
+	private static final Pattern INVISIBLE_CHARACTER = Pattern.compile("[\\p{Cc}\\p{Cf}]");
 
 	@Id
 	private UUID id;
@@ -90,8 +92,8 @@ public class Hub implements Persistable<UUID> {
 			throw new InvalidHubException("name",
 				"A hub name must have at most " + MAX_NAME_LENGTH + " characters.");
 		}
-		if (CONTROL_CHARACTER.matcher(stripped).find()) {
-			throw new InvalidHubException("name", "A hub name must not contain control characters.");
+		if (INVISIBLE_CHARACTER.matcher(stripped).find()) {
+			throw new InvalidHubException("name", "A hub name must not contain control or format characters.");
 		}
 		return stripped;
 	}
@@ -103,7 +105,13 @@ public class Hub implements Persistable<UUID> {
 		if (kind == HubKind.HOTEL && hotelId == null) {
 			throw new InvalidHubException("hotel", "A hotel hub must name the hotel it belongs to.");
 		}
-		if (kind == HubKind.TOURIST_SPOT && hotelId != null) {
+		requireNoHotelForTouristSpot(kind, hotelId != null);
+	}
+
+	// A tourist spot hub belongs to no hotel. Callers that resolve the hotel from its name check
+	// this first, so the kind decides whether a hotel is allowed before the hotel is looked up.
+	public static void requireNoHotelForTouristSpot(HubKind kind, boolean hasHotel) {
+		if (kind == HubKind.TOURIST_SPOT && hasHotel) {
 			throw new InvalidHubException("hotel", "A tourist spot hub must not belong to a hotel.");
 		}
 	}

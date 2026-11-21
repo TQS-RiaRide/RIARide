@@ -24,6 +24,7 @@ public class RegisterHubService {
 	// insert is flushed here, so its DataIntegrityViolationException reaches the caller.
 	@Transactional
 	public RegisteredHub register(RegisterHubCommand command) {
+		Hub.requireNoHotelForTouristSpot(command.kind(), command.hotelName() != null);
 		var hotel = command.hotelName() == null ? null : hotelNamed(command.hotelName());
 		var hub = Hub.register(command.name(), command.kind(), hotel == null ? null : hotel.id(), command.latitude(),
 			command.longitude(), command.capacity());
