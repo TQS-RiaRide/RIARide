@@ -1,0 +1,49 @@
+name: Agent boundaries
+
+# Enforces the role split of agent-generated stories (QA Manual 6.3): the implementer
+# never changes tests and the test author never changes production code. The developer
+# commits each step with an "Agent:" trailer (test-author or implementer); this check
+# fails a pull request labelled ai:generated when such a commit touches the other role's
+# files. Merge commits are skipped, since they bring in other people's changes.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  boundaries:
+    name: Agent commits stay in their role
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: contains(github.event.pull_request.labels.*.name, 'ai:generated')
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Check each agent commit
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          failed=0
+          checked=0
+          for commit in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            agent=$(git log -1 --format='%(trailers:key=Agent,valueonly)' "$commit" | tr -d '[:space:]')
+            case "$agent" in
+              implementer) forbidden='^backend/src/test/' ;;
+              test-author) forbidden='^backend/src/main/' ;;
+              *) continue ;;
+            esac
+            checked=$((checked + 1))
+            offending=$(git diff-tree --no-commit-id --name-only -r "$commit" | grep -E "$forbidden" || true)
+            if [ -n "$offending" ]; then
+              echo "::error::Commit ${commit:0:7} (Agent: $agent) changes files outside its role:"
+              echo "$offending"
+              failed=1
+            fi
+          done
+          echo "Agent commits checked: $checked"
+          exit "$failed"
