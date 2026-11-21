@@ -1,6 +1,7 @@
 package com.riaride.passes.internal.application;
 
 import com.riaride.passes.internal.domain.Pass;
+import com.riaride.passes.internal.domain.PassStatus;
 import com.riaride.passes.internal.persistence.PassRepository;
 import com.riaride.payments.PaymentLedger;
 import com.riaride.payments.PurchaseResult;
@@ -37,9 +38,11 @@ public class PassBook {
 		ledger.recordPurchase(stored.getId(), idempotencyKey, stored.amountToCharge(), result);
 	}
 
+	// Deletes the reservation only while it is still PENDING: never a pass that a concurrent request
+	// with the same key has already confirmed.
 	@Transactional
-	public void release(Pass pass) {
-		passes.deleteById(pass.getId());
+	public void releasePending(Pass pass) {
+		passes.deleteByIdAndStatus(pass.getId(), PassStatus.PENDING);
 	}
 
 }

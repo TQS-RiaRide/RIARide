@@ -68,15 +68,24 @@ public class PurchasePassService {
 		var retryOfPendingPurchase = passes.findById(pass.getId())
 			.filter(existing -> existing.getStatus() == PassStatus.PENDING)
 			.isPresent();
-		if (!retryOfPendingPurchase) {
+		// Only the request that created the reservation may release it: a retry that arrives while
+		// the first request is still running finds the reservation and leaves it alone.
+		var reservedHere = !retryOfPendingPurchase;
+		if (reservedHere) {
 			reserve(pass, guestId);
 		}
-		var paid = charge(pass, command, key);
+		var paid = charge(pass, command, key, reservedHere);
 		try {
 			book.confirm(pass, key, paid);
 		} catch (RuntimeException failure) {
+			// A concurrent request with the same key may have confirmed this very purchase first:
+			// then it is a duplicate, not a failure, and the charge must not be refunded.
+			var confirmedConcurrently = ledger.findPurchase(key).flatMap(purchase -> passes.findById(purchase.passId()));
+			if (confirmedConcurrently.isPresent()) {
+				return confirmedConcurrently.get();
+			}
 			var notCreated = new PassNotCreatedException(failure);
-			refund(pass, paid, key, notCreated);
+			refund(pass, paid, key, notCreated, reservedHere);
 			throw notCreated;
 		}
 		return pass;
@@ -93,17 +102,19 @@ public class PurchasePassService {
 		}
 	}
 
-	private PurchaseResult charge(Pass pass, PurchasePassCommand command, String key) {
+	private PurchaseResult charge(Pass pass, PurchasePassCommand command, String key, boolean reservedHere) {
 		try {
 			return gateway.purchase(new PurchaseRequest(pass.amountToCharge(), command.paymentMethod(),
 				"pass-" + pass.getId(), key));
 		} catch (PaymentException failure) {
-			book.release(pass);
+			if (reservedHere) {
+				book.releasePending(pass);
+			}
 			throw failure;
 		}
 	}
 
-	private void refund(Pass pass, PurchaseResult paid, String key, RuntimeException failure) {
+	private void refund(Pass pass, PurchaseResult paid, String key, RuntimeException failure, boolean reservedHere) {
 		log.error("Pass {} could not be stored after payment {}; refunding it", pass.getId(), paid.paymentRef());
 		try {
 			gateway.refund(new RefundRequest(paid.paymentRef(), pass.amountToCharge(), key + ":refund"));
@@ -111,8 +122,11 @@ public class PurchasePassService {
 			failure.addSuppressed(refundFailure);
 			log.error("Refund of payment {} failed; refund it by hand", paid.paymentRef());
 		}
+		if (!reservedHere) {
+			return;
+		}
 		try {
-			book.release(pass);
+			book.releasePending(pass);
 		} catch (RuntimeException releaseFailure) {
 			failure.addSuppressed(releaseFailure);
 		}
