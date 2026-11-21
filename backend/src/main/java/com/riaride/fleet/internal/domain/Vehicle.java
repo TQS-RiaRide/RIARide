@@ -66,6 +66,14 @@ public class Vehicle implements Persistable<UUID> {
 		return new Vehicle(code, type, hubId);
 	}
 
+	// A vehicle already in a given lifecycle state. The transitions (booking, trips, maintenance)
+	// belong to later stories; until then this is how the domain tests reach those states.
+	static Vehicle withStatus(String code, VehicleType type, UUID hubId, VehicleStatus status) {
+		var vehicle = new Vehicle(code, type, hubId);
+		vehicle.status = status;
+		return vehicle;
+	}
+
 	// BR12: bookable only when available and the battery is at or above the policy's minimum.
 	public boolean isBookable(BookingBatteryPolicy policy) {
 		return status == VehicleStatus.AVAILABLE && policy.allowsBooking(battery());
