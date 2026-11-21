@@ -16,20 +16,23 @@ import org.springframework.context.SmartLifecycle;
 
 // The MQTT adapter (ADR 0006): subscribes to every vehicle's telemetry topic with QoS 1 and hands
 // each message to the handler. A broker that is down at startup does not stop the application: the
-// subscriber retries until it connects, and Paho reconnects after a lost connection. The session is
-// kept (clean session off), so the broker queues QoS 1 messages while the platform is away.
+// subscriber retries until it connects and subscribes, and Paho reconnects after a lost connection.
+// The session is kept (clean session off), so the broker queues QoS 1 messages while the platform is
+// away. A kept session is tied to the client id, so one backend instance runs per client id; a second
+// instance needs its own MQTT_CLIENT_ID (or a shared subscription, once the deployment needs it).
 class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 
 	static final String TELEMETRY_TOPICS = "riaride/vehicles/+/telemetry";
 	private static final int QOS = 1;
 	private static final long RETRY_SECONDS = 5;
+	private static final long DISCONNECT_TIMEOUT_MS = 2_000;
 
 	private static final Logger log = LoggerFactory.getLogger(MqttTelemetrySubscriber.class);
 
 	private final TelemetryMqttProperties properties;
 	private final TelemetryMessageHandler handler;
-	private ScheduledExecutorService connector;
-	private MqttClient client;
+	private volatile ScheduledExecutorService connector;
+	private volatile MqttClient client;
 	private volatile boolean running;
 
 	MqttTelemetrySubscriber(TelemetryMqttProperties properties, TelemetryMessageHandler handler) {
@@ -38,7 +41,10 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 	}
 
 	@Override
-	public void start() {
+	public synchronized void start() {
+		if (running) {
+			return;
+		}
 		try {
 			client = new MqttClient(properties.url(), properties.clientId(), new MemoryPersistence());
 		} catch (MqttException invalidSettings) {
@@ -58,6 +64,16 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 		if (!running) {
 			return;
 		}
+		try {
+			client.connect(connectOptions());
+		} catch (MqttException unreachable) {
+			log.warn("MQTT broker not reachable (reason {}); retrying in {} s", unreachable.getReasonCode(),
+				RETRY_SECONDS);
+			retryLater(this::connect);
+		}
+	}
+
+	private MqttConnectOptions connectOptions() {
 		var options = new MqttConnectOptions();
 		options.setCleanSession(false);
 		options.setAutomaticReconnect(true);
@@ -65,35 +81,48 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 			options.setUserName(properties.username());
 			options.setPassword(properties.password() == null ? new char[0] : properties.password().toCharArray());
 		}
-		try {
-			client.connect(options);
-		} catch (MqttException unreachable) {
-			log.warn("MQTT broker {} not reachable ({}); retrying in {} s", properties.url(),
-				unreachable.getReasonCode(), RETRY_SECONDS);
-			connector.schedule(this::connect, RETRY_SECONDS, TimeUnit.SECONDS);
-		}
+		return options;
 	}
 
 	// Called on the first connection and on every automatic reconnection.
 	@Override
 	public void connectComplete(boolean reconnect, String serverUri) {
+		subscribe();
+	}
+
+	// Paho does not retry a failed subscription, so this does: a connected but unsubscribed adapter
+	// would otherwise stay silent.
+	private void subscribe() {
+		if (!running) {
+			return;
+		}
 		try {
 			client.subscribe(TELEMETRY_TOPICS, QOS);
-			log.info("Subscribed to {} on {}", TELEMETRY_TOPICS, serverUri);
+			log.info("Subscribed to {}", TELEMETRY_TOPICS);
 		} catch (MqttException failed) {
-			log.error("Could not subscribe to {} ({})", TELEMETRY_TOPICS, failed.getReasonCode());
+			log.error("Could not subscribe to {} (reason {}); retrying in {} s", TELEMETRY_TOPICS,
+				failed.getReasonCode(), RETRY_SECONDS);
+			retryLater(this::subscribe);
+		}
+	}
+
+	private void retryLater(Runnable action) {
+		var executor = connector;
+		if (running && executor != null && !executor.isShutdown()) {
+			executor.schedule(action, RETRY_SECONDS, TimeUnit.SECONDS);
 		}
 	}
 
 	// An exception here would make Paho drop the connection, and the broker would redeliver the same
 	// message on every reconnection. A message that cannot be handled is logged, without its
-	// payload, and dropped; the next reading of the same vehicle brings the state up to date.
+	// payload, and dropped: the simulator sends each vehicle's state periodically, so the next
+	// reading brings it up to date.
 	@Override
 	public void messageArrived(String topic, MqttMessage message) {
 		try {
 			handler.handle(topic, message.getPayload());
 		} catch (RuntimeException failed) {
-			log.error("Telemetry message on {} dropped: {}", topic, failed.getClass().getSimpleName());
+			log.error("Telemetry message dropped: {}", failed.getClass().getSimpleName());
 		}
 	}
 
@@ -108,16 +137,21 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 	}
 
 	@Override
-	public void stop() {
+	public synchronized void stop() {
 		running = false;
-		connector.shutdownNow();
+		if (connector != null) {
+			connector.shutdownNow();
+		}
+		if (client == null) {
+			return;
+		}
 		try {
 			if (client.isConnected()) {
-				client.disconnect();
+				client.disconnectForcibly(DISCONNECT_TIMEOUT_MS);
 			}
-			client.close();
-		} catch (MqttException ignored) {
-			log.debug("MQTT client closed with reason {}", ignored.getReasonCode());
+			client.close(true);
+		} catch (MqttException closing) {
+			log.debug("MQTT client closed with reason {}", closing.getReasonCode());
 		}
 	}
 
