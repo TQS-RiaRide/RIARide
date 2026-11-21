@@ -12,7 +12,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import tools.jackson.databind.json.JsonMapper;
 
 // Stateless bearer-token API. Every endpoint needs a valid Keycloak token except health;
-// modules restrict their endpoints by role with @PreAuthorize.
+// modules restrict their endpoints by role with @PreAuthorize. An endpoint whose callers must be
+// refused before the body is read and validated also gets a role rule here, so a caller without
+// the role gets 403 and learns nothing about the input rules.
 @Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
 class SecurityConfiguration {
@@ -28,6 +30,8 @@ class SecurityConfiguration {
 				.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 				// Guest sign-up (RIA-51): the guest has no account, and so no token, yet.
 				.requestMatchers(HttpMethod.POST, "/api/v1/guests").permitAll()
+				// Hub registration (RIA-56): operators and admins only.
+				.requestMatchers(HttpMethod.POST, "/api/v1/hubs").hasAnyRole("OPERATOR", "ADMIN")
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(resourceServer -> resourceServer
 				.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
