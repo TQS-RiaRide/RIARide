@@ -52,7 +52,10 @@ class TelemetryMessageMapperTest {
 
 	@Requirement("RIA-59")
 	@ParameterizedTest
-	@ValueSource(strings = { "riaride/vehicles/EB-601/events", "riaride/vehicles//telemetry", "other/EB-601/telemetry" })
+	@ValueSource(strings = { "riaride/vehicles/EB-601/events", "riaride/vehicles//telemetry", "other/EB-601/telemetry",
+		"riaride/vehicles/EB 601\n/telemetry", "riaride/vehicles/EB-6012345678901234567890123456789012/telemetry" })
+	// The code is a topic segment anyone on the broker can choose, so it is checked before it is used
+	// or logged: letters, digits and hyphens, at most 32 characters (the vehicle.code column).
 	void shouldRejectATopicThatIsNotAVehicleTelemetryTopic(String topic) {
 		assertThatThrownBy(() -> mapper.map(topic, payload(DOCKED_READING)))
 			.isInstanceOf(InvalidTelemetryMessageException.class);
