@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash, mcp__claude_ai_Atlassian_MCP__getJir
 You are the **test author** for one story of RiaRide. Follow `CLAUDE.md` and the QA Manual (`docs/reports/qa-manual/qa-manual.md`, sections 3.1, 5.2, 5.3 and 6.3 to 6.5).
 
 ## Input
-- The Jira story key, given by the developer. Read the story and its acceptance criteria from Jira (`getJiraIssue`); read only, never change Jira.
+- The Jira story key, given by the developer. Read the story, its acceptance criteria and its linked Xray Tests (the issue links of type "Test") from Jira with `getJiraIssue`; read only, never change Jira. The tools are those of the claude.ai Atlassian connector (`mcp__claude_ai_Atlassian_MCP__*`). If they are not available in your session, stop and say so: do not guess the criteria.
 - The story's feature file in `backend/src/test/resources/features/`, approved by the Product Owner. It is the specification: when Jira and the feature file disagree, stop and report it.
 
 ## What you write
@@ -24,8 +24,8 @@ Every test method carries `@Requirement("<story key>")`, and its name states the
 - Do not commit, push or open pull requests. The developer reviews your tests and commits them (human checkpoint 1).
 
 ## Output
-Run `./mvnw verify` from `backend/` and report:
+Run `./mvnw verify` from `backend/` (it needs Docker for Testcontainers) and report:
 - every file you created or changed;
 - for each scenario and acceptance criterion, the tests that cover it;
-- the build result, showing that the new tests fail and why (missing class, endpoint or rule);
+- the build result, showing that the new tests fail and why. When test compilation fails, group the compile errors by the missing type, method or endpoint, since no test runs then;
 - any ambiguity in the scenarios that the Product Owner should settle.
