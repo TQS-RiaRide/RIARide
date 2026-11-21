@@ -22,6 +22,8 @@
 		<jacoco.version>0.8.16</jacoco.version>
 		<cucumber.version>8.1.0</cucumber.version>
 		<rest-assured.version>6.3.0</rest-assured.version>
+		<stripe-java.version>34.2.0</stripe-java.version>
+		<wiremock.version>3.13.2</wiremock.version>
 		<xray-junit-extensions.version>1.1.0</xray-junit-extensions.version>
 		<!-- Set to true to run only integration tests: ./mvnw verify -DskipUnitTests=true -->
 		<skipUnitTests>false</skipUnitTests>
@@ -43,6 +45,13 @@
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
 			<artifactId>spring-modulith-starter-core</artifactId>
+		</dependency>
+
+		<!-- Stripe test mode behind the PaymentGateway port (ADR 0008). -->
+		<dependency>
+			<groupId>com.stripe</groupId>
+			<artifactId>stripe-java</artifactId>
+			<version>${stripe-java.version}</version>
 		</dependency>
 
 		<dependency>
@@ -108,6 +117,13 @@
 			<groupId>app.getxray</groupId>
 			<artifactId>xray-junit-extensions</artifactId>
 			<version>${xray-junit-extensions.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Stubs of the Stripe API for the payment adapter's integration tests (ADR 0008). -->
+		<dependency>
+			<groupId>org.wiremock</groupId>
+			<artifactId>wiremock-standalone</artifactId>
+			<version>${wiremock.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
