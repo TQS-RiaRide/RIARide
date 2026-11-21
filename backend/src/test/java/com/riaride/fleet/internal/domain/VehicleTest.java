@@ -82,4 +82,17 @@ class VehicleTest {
 		assertThat(vehicle.isBookable(POLICY)).isFalse();
 	}
 
+	@Requirement("RIA-59")
+	@Test
+	void shouldIgnoreAReadingOlderThanTheLastOne() {
+		var vehicle = availableWithBattery(80);
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(10));
+
+		vehicle.recordBattery(BatteryLevel.of(90), READ_AT.plusSeconds(5));
+
+		assertThat(vehicle.battery()).isEqualTo(BatteryLevel.of(18));
+		assertThat(vehicle.getLastTelemetryAt()).isEqualTo(READ_AT.plusSeconds(10));
+		assertThat(vehicle.isBookable(POLICY)).isFalse();
+	}
+
 }
