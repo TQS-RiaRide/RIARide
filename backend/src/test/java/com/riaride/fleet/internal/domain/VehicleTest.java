@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import java.time.Instant;
 import java.util.UUID;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -47,6 +48,36 @@ class VehicleTest {
 	void shouldNotBeBookableWhenNotAvailableEvenWithFullBattery(VehicleStatus status) {
 		var vehicle = Vehicle.withStatus("EB-601", VehicleType.E_BIKE, HUB, status);
 		vehicle.recordBattery(BatteryLevel.of(100), READ_AT);
+
+		assertThat(vehicle.isBookable(POLICY)).isFalse();
+	}
+
+	@Requirement("RIA-59")
+	@Test
+	void shouldKeepStatusAvailableWhenBatteryDropsBelow20Percent() {
+		var vehicle = availableWithBattery(80);
+
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(5));
+
+		assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+		assertThat(vehicle.battery()).isEqualTo(BatteryLevel.of(18));
+		assertThat(vehicle.getLastTelemetryAt()).isEqualTo(READ_AT.plusSeconds(5));
+	}
+
+	@Requirement("RIA-59")
+	@Test
+	void shouldBeBookableAgainWhenChargedBackTo20Percent() {
+		var vehicle = availableWithBattery(18);
+
+		vehicle.recordBattery(BatteryLevel.of(20), READ_AT.plusSeconds(60));
+
+		assertThat(vehicle.isBookable(POLICY)).isTrue();
+	}
+
+	@Requirement("RIA-59")
+	@Test
+	void shouldNotBeBookableBeforeTheFirstBatteryReading() {
+		var vehicle = Vehicle.register("EB-601", VehicleType.E_BIKE, HUB);
 
 		assertThat(vehicle.isBookable(POLICY)).isFalse();
 	}
