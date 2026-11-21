@@ -11,6 +11,11 @@ spring:
       ddl-auto: validate # Flyway owns the schema
   flyway:
     locations: classpath:db/migration
+  jackson:
+    deserialization:
+      # A fractional number for a whole-number field, such as a hub capacity of 1.5, is a 400,
+      # not silently truncated.
+      accept-float-as-int: false
   mvc:
     problemdetails:
       enabled: true # RFC 9457 problem details for Spring MVC errors
@@ -21,6 +26,13 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/riaride}
 
 riaride:
+  keycloak:
+    # Service client for the Admin API, used by guest sign-up (ADR 0010).
+    admin:
+      base-url: ${KEYCLOAK_ADMIN_URL:http://localhost:8180}
+      realm: riaride
+      client-id: riaride-backend
+      client-secret: ${KEYCLOAK_BACKEND_CLIENT_SECRET:}
   payments:
     # Stripe test mode (ADR 0008). The key is never committed: set STRIPE_SECRET_KEY.
     stripe:
