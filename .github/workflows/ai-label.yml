@@ -1,0 +1,45 @@
+name: AI label
+
+# Every pull request declares its AI use with exactly one label: ai:none,
+# ai:assisted or ai:generated (QA Manual 3.2 and 6.2). This check fails when a
+# pull request has none or more than one, and runs again when labels change.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]
+
+permissions: {}
+
+jobs:
+  ai-label:
+    name: Exactly one AI label
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      # Labels come from the event payload through an environment variable,
+      # never interpolated into the script, so a label name cannot inject code.
+      # Only the three exact labels count; any other ai:* label is a typo.
+      - name: Check the ai:* labels
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          valid=$(jq -r '.[] | select(. == "ai:none" or . == "ai:assisted" or . == "ai:generated")' <<<"$LABELS")
+          unknown=$(jq -r '.[] | select(startswith("ai:")) | select(. != "ai:none" and . != "ai:assisted" and . != "ai:generated")' <<<"$LABELS")
+          count=$(grep -c . <<<"$valid" || true)
+          if [ -n "$unknown" ]; then
+            echo "::error::Unknown AI label: $(paste -sd ' ' - <<<"$unknown"). Use ai:none, ai:assisted or ai:generated."
+            exit 1
+          fi
+          case "$count" in
+            1)
+              echo "AI label: $valid"
+              ;;
+            0)
+              echo "::error::Add one AI label: ai:none, ai:assisted or ai:generated (QA Manual 6.2)."
+              exit 1
+              ;;
+            *)
+              echo "::error::Keep only one AI label; found: $(paste -sd ' ' - <<<"$valid")."
+              exit 1
+              ;;
+          esac
