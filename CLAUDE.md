@@ -147,7 +147,7 @@ Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement(
 Full guidelines and review checklist: QA Manual, section 3.1 and 3.2.
 
 - **Java:** Google Java Style, enforced by Spotless (google-java-format). Package by Spring Modulith module, not by layer; constructor injection only; business rules in the domain, not in controllers; errors as RFC 9457 problem details.
-- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through translation files.
+- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through the translation files in `frontend/src/locales/<language>/<namespace>.json`, one namespace per feature (`frontend/src/i18n/README.md`).
 - **Python:** ruff for lint and format; type hints on public functions.
 - **Tests:** arrange, act, assert; names state the behaviour (`shouldRejectBookingWhenBatteryBelow20Percent`); fixed clocks for time rules, no sleeps; Gherkin scenarios tagged with the story key and business rule (`@RIA-31 @BR1`).
 
