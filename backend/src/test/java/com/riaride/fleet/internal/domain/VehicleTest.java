@@ -20,7 +20,7 @@ class VehicleTest {
 
 	private static Vehicle availableWithBattery(int percent) {
 		var vehicle = Vehicle.register("EB-601", VehicleType.E_BIKE, HUB);
-		vehicle.recordBattery(BatteryLevel.of(percent), READ_AT);
+		vehicle.recordBattery(BatteryLevel.of(percent), READ_AT, READ_AT);
 		return vehicle;
 	}
 
@@ -47,7 +47,7 @@ class VehicleTest {
 	@EnumSource(value = VehicleStatus.class, names = "AVAILABLE", mode = EnumSource.Mode.EXCLUDE)
 	void shouldNotBeBookableWhenNotAvailableEvenWithFullBattery(VehicleStatus status) {
 		var vehicle = Vehicle.withStatus("EB-601", VehicleType.E_BIKE, HUB, status);
-		vehicle.recordBattery(BatteryLevel.of(100), READ_AT);
+		vehicle.recordBattery(BatteryLevel.of(100), READ_AT, READ_AT);
 
 		assertThat(vehicle.isBookable(POLICY)).isFalse();
 	}
@@ -57,7 +57,7 @@ class VehicleTest {
 	void shouldKeepStatusAvailableWhenBatteryDropsBelow20Percent() {
 		var vehicle = availableWithBattery(80);
 
-		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(5));
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(5), READ_AT.plusSeconds(5));
 
 		assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
 		assertThat(vehicle.battery()).isEqualTo(BatteryLevel.of(18));
@@ -69,7 +69,7 @@ class VehicleTest {
 	void shouldBeBookableAgainWhenChargedBackTo20Percent() {
 		var vehicle = availableWithBattery(18);
 
-		vehicle.recordBattery(BatteryLevel.of(20), READ_AT.plusSeconds(60));
+		vehicle.recordBattery(BatteryLevel.of(20), READ_AT.plusSeconds(60), READ_AT.plusSeconds(60));
 
 		assertThat(vehicle.isBookable(POLICY)).isTrue();
 	}
@@ -86,12 +86,46 @@ class VehicleTest {
 	@Test
 	void shouldIgnoreAReadingOlderThanTheLastOne() {
 		var vehicle = availableWithBattery(80);
-		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(10));
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(10), READ_AT.plusSeconds(10));
 
-		vehicle.recordBattery(BatteryLevel.of(90), READ_AT.plusSeconds(5));
+		vehicle.recordBattery(BatteryLevel.of(90), READ_AT.plusSeconds(5), READ_AT.plusSeconds(5));
 
 		assertThat(vehicle.battery()).isEqualTo(BatteryLevel.of(18));
 		assertThat(vehicle.getLastTelemetryAt()).isEqualTo(READ_AT.plusSeconds(10));
+		assertThat(vehicle.isBookable(POLICY)).isFalse();
+	}
+
+	@Requirement("RIA-59")
+	@Test
+	void shouldAcceptAReadingUpToOneMinuteAheadOfTheServerClock() {
+		var vehicle = availableWithBattery(80);
+
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(60), READ_AT);
+
+		assertThat(vehicle.battery()).isEqualTo(BatteryLevel.of(18));
+		assertThat(vehicle.getLastTelemetryAt()).isEqualTo(READ_AT.plusSeconds(60));
+	}
+
+	@Requirement("RIA-59")
+	@Test
+	void shouldIgnoreAReadingMoreThanOneMinuteAheadOfTheServerClock() {
+		var vehicle = availableWithBattery(80);
+
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(61), READ_AT);
+
+		assertThat(vehicle.battery()).isEqualTo(BatteryLevel.of(80));
+		assertThat(vehicle.getLastTelemetryAt()).isEqualTo(READ_AT);
+	}
+
+	@Requirement("RIA-59")
+	@Test
+	void shouldKeepAcceptingReadingsAfterIgnoringOneFromTheFuture() {
+		var vehicle = availableWithBattery(80);
+		vehicle.recordBattery(BatteryLevel.of(90), READ_AT.plusSeconds(86_400), READ_AT);
+
+		vehicle.recordBattery(BatteryLevel.of(18), READ_AT.plusSeconds(10), READ_AT.plusSeconds(10));
+
+		assertThat(vehicle.battery()).isEqualTo(BatteryLevel.of(18));
 		assertThat(vehicle.isBookable(POLICY)).isFalse();
 	}
 
