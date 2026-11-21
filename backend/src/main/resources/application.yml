@@ -37,6 +37,14 @@ riaride:
     # Stripe test mode (ADR 0008). The key is never committed: set STRIPE_SECRET_KEY.
     stripe:
       secret-key: ${STRIPE_SECRET_KEY:}
+  telemetry:
+    # The simulator's broker (ADR 0006). Turned off in the tests that do not need a broker.
+    mqtt:
+      enabled: ${MQTT_ENABLED:true}
+      url: ${MQTT_URL:tcp://localhost:1883}
+      client-id: ${MQTT_CLIENT_ID:riaride-backend}
+      username: ${MQTT_USERNAME:}
+      password: ${MQTT_PASSWORD:}
   fleet:
     # BR12: a vehicle below this battery cannot be booked. Moves to the backoffice usage rule later.
     min-booking-battery-pct: 20
