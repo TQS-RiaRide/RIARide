@@ -2,6 +2,15 @@ spring:
   application:
     name: riaride-backend
 
+riaride:
+  payments:
+    # Stripe test mode (ADR 0008). The key is never committed: set STRIPE_SECRET_KEY.
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+  fleet:
+    # BR12: a vehicle below this battery cannot be booked. Moves to the backoffice usage rule later.
+    min-booking-battery-pct: 20
+
 management:
   endpoints:
     web:

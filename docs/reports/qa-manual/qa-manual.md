@@ -22,7 +22,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | PM2 | User stories with points and acceptance criteria | E | Partial | Section 2.2 |
 | PM3 | Jira linked to Git | E | Partial | Keys in branches, commits and PRs: [PR #1](https://github.com/TQS-RiaRide/RIARide/pull/1), [PR #2](https://github.com/TQS-RiaRide/RIARide/pull/2). The development panel needs the GitHub for Jira app. Early commits pushed straight to `main` before protection carry no key |
 | PM4 | Burndown and velocity | E | Decided (I2) | Section 2.2; charts available once sprint I1 closes |
-| PM5 | Requirements coverage in Xray | E | Partial | [`xray-import.yml`](../../../.github/workflows/xray-import.yml) imports the test reports after every CI run on `main` ([first run](https://github.com/TQS-RiaRide/RIARide/actions/runs/44077318930)). The coverage report needs the first tests linked to stories. Section 2.3 |
+| PM5 | Requirements coverage in Xray | E | Partial | Section 2.3. [Xray import workflow](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/workflows/xray-import.yml) runs after CI on `main`; its [first run](https://github.com/TQS-RiaRide/RIARide/actions/runs/44077318930) imported the JUnit reports as Test Execution [RIA-169](https://riaride.atlassian.net/browse/RIA-169). Test Plan [RIA-146](https://riaride.atlassian.net/browse/RIA-146) holds one Test per I2 story (RIA-147 to RIA-156, linked to RIA-50 to RIA-59), for each story's main scenario (section 2.3); they are not executed until the Cucumber scenarios run (RIA-68) |
 | T1 | BDD: Gherkin scenarios automated with Cucumber | E | Decided (I2) | Section 5.3 |
 | T2 | Unit tests for business logic | E | Decided (I2) | Section 5.2 |
 | T3 | Integration tests, run separately | E | Decided (I2) | Section 5.2 |
@@ -81,7 +81,7 @@ Every member also develops stories.
 ### 2.3 Requirements coverage tracking
 
 - **Source of truth:** Gherkin scenarios live in the repository, never edited in Jira.
-- **Linking:** each scenario is tagged with its story key (`@RIA-31`), so Xray links the Test it creates to that story. When a Test for the scenario already exists in Jira, the scenario also carries its key (`@TEST_RIA-147`), so the import updates that Test instead of creating a duplicate. JUnit tests that verify a story declare it with `@Requirement("RIA-31")` from the Xray JUnit extensions.
+- **Linking:** each scenario is tagged with its story key (`@RIA-31`), so Xray links the Test it creates to that story. Xray creates one Test per scenario, so a Test key belongs to a single scenario. Each story planned for an iteration has one Test created in Jira beforehand (for I2, RIA-147 to RIA-156): only the story's main scenario, the first in its feature file, carries that key (`@RIA-50 @TEST_RIA-147`), so the import updates that Test instead of creating a duplicate. The story's other scenarios carry only the story key, and the first import creates their Tests, linked to the story. JUnit tests that verify a story declare it with `@Requirement("RIA-31")` from the Xray JUnit extensions.
 - **Import:** after every CI run on `main`, the `Xray import` workflow sends the JUnit XML and Cucumber JSON reports to the Xray Cloud API. Xray imports each format through its own endpoint, so a run creates up to two Test Executions: one for JUnit and one for Cucumber. The workflow reads the organization secrets `XRAY_CLIENT_ID` and `XRAY_CLIENT_SECRET` and the organization variable `XRAY_TEST_PLAN_KEY`, and fails with a clear message if any of them is empty.
 - **Plans:** one Test Plan per iteration groups the Test Executions of that iteration. At the start of each iteration, the QA Engineer creates the new Test Plan and updates `XRAY_TEST_PLAN_KEY` to its key; until then, executions go to the previous iteration's plan.
 - **Coverage:** the Xray requirement coverage report is checked at each checkpoint. A story without linked tests is not *Done*; any exception is explained in the story.
@@ -138,7 +138,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 - [ ] No secrets, credentials or personal data; test data is synthetic.
 - [ ] Security hotspots raised by SonarQube on this change are reviewed.
 - [ ] The AI review findings table is filled in, and the reasons for rejections are sound.
-- [ ] The pull request has its AI label (section 6.7).
+- [ ] The pull request has its AI label (section 6.7); the `AI label` check fails without it.
 - [ ] Documentation that the change affects is updated (API documentation, `CLAUDE.md`, this manual).
 - [ ] The reviewer can explain the change; anyone may be asked to explain any merged code.
 
@@ -465,7 +465,7 @@ All agent jobs have permission only to read the code and comment on pull request
 
 *Written in I5*, from data collected on every pull request from now on:
 
-- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. `ai:assisted` exists and is in use (#21, #22, #23, #25, #26, #28, #29); the QA Engineer creates `ai:none` and `ai:generated` in I2 and labels the pull requests up to #20 from their declarations. A CI check that fails when a pull request has no label or more than one is planned for I2; until then, the reviewer checks the label. Dependabot pull requests are labelled `ai:none`.
+- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. The `AI label` check ([`ai-label.yml`](../../../.github/workflows/ai-label.yml)) fails a pull request with none of the three, more than one, or an unknown `ai:*` label; it blocks the merge once it is a required check in the branch protection of `dev` and `main` (DevOps Master). Dependabot pull requests get `ai:none` automatically. The earlier pull requests that have no label (#3 to #14, #17 and #20) will be labelled by the QA Engineer from their template declarations before the I5 analysis.
 - **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so a script can count them.
 - **Agent actions in Jira and SonarQube:** agent comments on stories and fixes of SonarQube issues proposed by agents (section 6.4), and how many of those fixes needed human rework.
 - **Defects and rework traced to AI:** Jira bugs and follow-up pull requests that name the original pull request, and quality gate failures on AI-labelled pull requests.
