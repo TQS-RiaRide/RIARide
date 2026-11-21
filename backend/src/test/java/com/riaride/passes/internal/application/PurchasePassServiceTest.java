@@ -207,7 +207,7 @@ class PurchasePassServiceTest {
 		when(gateway.refund(refund.capture())).thenReturn(new RefundResult("re_1", false));
 		var command = buy(PassType.STAY);
 
-		assertThatThrownBy(() -> service.purchase(command)).isSameAs(failure);
+		assertThatThrownBy(() -> service.purchase(command)).isInstanceOf(PassNotCreatedException.class).hasCause(failure);
 		assertThat(refund.getValue().paymentRef()).isEqualTo("pi_purchase");
 		assertThat(refund.getValue().amount().cents()).isEqualTo(7500);
 		assertThat(refund.getValue().idempotencyKey()).isEqualTo(SCOPED_KEY + ":refund");
@@ -225,7 +225,8 @@ class PurchasePassServiceTest {
 		var command = buy(PassType.STAY);
 
 		assertThatThrownBy(() -> service.purchase(command))
-			.isSameAs(failure)
+			.isInstanceOf(PassNotCreatedException.class)
+			.hasCause(failure)
 			.satisfies(thrown -> assertThat(thrown.getSuppressed()).containsExactly(refundFailure));
 	}
 
