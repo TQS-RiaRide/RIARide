@@ -25,8 +25,12 @@ record RegisterHubRequest(
 
 	static final String NO_INVISIBLE_CHARACTERS = "^[^\\p{Cc}\\p{Cf}]*$";
 
+	// A blank hotel name counts as no hotel, so a hotel hub is asked to name its hotel and a
+	// tourist spot hub is registered without one.
 	RegisterHubCommand toCommand() {
-		return new RegisterHubCommand(name, kind, hotel == null ? null : hotel.strip(), latitude, longitude, capacity);
+		var strippedHotel = hotel == null ? null : Hub.stripSpaces(hotel);
+		return new RegisterHubCommand(name, kind, strippedHotel == null || strippedHotel.isEmpty() ? null : strippedHotel,
+			latitude, longitude, capacity);
 	}
 
 }
