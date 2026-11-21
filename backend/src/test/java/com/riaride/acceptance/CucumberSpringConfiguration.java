@@ -1,6 +1,7 @@
 package com.riaride.acceptance;
 
 import com.riaride.FixedClockConfiguration;
+import com.riaride.TestKeycloak;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import io.cucumber.java.Before;
 import io.cucumber.spring.CucumberContextConfiguration;
@@ -24,16 +25,15 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @Import(FixedClockConfiguration.class)
 public class CucumberSpringConfiguration {
 
-	static final String REALM = "riaride";
+	static final String REALM = TestKeycloak.REALM;
 
 	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
 
-	static final KeycloakContainer KEYCLOAK = new KeycloakContainer("quay.io/keycloak/keycloak:26.8.0")
-		.withRealmImportFile("/keycloak/riaride-realm.json");
+	// Shared with the integration tests, so Keycloak starts once per build.
+	static final KeycloakContainer KEYCLOAK = TestKeycloak.container();
 
 	static {
 		POSTGRES.start();
-		KEYCLOAK.start();
 	}
 
 	@DynamicPropertySource
@@ -41,8 +41,8 @@ public class CucumberSpringConfiguration {
 		registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
 		registry.add("spring.datasource.username", POSTGRES::getUsername);
 		registry.add("spring.datasource.password", POSTGRES::getPassword);
-		registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
-			() -> KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM);
+		// Token validation and the Admin API client used by guest sign-up (RIA-51).
+		TestKeycloak.registerProperties(registry);
 	}
 
 	@LocalServerPort
