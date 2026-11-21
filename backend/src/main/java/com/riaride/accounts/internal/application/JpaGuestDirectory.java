@@ -7,6 +7,7 @@ import com.riaride.accounts.internal.persistence.StayRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,12 @@ class JpaGuestDirectory implements GuestDirectory {
 			.flatMap(guest -> stays.findById(guest.getStayId())
 				.filter(stay -> !stay.hasEndedOn(today))
 				.map(stay -> new ActiveGuest(guest.getId(), stay.getId(), stay.getCheckOut())));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Optional<UUID> findGuestId(String keycloakId) {
+		return guests.findByKeycloakId(keycloakId).map(guest -> guest.getId());
 	}
 
 }

@@ -7,7 +7,8 @@ import com.riaride.payments.PurchaseResult;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-// Stores a paid pass and its payment in one transaction, so there is never one without the other.
+// The database side of a purchase, each step in its own transaction: reserve the pending pass
+// before the charge, then confirm it with its payment, or release it if the payment failed.
 @Component
 public class PassBook {
 
@@ -19,10 +20,26 @@ public class PassBook {
 		this.ledger = ledger;
 	}
 
+	// The one-open-pass index (uq_pass_open_per_guest) refuses a concurrent purchase here,
+	// before its card is charged.
 	@Transactional
-	public void store(Pass pass, String idempotencyKey, PurchaseResult result) {
+	public void reserve(Pass pass) {
 		passes.saveAndFlush(pass);
-		ledger.recordPurchase(pass.getId(), idempotencyKey, pass.amountToCharge(), result);
+	}
+
+	// Stores the paid pass and its payment together, so there is never one without the other.
+	@Transactional
+	public void confirm(Pass pass, String idempotencyKey, PurchaseResult result) {
+		var stored = passes.findById(pass.getId()).orElseThrow(() -> new IllegalStateException("No reserved pass"));
+		stored.confirmPayment();
+		pass.confirmPayment();
+		passes.saveAndFlush(stored);
+		ledger.recordPurchase(stored.getId(), idempotencyKey, stored.amountToCharge(), result);
+	}
+
+	@Transactional
+	public void release(Pass pass) {
+		passes.deleteById(pass.getId());
 	}
 
 }
