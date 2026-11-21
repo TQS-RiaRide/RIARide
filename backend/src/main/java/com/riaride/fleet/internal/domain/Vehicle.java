@@ -9,6 +9,7 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
@@ -19,6 +20,10 @@ import org.springframework.data.domain.Persistable;
 @Entity
 @Table(name = "vehicle")
 public class Vehicle implements Persistable<UUID> {
+
+	// How far ahead of the server clock a telemetry timestamp may be (clock skew between the
+	// simulator and the platform).
+	static final Duration MAX_CLOCK_AHEAD = Duration.ofMinutes(1);
 
 	@Id
 	private UUID id;
@@ -80,8 +85,14 @@ public class Vehicle implements Persistable<UUID> {
 	}
 
 	// A reading older than the last one is ignored: with QoS 1, a redelivered or late message must
-	// never make a low-battery bike bookable again (BR12). It never changes the status.
-	public void recordBattery(BatteryLevel level, Instant readAt) {
+	// never make a low-battery bike bookable again (BR12). A reading stamped more than
+	// MAX_CLOCK_AHEAD after the server's now is ignored too: the timestamp comes from the
+	// simulator's clock, and a reading from the future would otherwise hide every correct reading
+	// until that time. It never changes the status.
+	public void recordBattery(BatteryLevel level, Instant readAt, Instant now) {
+		if (readAt.isAfter(now.plus(MAX_CLOCK_AHEAD))) {
+			return;
+		}
 		if (lastTelemetryAt != null && readAt.isBefore(lastTelemetryAt)) {
 			return;
 		}

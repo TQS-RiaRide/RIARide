@@ -3,6 +3,7 @@ package com.riaride.fleet.internal.application;
 import com.riaride.fleet.internal.domain.BatteryLevel;
 import com.riaride.fleet.internal.persistence.VehicleRepository;
 import com.riaride.telemetry.VehicleTelemetryReceived;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -18,9 +19,11 @@ class VehicleTelemetryListener {
 	private static final Logger log = LoggerFactory.getLogger(VehicleTelemetryListener.class);
 
 	private final VehicleRepository vehicles;
+	private final Clock clock;
 
-	VehicleTelemetryListener(VehicleRepository vehicles) {
+	VehicleTelemetryListener(VehicleRepository vehicles, Clock clock) {
 		this.vehicles = vehicles;
+		this.clock = clock;
 	}
 
 	// Synchronous, in the publisher's transaction: the reading is stored before the MQTT message is
@@ -28,8 +31,9 @@ class VehicleTelemetryListener {
 	@EventListener
 	@Transactional
 	void on(VehicleTelemetryReceived reading) {
+		var now = clock.instant();
 		vehicles.findByCode(reading.vehicleCode()).ifPresentOrElse(
-			vehicle -> vehicle.recordBattery(BatteryLevel.of(reading.batteryPct()), reading.emittedAt()),
+			vehicle -> vehicle.recordBattery(BatteryLevel.of(reading.batteryPct()), reading.emittedAt(), now),
 			() -> log.warn("Telemetry for unknown vehicle {} ignored", reading.vehicleCode()));
 	}
 

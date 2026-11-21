@@ -12,7 +12,9 @@ import com.riaride.fleet.internal.domain.VehicleStatus;
 import com.riaride.fleet.internal.domain.VehicleType;
 import com.riaride.fleet.internal.persistence.VehicleRepository;
 import com.riaride.telemetry.VehicleTelemetryReceived;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -23,7 +25,8 @@ class VehicleTelemetryListenerTest {
 	private static final Instant EMITTED_AT = Instant.parse("2026-11-30T10:00:05Z");
 
 	private final VehicleRepository vehicles = mock(VehicleRepository.class);
-	private final VehicleTelemetryListener listener = new VehicleTelemetryListener(vehicles);
+	private final VehicleTelemetryListener listener = new VehicleTelemetryListener(vehicles,
+		Clock.fixed(EMITTED_AT, ZoneOffset.UTC));
 
 	private static VehicleTelemetryReceived reading(String code, int batteryPct) {
 		return new VehicleTelemetryReceived(code, "3f6c1d2e-7a4b-4c1d-9e2f-0a1b2c3d4e5f", EMITTED_AT, batteryPct,
