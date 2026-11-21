@@ -1,5 +1,7 @@
 package com.riaride.acceptance;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestKeycloak;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
@@ -32,8 +34,12 @@ public class CucumberSpringConfiguration {
 	// Shared with the integration tests, so Keycloak starts once per build.
 	static final KeycloakContainer KEYCLOAK = TestKeycloak.container();
 
+	// The Stripe API, stubbed for the payment scenarios (ADR 0008): CI needs no network or key.
+	static final WireMockServer STRIPE = new WireMockServer(WireMockConfiguration.options().dynamicPort());
+
 	static {
 		POSTGRES.start();
+		STRIPE.start();
 	}
 
 	@DynamicPropertySource
@@ -43,6 +49,7 @@ public class CucumberSpringConfiguration {
 		registry.add("spring.datasource.password", POSTGRES::getPassword);
 		// Token validation and the Admin API client used by guest sign-up (RIA-51).
 		TestKeycloak.registerProperties(registry);
+		registry.add("riaride.payments.stripe.api-base", STRIPE::baseUrl);
 	}
 
 	@LocalServerPort
