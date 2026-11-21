@@ -3,11 +3,14 @@ Feature: Buy a pass
   As a guest, I want to buy a pass and pay the deposit,
   so that I can make trips during my stay.
 
+  The price and deposit below are test values the scenario sets itself, not the real amounts,
+  which the hotel group sets in the backoffice (RIA-121).
+
   Background:
     Given the base price of a stay pass is 25.00 EUR and the deposit is 50.00 EUR
     And a guest "Rita Almeida" with an active stay at "Marés Salinas" is logged in
 
-  @BR2 @BR3 @BR4 @BR5 @wip
+  @TEST_RIA-149 @BR3 @BR4 @BR5 @wip
   Scenario: A guest buys a stay pass
     Given the payment sandbox accepts the card
     When the guest buys a "stay" pass

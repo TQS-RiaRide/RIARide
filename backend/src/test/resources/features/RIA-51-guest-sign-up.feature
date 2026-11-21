@@ -3,7 +3,7 @@ Feature: Guest sign-up with a stay code
   As a guest, I want to create an account with my email, a password and my stay code,
   so that I can buy a pass and use the bikes.
 
-  @BR1 @wip
+  @TEST_RIA-148 @BR1 @wip
   Scenario: A guest with a stay code for an active stay signs up
     Given a stay at "Marés Centro" for guest "Rita Almeida" from "2026-12-01" to "2026-12-05"
     And today is "2026-12-02"

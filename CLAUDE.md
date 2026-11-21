@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Group project for the TQS course: a *light-mobility fleet-as-a-service* platform, graded on both the product and the evidence that quality was built in from the start. A practice only counts if the QA Manual's compliance table links to evidence of it working.
 
-The backend walking skeleton exists (Spring Boot 4.1, Java 21, Spring Modulith, Maven). `frontend/` and `simulator/` are still empty; document their commands here when they land.
+The backend (Spring Boot 4.1, Java 21, Spring Modulith, Maven) and frontend (React, Vite, TypeScript) walking skeletons exist. `simulator/` is still empty; document its commands here when it lands.
 
 ### Backend commands
 
@@ -40,6 +40,22 @@ Run from the repository root; details in [`infra/README.md`](infra/README.md).
 
 The Keycloak realm is `infra/keycloak/riaride-realm.json`; the Cucumber tests import the same file. Hotel managers carry the hotel they manage in the `hotel_id` token claim.
 
+### Frontend commands
+
+Run from `frontend/`, with Node.js 22.22.2 or later in the 22 line, or 24.15.0 or later (24 LTS recommended). Details in [`frontend/README.md`](frontend/README.md).
+
+| Task | Command |
+|---|---|
+| Install dependencies | `npm ci` |
+| Dev server (`/api/v1` forwarded to `http://localhost:8080`; `VITE_BACKEND_URL` overrides it) | `npm run dev` (at `http://localhost:5173`) |
+| Lint (typescript-eslint strict, react-hooks) | `npm run lint` |
+| Format / check formatting (Prettier) | `npm run format` / `npm run format:check` |
+| Unit tests (Vitest, React Testing Library) | `npm test` |
+| Tests with LCOV coverage (`coverage/`, read by SonarQube) | `npm run test:coverage` |
+| Single test file or test | `npx vitest run src/features/health/api.test.ts -t "unreachable"` |
+| Type check and production build (`dist/`) | `npm run build` |
+| Docker image | `docker build -t riaride-frontend .` |
+
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
 Product definitions and backlog:
@@ -59,20 +75,23 @@ Product definitions and backlog:
 
 ### Business rules (draft)
 
-| Rule | Proposal |
-|---|---|
-| Access | Only guests with an active stay can register and book |
-| Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
-| Pricing | One base price, used by all hotels in the group |
-| Activation | On the first trip, not at purchase |
-| Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |
-| One bike at a time | Each pass can only have one vehicle in use |
-| Maximum trip duration | 3 h; beyond that, overtime is charged per 15 min |
-| Pass expires during a trip | The trip continues; time after expiry is charged as overtime |
-| Check-out | The stay pass ends at check-out; if the bike was not returned, the extra time is overtime |
-| End of trip | Only at a hub with a free slot; capacity is defined by the client |
-| Booking | Can be made in advance; the bike is held for 15 min |
-| Battery | A vehicle below 20 % cannot be booked (value comes from telemetry) |
+| ID | Rule | Proposal |
+|---|---|---|
+| BR1 | Access | Only guests with an active stay can register and book |
+| BR2 | Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
+| BR3 | Pricing | One base price, used by all hotels in the group |
+| BR4 | Activation | On the first trip, not at purchase |
+| BR5 | Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |
+| BR6 | One bike at a time | Each pass can only have one vehicle in use |
+| BR7 | Maximum trip duration | 3 h; beyond that, overtime is charged per 15 min |
+| BR8 | Pass expires during a trip | The trip continues; time after expiry is charged as overtime |
+| BR9 | Check-out | The stay pass ends at check-out; if the bike was not returned, the extra time is overtime |
+| BR10 | End of trip | Only at a hub with a free slot; capacity is defined by the client |
+| BR11 | Booking | Can be made in advance; the bike is held for 15 min |
+| BR12 | Battery | A vehicle below 20 % cannot be booked (value comes from telemetry) |
+| BR13 | Unlock timeout | A trip whose unlock is not confirmed by telemetry within 30 s fails; the pass stays inactive and the bike stays reserved until the booking expires (BR11) |
+
+Gherkin scenarios tag the rules they cover with these IDs (`@BR10`); hub capacity is part of BR10.
 
 Payments are always made by the guest. Invoicing the hotel is out of scope.
 
@@ -112,11 +131,11 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 
 ### Git and Jira
 
-- One feature branch per story; protected `main`; merges only through a pull request approved by another member.
+- One feature branch per story, created from `dev` and merged into `dev`; merges only through a pull request approved by another member. `main` is the release branch: `dev` is merged into it by a pull request at the end of each iteration, before the tag. Nobody pushes directly to `dev` or `main`.
 - The Jira key (for example, `RIA-12`) must appear in the branch name, the commits and the pull request.
 - Branch names: `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`.
 - Commits: Conventional Commits with the key, for example `feat: RIA-31 add booking endpoint`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
-- Merge with a merge commit, never squash, so test-first (TDD) commits stay in `main`'s history. For TDD components, commit the failing test before the implementation.
+- Merge with a merge commit, never squash, so test-first (TDD) commits stay in the history of `dev` and `main`. For TDD components, commit the failing test before the implementation.
 - Tags at the end of each iteration: `iter1`, `iter2`, ..., `final_v1`. At each tag, a PDF of each report goes in `docs/`.
 
 ### Expected tests
@@ -161,6 +180,8 @@ A story is done when: acceptance criteria met (Gherkin + Cucumber for core stori
 - At least two stories must be agent-generated from Gherkin or an OpenSpec proposal and delivered as pull requests.
 - Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`; a CI check to enforce it is planned (I2), and until then the reviewer checks it.
 - Agent-generated stories follow test author → implementer → reviewer, with a human checkpoint after each step; the implementer must not edit the tests written in the first step.
+- Jira (Atlassian MCP): read the story, acceptance criteria and Xray Tests before writing code or tests; you may comment with the PR link and move a story to *In progress* or *In review*. Never move a story to *Done*, create, split or estimate stories, or edit Gherkin in Jira (QA Manual 6.4).
+- SonarQube (MCP and `sonar-*` skills): read the quality gate, new issues, coverage gaps and duplications, and fix issues in code. Never mark a hotspot as reviewed, accept or close an issue, or change the quality gate, quality profile or coverage exclusions (QA Manual 6.4).
 - These instructions must stay consistent with the QA Manual (style, definition of done, test rules, build commands).
 
 ### Reports

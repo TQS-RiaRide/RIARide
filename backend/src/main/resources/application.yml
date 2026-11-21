@@ -20,6 +20,11 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/riaride}
 
+riaride:
+  fleet:
+    # BR12: a vehicle below this battery cannot be booked. Moves to the backoffice usage rule later.
+    min-booking-battery-pct: 20
+
 management:
   endpoints:
     web:

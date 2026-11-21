@@ -8,7 +8,7 @@ Feature: Start a trip now
     And a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
     And the guest has a valid "stay" pass
 
-  @BR6 @wip
+  @TEST_RIA-151 @BR6 @wip
   Scenario: Starting a trip reserves the bike and sends the unlock command
     Given the guest has no trip in progress
     When the guest starts a trip with bike "EB-201"
@@ -25,7 +25,7 @@ Feature: Start a trip now
     And bike "EB-201" is "in use"
     And the guest's pass is active
 
-  @BR4 @BR11 @wip
+  @BR4 @BR11 @BR13 @wip
   Scenario: The trip fails when the unlock is not confirmed within 30 seconds
     Given the guest has a "starting" trip with bike "EB-201"
     When 30 seconds pass without telemetry confirming the unlock of bike "EB-201"
