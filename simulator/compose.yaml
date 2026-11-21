@@ -1,0 +1,26 @@
+# Local run of the simulator with its own Mosquitto broker.
+# Usage (from the repository root):
+#   docker compose -f simulator/compose.yaml up --build
+# Watch the messages:
+#   docker compose -f simulator/compose.yaml exec mosquitto mosquitto_sub -t 'riaride/#' -v
+# These services move into the main stack (infra/compose.yaml) when it lands on dev.
+name: riaride-simulator
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "127.0.0.1:${MQTT_PORT:-1883}:1883"
+
+  simulator:
+    build: .
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      TELEMETRY_INTERVAL_SECONDS: "5"
+      FAULT_PROBABILITY: "0.001"
+    depends_on:
+      - mosquitto
+    restart: unless-stopped

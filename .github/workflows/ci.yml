@@ -19,8 +19,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Backend and frontend jobs always run: if pom.xml or package.json goes
-  # missing, the job fails instead of being skipped.
+  # Backend, frontend and simulator jobs always run: if pom.xml, package.json
+  # or requirements.txt goes missing, the job fails instead of being skipped.
   backend:
     name: Backend build & tests
     runs-on: ubuntu-latest
@@ -85,9 +85,48 @@ jobs:
       - run: npm test --if-present
       - run: npm run build
 
+  simulator:
+    name: Simulator lint & tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: simulator
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: simulator/requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+      - name: Lint and format check (ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+      # Tests include the contract tests against contracts/mqtt/*.schema.json.
+      - name: Tests with coverage
+        run: python -m pytest --cov --cov-report=term --cov-report=xml
+      - name: Dependency vulnerabilities (pip-audit)
+        run: pip-audit -r requirements.txt
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: simulator-coverage
+          path: simulator/coverage.xml
+          if-no-files-found: ignore
+
+      # Checks that the Dockerfile builds; the image is not pushed here.
+      - name: Build Docker image
+        run: docker build -t riaride-simulator:ci .
+
   result:
     name: CI result
-    needs: [backend, frontend]
+    needs: [backend, frontend, simulator]
     if: always()
     runs-on: ubuntu-latest
     steps:
