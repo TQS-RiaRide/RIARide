@@ -444,6 +444,17 @@ class RegisterHubApiIT {
 			.isEqualTo(1);
 	}
 
+	// The hotel name is stripped of spaces, no-break spaces included, before it is looked up.
+	@Requirement("RIA-56")
+	@Test
+	void shouldFindHotelWhenHotelNameHasSeparatorsAtItsEnds() throws Exception {
+		postHub(OPERATOR, hotelHubWith("hotel", "\"\\u00A0Marés Praia \""))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.hotel").value("Marés Praia"));
+
+		assertThat(hubsNamed(NAME)).isEqualTo(1);
+	}
+
 	// The Location header points at the new hub, without the query string of the request.
 	@Requirement("RIA-56")
 	@Test

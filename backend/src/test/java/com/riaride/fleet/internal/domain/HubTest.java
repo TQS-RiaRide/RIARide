@@ -179,7 +179,7 @@ class HubTest {
 	void shouldAcceptHubNameOf120CharactersSurroundedByNoBreakSpaces() {
 		var name = "A".repeat(120);
 
-		var hub = Hub.register(" " + name + " ", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10);
+		var hub = Hub.register("\u00A0" + name + "\u00A0", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10);
 
 		assertThat(hub.getName()).isEqualTo(name);
 	}
@@ -187,9 +187,9 @@ class HubTest {
 	@Requirement("RIA-56")
 	@Test
 	void shouldKeepNoBreakSpaceInsideHubName() {
-		var hub = Hub.register("Marés Praia", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10);
+		var hub = Hub.register("Marés\u00A0Praia", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10);
 
-		assertThat(hub.getName()).isEqualTo("Marés Praia");
+		assertThat(hub.getName()).isEqualTo("Marés\u00A0Praia");
 	}
 
 	// Name: no invisible characters, that is, no C0 or C1 control character (Unicode category Cc)
