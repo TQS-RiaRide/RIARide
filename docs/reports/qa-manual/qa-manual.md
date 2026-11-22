@@ -46,8 +46,8 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | D5 | Separate staging and production | V | Decided (I4) | Section 4.2 |
 | D6 | Observability with SLO alerts | V | Decided (I4) | Section 4.3 |
 | AI1 | Team AI policy and declaration of AI use | E | Done | Sections 6.1 and 6.2 |
-| AI2 | Versioned agent instructions | E | Done | [`AGENTS.md`](../../../AGENTS.md) → [`CLAUDE.md`](../../../CLAUDE.md), covering style, definition of done, test rules, backend build commands and the limits on agents' Jira and SonarQube access. Sections 6.3 and 6.4 |
-| AI3 | AI-assisted code review | E | Partial | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Its first runs posted no review; evidence is a PR with AI comments and a filled findings table |
+| AI2 | Versioned agent instructions | E | Done | [`AGENTS.md`](../../../AGENTS.md) → [`CLAUDE.md`](../../../CLAUDE.md), covering style, definition of done, test rules, backend and frontend build commands and the limits on agents' Jira and SonarQube access. Sections 6.3 and 6.4 |
+| AI3 | AI-assisted code review | E | Done | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Evidence: [#25](https://github.com/TQS-RiaRide/RIARide/pull/25), where the Claude review's finding is recorded as partly accepted in the AI review findings table, and [#40](https://github.com/TQS-RiaRide/RIARide/pull/40). Section 6.6 |
 | AI4 | Specification-driven generation (≥ 2 stories) | E | Decided (I2) | Section 6.5 |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.7; data collected from every PR from now on |
 | AI6 | Coordination of several agents | V | Decided (I2) | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), and the `Agent boundaries` CI check enforces their roles |
@@ -412,11 +412,11 @@ One declaration for the whole project, updated as tools are added.
 
 ### 6.3 Agent instructions and coordination
 
-**Instructions.** The agent instructions are versioned in the repository: [`AGENTS.md`](../../../AGENTS.md) points to [`CLAUDE.md`](../../../CLAUDE.md), which covers the domain, the architecture constraints, the Git and Jira rules, the code style, the definition of done, the expected tests, the quality and CI rules and the AI rules. It also lists the backend build and test commands (the frontend and simulator commands are added when those projects land) and the limits of section 6.4 on what agents may do in Jira and SonarQube.
+**Instructions.** The agent instructions are versioned in the repository: [`AGENTS.md`](../../../AGENTS.md) points to [`CLAUDE.md`](../../../CLAUDE.md), which covers the domain, the architecture constraints, the Git and Jira rules, the code style, the definition of done, the expected tests, the quality and CI rules and the AI rules. It also lists the backend and frontend build and test commands (the simulator commands are added when it lands) and the limits of section 6.4 on what agents may do in Jira and SonarQube.
 
 The QA Engineer maintains them. A pull request that changes a practice in this manual must update `CLAUDE.md` in the same pull request; the review checklist (section 3.2) checks it.
 
-**Coordination (AI6).** Agent-generated stories use three agents with separate roles, defined as `test-author.md`, `implementer.md` and `reviewer.md` in `.claude/agents/` with the first generated story (the folder does not exist yet), with a human checkpoint after each handoff. Each definition lists the tools the agent may use, including its Jira and SonarQube access:
+**Coordination (AI6).** Agent-generated stories use three agents with separate roles, defined as `test-author.md`, `implementer.md` and `reviewer.md` in `.claude/agents/` (added in RIA-73 and first used for RIA-56), with a human checkpoint after each handoff. Each definition lists the tools the agent may use, including its Jira and SonarQube access:
 
 | Step | Agent | Input | Output | Human checkpoint |
 |---|---|---|---|---|
