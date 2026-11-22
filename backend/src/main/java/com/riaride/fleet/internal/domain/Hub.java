@@ -71,7 +71,7 @@ public class Hub implements Persistable<UUID> {
 	}
 
 	// hotelId is the hotel a HOTEL hub belongs to, and null for a TOURIST_SPOT hub.
-	// The name is stored without leading and trailing spaces.
+	// The name is stored without leading and trailing spaces (see Names.stripSpaces).
 	public static Hub register(String name, HubKind kind, UUID hotelId, double latitude, double longitude,
 		int capacity) {
 		var strippedName = validName(name);
@@ -84,10 +84,10 @@ public class Hub implements Persistable<UUID> {
 	}
 
 	private static String validName(String name) {
-		if (name == null || name.isBlank()) {
+		var stripped = name == null ? "" : Names.stripSpaces(name);
+		if (stripped.isEmpty()) {
 			throw new InvalidHubException("name", "A hub needs a name.");
 		}
-		var stripped = name.strip();
 		if (stripped.length() > MAX_NAME_LENGTH) {
 			throw new InvalidHubException("name",
 				"A hub name must have at most " + MAX_NAME_LENGTH + " characters.");

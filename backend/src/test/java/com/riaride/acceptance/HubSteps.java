@@ -31,8 +31,10 @@ public class HubSteps {
 		this.jdbc = jdbc;
 	}
 
-	// Scenarios share one database, so each starts without hubs.
-	@Before
+	// Scenarios share one database, so each starts without hubs. Cleanups run from the lowest
+	// order up, children first: passes and payments (8000), guests (9000), hubs (9500), stays
+	// (10000). Tables that reference hubs, such as bikes (RIA-57), need an order below 9500.
+	@Before(order = 9500)
 	public void removeHubs() {
 		jdbc.update("delete from hub");
 	}
