@@ -16,7 +16,7 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
   // Resources are bundled, so initialize synchronously: components render
   // translated text on the first render, with no update afterwards
-  initImmediate: false,
+  initAsync: false,
 });
 
 i18n.on('languageChanged', (lng) => {
