@@ -12,11 +12,12 @@ import jakarta.persistence.Transient;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.data.domain.Persistable;
 
 // A vehicle of the fleet and its latest known state. The code (for example EB-601) is the id the
-// simulator uses in its MQTT topics. Registration by an operator is RIA-57; this is the part that
-// RIA-59 needs: the status and the battery reported by telemetry.
+// simulator uses in its MQTT topics. An operator registers it at a hub (RIA-57); telemetry then
+// reports its battery (RIA-59).
 @Entity
 @Table(name = "vehicle")
 public class Vehicle implements Persistable<UUID> {
@@ -24,6 +25,12 @@ public class Vehicle implements Persistable<UUID> {
 	// How far ahead of the server clock a telemetry timestamp may be (clock skew between the
 	// simulator and the platform).
 	static final Duration MAX_CLOCK_AHEAD = Duration.ofMinutes(1);
+
+	public static final int MAX_CODE_LENGTH = 32;
+
+	// The same rule as the MQTT topics (riaride/vehicles/{code}/telemetry): letters, digits and
+	// hyphens only, so every registered code can appear in a topic. No spaces, slashes or wildcards.
+	private static final Pattern CODE = Pattern.compile("[A-Za-z0-9-]{1," + MAX_CODE_LENGTH + "}");
 
 	@Id
 	private UUID id;
@@ -66,8 +73,19 @@ public class Vehicle implements Persistable<UUID> {
 		this.isNew = true;
 	}
 
-	// A new vehicle is docked at a hub and available, with no battery reading yet.
+	// A new vehicle is docked at a hub and available, with no battery reading yet. Whether the hub
+	// exists and has a free slot needs the other vehicles, so RegisterVehicleService checks it.
 	public static Vehicle register(String code, VehicleType type, UUID hubId) {
+		if (code == null || !CODE.matcher(code).matches()) {
+			throw new InvalidVehicleException("code", "A vehicle code has 1 to " + MAX_CODE_LENGTH
+				+ " letters, digits or hyphens.");
+		}
+		if (type == null) {
+			throw new InvalidVehicleException("type", "A vehicle needs a type.");
+		}
+		if (hubId == null) {
+			throw new InvalidVehicleException("hub", "A new vehicle must be docked at a hub.");
+		}
 		return new Vehicle(code, type, hubId);
 	}
 

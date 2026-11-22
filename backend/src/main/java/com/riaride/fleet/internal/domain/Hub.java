@@ -166,8 +166,9 @@ public class Hub implements Persistable<UUID> {
 		return capacity;
 	}
 
-	// Bikes cannot be registered yet (RIA-57), so no hub has any docked. Once they can, this
-	// counts the bikes docked at the hub.
+	// A hub has no bikes when it is registered, which is the only time this is read. The bikes
+	// docked at an existing hub are the vehicles whose hub it is (VehicleRepository.countByHubId),
+	// which is what RegisterVehicleService checks against the capacity (BR10).
 	public int getDockedBikes() {
 		return 0;
 	}
