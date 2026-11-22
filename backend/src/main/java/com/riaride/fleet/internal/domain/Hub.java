@@ -71,7 +71,7 @@ public class Hub implements Persistable<UUID> {
 	}
 
 	// hotelId is the hotel a HOTEL hub belongs to, and null for a TOURIST_SPOT hub.
-	// The name is stored without leading and trailing spaces (see stripSpaces).
+	// The name is stored without leading and trailing spaces (see Names.stripSpaces).
 	public static Hub register(String name, HubKind kind, UUID hotelId, double latitude, double longitude,
 		int capacity) {
 		var strippedName = validName(name);
@@ -83,27 +83,8 @@ public class Hub implements Persistable<UUID> {
 		return new Hub(strippedName, kind, hotelId, latitude, longitude, capacity);
 	}
 
-	// Removes the spaces at both ends of a name. A space is what String.strip removes plus every
-	// Unicode separator (category Z), such as the no-break spaces U+00A0, U+2007 and U+202F, which
-	// String.strip keeps. Returns an empty string when the name is only spaces.
-	public static String stripSpaces(String name) {
-		int start = 0;
-		int end = name.length();
-		while (start < end && isSpace(name.codePointAt(start))) {
-			start += Character.charCount(name.codePointAt(start));
-		}
-		while (end > start && isSpace(name.codePointBefore(end))) {
-			end -= Character.charCount(name.codePointBefore(end));
-		}
-		return name.substring(start, end);
-	}
-
-	private static boolean isSpace(int codePoint) {
-		return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
-	}
-
 	private static String validName(String name) {
-		var stripped = name == null ? "" : stripSpaces(name);
+		var stripped = name == null ? "" : Names.stripSpaces(name);
 		if (stripped.isEmpty()) {
 			throw new InvalidHubException("name", "A hub needs a name.");
 		}
