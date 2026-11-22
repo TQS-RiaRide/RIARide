@@ -125,6 +125,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # An unset secret expands to an empty string, which would fail later
+      # with an unclear authentication error.
+      - name: Check SonarQube configuration
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::SonarQube is not configured. Missing: SONAR_TOKEN (secret). See QA Manual, section 3.3."
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # full history, for new code detection and blame
@@ -134,6 +145,19 @@ jobs:
         with:
           name: backend-coverage
           path: backend/target
+
+      # The Java analyzer needs the dependency jars to resolve Spring,
+      # Modulith and JPA types; without them some rules under-report.
+      # Copied from the Maven cache the backend job fills, not uploaded.
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Copy backend dependency jars
+        working-directory: backend
+        run: ./mvnw -B -q dependency:copy-dependencies -DincludeScope=test -DoutputDirectory=target/dependency
 
       - name: Download frontend coverage
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -145,17 +169,6 @@ jobs:
       # resolves them from the repository root, so they need the prefix.
       - name: Make LCOV paths relative to the repository root
         run: sed -i 's|^SF:src/|SF:frontend/src/|' frontend/coverage/lcov.info
-
-      # An unset secret expands to an empty string, which would fail later
-      # with an unclear authentication error.
-      - name: Check SonarQube configuration
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error::SonarQube is not configured. Missing: SONAR_TOKEN (secret). See QA Manual, section 3.3."
-            exit 1
-          fi
 
       # Project settings are in sonar-project.properties at the repository root.
       - name: SonarQube scan
