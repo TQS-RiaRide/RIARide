@@ -123,7 +123,7 @@ jobs:
           cache-dependency-path: simulator/requirements-dev.txt
 
       # Wheels only, so no setup script runs, and every file is checked against its hash.
-      - run: pip install --only-binary :all: --require-hashes -r requirements-dev.txt
+      - run: pip install --only-binary ":all:" --require-hashes -r requirements-dev.txt
       - name: Lint and format check (ruff)
         run: |
           ruff check .
