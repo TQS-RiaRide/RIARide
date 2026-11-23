@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// Integration test (Failsafe): the reservation and trip tables (Flyway V6) on PostgreSQL in
+// Integration test (Failsafe): the reservation and trip tables (Flyway V7) on PostgreSQL in
 // Testcontainers. The database itself guarantees one trip in progress per pass (BR6) and one active
 // reservation per bike and per pass, so concurrent starts cannot both succeed (RIA-54).
 @DataJpaTest
