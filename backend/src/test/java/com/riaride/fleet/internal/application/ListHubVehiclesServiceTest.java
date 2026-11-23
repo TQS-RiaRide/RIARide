@@ -59,6 +59,8 @@ class ListHubVehiclesServiceTest {
 
 	// RIA-53: the guest finds the vehicles at a hub, optionally of one type.
 
+	// VehicleType has only E_BIKE, so this cannot yet show that other types are dropped; when a
+	// second type exists, add a vehicle of that type here and expect it to be left out.
 	@Requirement("RIA-53")
 	@Test
 	void shouldListTheVehiclesOfTheRequestedType() {

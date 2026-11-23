@@ -1,5 +1,10 @@
 package com.riaride.fleet.internal.web;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -95,7 +100,7 @@ class HubVehiclesApiIT {
 	void shouldListTheHubsVehiclesWithOnlyThoseWithEnoughBatteryBookable() throws Exception {
 		mvc.perform(get("/api/v1/hubs/{hubId}/vehicles", HUB).header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].code").value(org.hamcrest.Matchers.contains("EB-601", "EB-602", "EB-603", "EB-604")))
+			.andExpect(jsonPath("$[*].code").value(contains("EB-601", "EB-602", "EB-603", "EB-604")))
 			.andExpect(jsonPath("$[0].status").value("AVAILABLE"))
 			.andExpect(jsonPath("$[0].batteryPct").value(18))
 			.andExpect(jsonPath("$[0].bookable").value(false))
@@ -150,15 +155,16 @@ class HubVehiclesApiIT {
 
 	// RIA-53: find the vehicles at a hub by type.
 
+	// VehicleType has only E_BIKE, so this cannot yet show that other types are dropped; when a
+	// second type exists, add a vehicle of that type here and expect it to be left out.
 	@Requirement("RIA-53")
 	@Test
 	void shouldListTheVehiclesOfTheRequestedType() throws Exception {
 		mvc.perform(get("/api/v1/hubs/{hubId}/vehicles", HUB).param("type", "E_BIKE")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].code").value(org.hamcrest.Matchers.contains("EB-601", "EB-602", "EB-603", "EB-604")))
-			.andExpect(jsonPath("$[*].type").value(org.hamcrest.Matchers.everyItem(
-				org.hamcrest.Matchers.is("E_BIKE"))));
+			.andExpect(jsonPath("$[*].code").value(contains("EB-601", "EB-602", "EB-603", "EB-604")))
+			.andExpect(jsonPath("$[*].type").value(everyItem(is("E_BIKE"))));
 	}
 
 	@Requirement("RIA-53")
@@ -171,8 +177,7 @@ class HubVehiclesApiIT {
 			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
 			.andExpect(jsonPath("$.title").value("Invalid vehicle type"))
 			.andExpect(jsonPath("$['invalid-params'][0].name").value("type"))
-			.andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.not(
-				org.hamcrest.Matchers.containsString(type))));
+			.andExpect(jsonPath("$.detail").value(not(containsString(type))));
 	}
 
 }
