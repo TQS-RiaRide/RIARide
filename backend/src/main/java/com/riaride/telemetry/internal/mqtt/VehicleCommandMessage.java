@@ -7,11 +7,16 @@ import tools.jackson.databind.json.JsonMapper;
 
 // A command in the simulator's format (contracts/mqtt/command.schema.json): published on
 // riaride/vehicles/{code}/commands with messageId, emittedAt, command and hubId, and nothing else.
-// hubId is only set by LOCK, which ends a ride at a hub (RIA-55).
+// hubId is only set by LOCK: the hub a ride ends at (RIA-55), or the hub a bike whose start failed
+// was reserved at (RIA-54).
 record VehicleCommandMessage(String vehicleCode, String messageId, Instant emittedAt, String command, String hubId) {
 
 	static VehicleCommandMessage unlock(String vehicleCode, Instant now) {
 		return new VehicleCommandMessage(vehicleCode, UUID.randomUUID().toString(), now, "UNLOCK", null);
+	}
+
+	static VehicleCommandMessage lock(String vehicleCode, String hubId, Instant now) {
+		return new VehicleCommandMessage(vehicleCode, UUID.randomUUID().toString(), now, "LOCK", hubId);
 	}
 
 	String topic() {

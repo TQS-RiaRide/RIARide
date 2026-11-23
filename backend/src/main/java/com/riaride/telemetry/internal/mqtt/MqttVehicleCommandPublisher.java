@@ -45,6 +45,11 @@ class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
 		publish(VehicleCommandMessage.unlock(vehicleCode, clock.instant()));
 	}
 
+	@Override
+	public void lock(String vehicleCode, String hubId) {
+		publish(VehicleCommandMessage.lock(vehicleCode, hubId, clock.instant()));
+	}
+
 	private void publish(VehicleCommandMessage message) {
 		var current = client;
 		if (current == null || !current.isConnected()) {

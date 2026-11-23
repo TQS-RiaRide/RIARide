@@ -15,4 +15,9 @@ class DisabledVehicleCommands implements VehicleCommands {
 		log.warn("MQTT is turned off; UNLOCK for vehicle {} dropped", vehicleCode);
 	}
 
+	@Override
+	public void lock(String vehicleCode, String hubId) {
+		log.warn("MQTT is turned off; LOCK for vehicle {} dropped", vehicleCode);
+	}
+
 }
