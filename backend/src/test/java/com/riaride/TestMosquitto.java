@@ -1,7 +1,10 @@
 package com.riaride;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Pattern;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
@@ -52,6 +55,55 @@ public final class TestMosquitto {
 		} catch (MqttException failed) {
 			throw new IllegalStateException("Could not publish telemetry to the test broker", failed);
 		}
+	}
+
+	// Listens as the simulator does on every vehicle's command topic (RIA-54). Open it before the
+	// action that sends the command: the broker does not keep non-retained messages for late
+	// subscribers.
+	public static CommandRecorder recordCommands() {
+		return new CommandRecorder(url());
+	}
+
+	public record RecordedCommand(String vehicleCode, String payload) {
+	}
+
+	public static final class CommandRecorder implements AutoCloseable {
+
+		private static final Pattern COMMAND_TOPIC = Pattern.compile("riaride/vehicles/([^/]+)/commands");
+
+		private final List<RecordedCommand> commands = new CopyOnWriteArrayList<>();
+		private final MqttClient client;
+
+		private CommandRecorder(String url) {
+			try {
+				client = new MqttClient(url, "riaride-simulator-test-" + UUID.randomUUID(), new MemoryPersistence());
+				client.connect();
+				client.subscribe("riaride/vehicles/+/commands", 1, (topic, message) -> {
+					var match = COMMAND_TOPIC.matcher(topic);
+					if (match.matches()) {
+						commands.add(new RecordedCommand(match.group(1),
+							new String(message.getPayload(), StandardCharsets.UTF_8)));
+					}
+				});
+			} catch (MqttException failed) {
+				throw new IllegalStateException("Could not subscribe to the test broker", failed);
+			}
+		}
+
+		public List<RecordedCommand> commands() {
+			return List.copyOf(commands);
+		}
+
+		@Override
+		public void close() {
+			try {
+				client.disconnect();
+				client.close();
+			} catch (MqttException ignored) {
+				// The broker only lives for the build.
+			}
+		}
+
 	}
 
 }
