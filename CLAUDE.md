@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Group project for the TQS course: a *light-mobility fleet-as-a-service* platform, graded on both the product and the evidence that quality was built in from the start. A practice only counts if the QA Manual's compliance table links to evidence of it working.
 
-The backend (Spring Boot 4.1, Java 21, Spring Modulith, Maven) and frontend (React, Vite, TypeScript) walking skeletons exist. `simulator/` is still empty; document its commands here when it lands.
+The backend (Spring Boot 4.1, Java 21, Spring Modulith, Maven) and frontend (React, Vite, TypeScript) walking skeletons exist. `simulator/` holds only a placeholder Dockerfile for the Compose `sim` profile; document its commands here when the simulator lands.
 
 ### Backend commands
 
@@ -29,7 +29,7 @@ To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds 
 
 The backend reads `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `KEYCLOAK_ISSUER_URI`; the defaults point at the local stack. Integration tests never use these: they start their own containers.
 
-### Local stack (PostgreSQL and Keycloak)
+### Local stack (PostgreSQL, Keycloak and Mosquitto)
 
 Run from the repository root; details in [`infra/README.md`](infra/README.md).
 
@@ -37,6 +37,7 @@ Run from the repository root; details in [`infra/README.md`](infra/README.md).
 |---|---|
 | First time | `cp infra/.env.example infra/.env`, then set every password |
 | Start | `docker compose -f infra/compose.yaml up -d` |
+| Start the whole platform in containers (backend, frontend, simulator) | `docker compose -f infra/compose.yaml --profile app --profile sim up -d --build` |
 | Create synthetic users (idempotent) | `infra/keycloak/create-dev-users.sh` |
 | Reset (re-imports the realm) | `docker compose -f infra/compose.yaml down -v` |
 

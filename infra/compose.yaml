@@ -1,8 +1,12 @@
-# Local development stack: PostgreSQL and Keycloak.
-# The other services (backend, frontend, Mosquitto, simulator, monitoring) join as their stories land.
+# Local development stack.
+# Default: PostgreSQL, Keycloak and Mosquitto, for running the backend and frontend from the IDE.
+# Profile "app": also builds and runs the backend and the frontend, for the whole platform in containers.
+# Profile "sim": also builds and runs the vehicle simulator (ADR 0007).
+# Monitoring joins when its story lands.
 # Usage (from the repository root):
 #   cp infra/.env.example infra/.env   # then set the passwords
-#   docker compose -f infra/compose.yaml up -d
+#   docker compose -f infra/compose.yaml up -d                                        # infrastructure only
+#   docker compose -f infra/compose.yaml --profile app --profile sim up -d --build    # whole platform
 #   infra/keycloak/create-dev-users.sh
 name: riaride
 
@@ -35,6 +39,11 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in infra/.env}
+      # Tokens always carry the address the browser uses as issuer, also when the backend
+      # container reaches Keycloak at http://keycloak:8080 (backchannel).
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8180}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
     volumes:
       # Imported only when the realm does not exist yet.
       - ./keycloak/riaride-realm.json:/opt/keycloak/data/import/riaride-realm.json:ro
@@ -42,6 +51,91 @@ services:
       - "127.0.0.1:${KEYCLOAK_PORT:-8180}:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+    healthcheck:
+      # The image has no curl or wget: ask the management port for readiness through bash.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"UP"' <&3
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 20s
+
+  mosquitto:
+    # MQTT broker between the platform and the simulator, in both directions (ADR 0006).
+    image: eclipse-mosquitto:2.0
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "127.0.0.1:${MQTT_PORT:-1883}:1883"
+    healthcheck:
+      # Fails when the broker does not accept a connection.
+      test: ["CMD", "mosquitto_pub", "-h", "127.0.0.1", "-t", "healthcheck", "-m", "ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    profiles: [app]
+    build: ../backend
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/riaride
+      DB_USERNAME: riaride
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # The issuer is the browser's address (KC_HOSTNAME); keys and the Admin API go
+      # through the Compose network.
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/riaride
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/riaride/protocol/openid-connect/certs
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_BACKEND_CLIENT_SECRET: ${KEYCLOAK_BACKEND_CLIENT_SECRET:-}
+      # The backend refuses to start without a test mode key (ADR 0008). This placeholder
+      # lets it start; pass purchases need a real sk_test_ key in infra/.env.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder_local_only}
+      # Read by the MQTT adapter when it lands.
+      MQTT_URL: tcp://mosquitto:1883
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  frontend:
+    profiles: [app]
+    build: ../frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8081}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # Through nginx to the backend: checks the whole path the browser uses.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  simulator:
+    profiles: [sim]
+    build: ../simulator
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+    depends_on:
+      mosquitto:
         condition: service_healthy
 
 volumes:
