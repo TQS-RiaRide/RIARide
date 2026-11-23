@@ -117,11 +117,16 @@ jobs:
   sonar:
     name: SonarQube analysis
     needs: [backend, frontend]
+    # SonarQube Cloud (free plan) only analyses the main branch and pull
+    # requests; a branch analysis of any other push is rejected ("not
+    # allowed to access data from non main branches"). Pushes to dev and
+    # main only arrive through pull requests, which are analysed here.
     # The token is not available to pull requests from forks or Dependabot.
     if: >-
       github.actor != 'dependabot[bot]' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
+      ((github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
+       github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -191,8 +196,10 @@ jobs:
     steps:
       # Every job must succeed: a failed, cancelled or skipped job fails
       # the whole pipeline, so a missing build can never pass this check.
-      # One exception: the sonar job is skipped on Dependabot and fork pull
-      # requests, which have no access to SONAR_TOKEN. Its skip is accepted
+      # One exception: the sonar job is skipped on pushes to branches other
+      # than main (not supported by the SonarQube Cloud plan) and on
+      # Dependabot and fork pull requests, which have no access to
+      # SONAR_TOKEN. Its skip is accepted
       # only when the build jobs succeeded; if a build job fails, sonar is
       # skipped too, but that failure already fails this check.
       - name: Check job results
@@ -206,7 +213,7 @@ jobs:
             exit 1
           fi
           if [ "$SONAR" = "skipped" ]; then
-            echo "::notice::SonarQube analysis skipped (Dependabot or fork pull request): the quality gate was not checked."
+            echo "::notice::SonarQube analysis skipped (push to a branch other than main, or a Dependabot or fork pull request): the quality gate was not checked."
           elif [ "$SONAR" != "success" ]; then
             echo "::error::SonarQube analysis failed: the quality gate on new code did not pass, or the scan failed. See the SonarQube analysis job."
             exit 1
