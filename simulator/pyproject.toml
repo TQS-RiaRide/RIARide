@@ -1,0 +1,34 @@
+[project]
+name = "riaride-simulator"
+version = "0.1.0"
+description = "Minimal fleet telemetry simulator for RiaRide: publishes e-bike telemetry and faults over MQTT and reacts to lock commands."
+requires-python = ">=3.12"
+# Runtime and development dependencies are pinned in requirements.txt and
+# requirements-dev.txt, which Dependabot updates.
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+source = ["riaride_simulator"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# The entry point and the paho-mqtt wiring need a broker; they are covered
+# by running the service against Mosquitto, not by unit tests.
+omit = ["*/riaride_simulator/__main__.py", "*/riaride_simulator/mqtt_publisher.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pep8-naming, pyupgrade, bugbear, simplify
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM"]
