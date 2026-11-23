@@ -26,8 +26,9 @@ public class StaySteps {
 		this.jdbc = jdbc;
 	}
 
-	// Scenarios share one database, so each starts without stays.
-	@Before
+	// Scenarios share one database, so each starts without stays. Last of the cleanups (see
+	// HubSteps), since guests reference stays.
+	@Before(order = 10000)
 	public void removeStays() {
 		jdbc.update("delete from stay");
 	}

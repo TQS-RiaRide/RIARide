@@ -26,7 +26,8 @@ class HubController {
 	@PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
 	ResponseEntity<HubResponse> register(@Valid @RequestBody RegisterHubRequest request) {
 		var registered = registerHub.register(request.toCommand());
-		var location = ServletUriComponentsBuilder.fromCurrentRequest()
+		// fromCurrentRequestUri leaves out the query string of the request.
+		var location = ServletUriComponentsBuilder.fromCurrentRequestUri()
 			.path("/{id}")
 			.buildAndExpand(registered.hub().getId())
 			.toUri();
