@@ -7,6 +7,7 @@ import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 // Unit test (Surefire): BR4, a pass is activated on the first trip, not at purchase (RIA-54).
 class PassActivationTest {
@@ -53,6 +54,18 @@ class PassActivationTest {
 		assertThatThrownBy(() -> pending.activate(FIRST_TRIP)).isInstanceOf(IllegalStateException.class);
 		assertThat(pending.getStatus()).isEqualTo(PassStatus.PENDING);
 		assertThat(pending.getActivatedAt()).isNull();
+	}
+
+	// No transition closes a pass yet (that is the pass-expiry story), so the test sets the status.
+	@Requirement("RIA-54")
+	@Test
+	void shouldRefuseToActivateAClosedPass() {
+		var closed = paidPass();
+		ReflectionTestUtils.setField(closed, "status", PassStatus.CLOSED);
+
+		assertThatThrownBy(() -> closed.activate(FIRST_TRIP)).isInstanceOf(IllegalStateException.class);
+		assertThat(closed.getStatus()).isEqualTo(PassStatus.CLOSED);
+		assertThat(closed.getActivatedAt()).isNull();
 	}
 
 }
