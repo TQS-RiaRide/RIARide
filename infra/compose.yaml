@@ -1,5 +1,5 @@
-# Local development stack: PostgreSQL and Keycloak.
-# The other services (backend, frontend, Mosquitto, simulator, monitoring) join as their stories land.
+# Local development stack: PostgreSQL, Keycloak, Mosquitto and the fleet simulator.
+# The other services (backend, frontend, monitoring) join as their stories land.
 # Usage (from the repository root):
 #   cp infra/.env.example infra/.env   # then set the passwords
 #   docker compose -f infra/compose.yaml up -d
@@ -43,6 +43,25 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    volumes:
+      - ../simulator/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "127.0.0.1:${MQTT_PORT:-1883}:1883"
+
+  # Publishes the demo fleet's telemetry (simulator/README.md).
+  simulator:
+    build: ../simulator
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      TELEMETRY_INTERVAL_SECONDS: "5"
+      FAULT_PROBABILITY: "0.001"
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
 
 volumes:
   postgres-data:

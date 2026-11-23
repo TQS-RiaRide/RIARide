@@ -1,6 +1,6 @@
 # Infrastructure
 
-Docker Compose for the local development stack. For now it runs PostgreSQL and Keycloak; the other services join as their stories land (architecture, section 4).
+Docker Compose for the local development stack. For now it runs PostgreSQL, Keycloak, Mosquitto and the fleet simulator; the other services join as their stories land (architecture, section 4).
 
 ## Start
 
@@ -14,8 +14,10 @@ infra/keycloak/create-dev-users.sh      # synthetic users and a dev-only client,
 |---|---|---|
 | PostgreSQL | `localhost:5432` | Databases `riaride` (backend, owner `riaride`) and `keycloak` |
 | Keycloak | `http://localhost:8180` | Realm `riaride`; admin console with `KEYCLOAK_ADMIN_*` from `.env` |
+| Mosquitto | `localhost:1883` | Anonymous, local development only; watch with `docker compose -f infra/compose.yaml exec mosquitto mosquitto_sub -t 'riaride/#' -v` |
+| Fleet simulator | none | Publishes the demo fleet over MQTT ([`simulator/README.md`](../simulator/README.md)) |
 
-Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT` or `KEYCLOAK_PORT` in `.env` if the defaults are taken; then point the backend at them with `DB_URL` and `KEYCLOAK_ISSUER_URI`.
+Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT`, `KEYCLOAK_PORT` or `MQTT_PORT` in `.env` if the defaults are taken; then point the backend at them with `DB_URL` and `KEYCLOAK_ISSUER_URI`.
 
 ## Keycloak
 

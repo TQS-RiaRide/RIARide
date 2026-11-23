@@ -1,9 +1,9 @@
-# Local run of the simulator with its own Mosquitto broker.
+# Standalone run of the simulator with its own Mosquitto broker, without the rest of the stack.
+# The main stack (infra/compose.yaml) runs the same two services next to the platform.
 # Usage (from the repository root):
 #   docker compose -f simulator/compose.yaml up --build
 # Watch the messages:
 #   docker compose -f simulator/compose.yaml exec mosquitto mosquitto_sub -t 'riaride/#' -v
-# These services move into the main stack (infra/compose.yaml) when it lands on dev.
 name: riaride-simulator
 
 services:
