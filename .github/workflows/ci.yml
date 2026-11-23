@@ -106,9 +106,14 @@ jobs:
         run: |
           ruff check .
           ruff format --check .
-      # Tests include the contract tests against contracts/mqtt/*.schema.json.
-      - name: Tests with coverage
-        run: python -m pytest --cov --cov-report=term --cov-report=xml
+      # Unit tests include the contract tests against contracts/mqtt/*.schema.json.
+      - name: Unit tests
+        run: python -m pytest --cov --cov-report= --junitxml=reports/simulator-unit.xml
+      # Against Mosquitto in Testcontainers; coverage adds to the unit tests' figure.
+      - name: Integration tests
+        run: >-
+          python -m pytest -m integration --cov --cov-append --cov-report=term
+          --cov-report=xml --junitxml=reports/simulator-integration.xml
       - name: Dependency vulnerabilities (pip-audit)
         run: pip-audit -r requirements.txt
 
@@ -118,6 +123,15 @@ jobs:
         with:
           name: simulator-coverage
           path: simulator/coverage.xml
+          if-no-files-found: ignore
+
+      # Imported into Xray by the Xray import workflow (QA Manual 2.3).
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: simulator-test-reports
+          path: simulator/reports/
           if-no-files-found: ignore
 
       # Checks that the Dockerfile builds; the image is not pushed here.
