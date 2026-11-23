@@ -227,6 +227,13 @@ Battery below 20 % blocks booking without changing the status. A fault during a 
 
 The consumer ignores a repeated `messageId` on both topics. Only telemetry is also checked for staleness: a telemetry message older than the vehicle's last state is ignored. Fault events are never dropped as stale, because MQTT does not order messages across topics, so a fault can arrive after a later telemetry message. Replacing the simulator means replacing the adapter in `telemetry`, with no change to the ports or to other modules.
 
+The message formats are the JSON Schemas in [`contracts/mqtt/`](../../contracts/mqtt/), shared by the simulator and the backend adapter (RIA-58). Agreed for both sides:
+
+- `{id}` in the topics is the vehicle code (`vehicle.code`, for example `EB-101`), not the platform's vehicle id: the code is what an operator registers and what the simulator knows.
+- `hubId` is the platform's hub id, so the simulator's demo fleet uses the same hub ids as the platform's seed data.
+- `hubId` is optional on `LOCK`. Without it, or with a hub the simulator does not know, the vehicle locks where it is and its telemetry reports `hubId: null`.
+- Every command carries `emittedAt`. The simulator ignores a command older than 30 s, the unlock timeout (BR13), so an `UNLOCK` the platform already gave up on is not applied when the simulator reconnects and the broker delivers the commands it kept.
+
 **Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
 
 **REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details. Request bodies are strict for the whole API: a JSON number with a fraction in a whole-number field is rejected with a 400 (`spring.jackson.deserialization.accept-float-as-int: false`), so `1.5` and `1.0` are both refused instead of being truncated.

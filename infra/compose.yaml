@@ -129,14 +129,18 @@ services:
       retries: 10
 
   simulator:
+    # Publishes the demo fleet's telemetry and answers lock commands (simulator/README.md).
     profiles: [sim]
     build: ../simulator
     environment:
       MQTT_HOST: mosquitto
-      MQTT_PORT: 1883
+      MQTT_PORT: "1883"
+      TELEMETRY_INTERVAL_SECONDS: "5"
+      FAULT_PROBABILITY: "0.001"
     depends_on:
       mosquitto:
         condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres-data:
