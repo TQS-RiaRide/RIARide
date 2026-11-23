@@ -1,5 +1,6 @@
 package com.riaride.fleet.internal.domain;
 
+import com.riaride.fleet.VehicleNotBookableException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -100,6 +101,23 @@ public class Vehicle implements Persistable<UUID> {
 	// BR12: bookable only when available and the battery is at or above the policy's minimum.
 	public boolean isBookable(BookingBatteryPolicy policy) {
 		return status == VehicleStatus.AVAILABLE && policy.allowsBooking(battery());
+	}
+
+	// Starting a trip reserves the vehicle first (RIA-54), so the same rule as booking applies.
+	public void reserve(BookingBatteryPolicy policy) {
+		if (!isBookable(policy)) {
+			throw new VehicleNotBookableException();
+		}
+		this.status = VehicleStatus.RESERVED;
+	}
+
+	// Telemetry confirmed the unlock: the vehicle leaves its hub, so it no longer takes a slot.
+	public void startRide() {
+		if (status != VehicleStatus.RESERVED) {
+			throw new IllegalStateException("Only a reserved vehicle can start a ride");
+		}
+		this.status = VehicleStatus.IN_USE;
+		this.hubId = null;
 	}
 
 	// A reading older than the last one is ignored: with QoS 1, a redelivered or late message must
