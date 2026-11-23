@@ -20,14 +20,14 @@ public class RegisterVehicleService {
 	}
 
 	// The hub row is locked before its vehicles are counted, so two registrations at a hub with one
-	// free slot cannot both take it. The unique constraint on vehicle.code is the final guard
-	// against a concurrent duplicate code: the insert is flushed here, so its
-	// DataIntegrityViolationException reaches the caller.
+	// free slot cannot both take it. A code is in use whatever its case. The unique index on
+	// lower(vehicle.code) is the final guard against a concurrent duplicate code: the insert is
+	// flushed here, so its DataIntegrityViolationException reaches the caller.
 	@Transactional
 	public Vehicle register(RegisterVehicleCommand command) {
 		var vehicle = Vehicle.register(command.code(), command.type(), command.hubId());
 		var hub = hubs.findByIdForUpdate(command.hubId()).orElseThrow(HubNotFoundException::new);
-		if (vehicles.existsByCode(vehicle.getCode())) {
+		if (vehicles.existsByCodeIgnoreCase(vehicle.getCode())) {
 			throw new VehicleCodeAlreadyInUseException();
 		}
 		if (vehicles.countByHubId(hub.getId()) >= hub.getCapacity()) {

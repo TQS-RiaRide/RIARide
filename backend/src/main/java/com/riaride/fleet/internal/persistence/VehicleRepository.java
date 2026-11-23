@@ -13,7 +13,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
 
 	List<Vehicle> findByHubIdOrderByCode(UUID hubId);
 
-	boolean existsByCode(String code);
+	// Codes are unique regardless of case, so EB-401 and eb-401 cannot both exist (V6).
+	boolean existsByCodeIgnoreCase(String code);
 
 	// The vehicles docked at a hub, which take its slots (BR10). A ridden vehicle has no hub.
 	long countByHubId(UUID hubId);
