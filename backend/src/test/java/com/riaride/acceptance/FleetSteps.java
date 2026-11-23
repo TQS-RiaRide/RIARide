@@ -37,14 +37,16 @@ public class FleetSteps {
 		jdbc.update("delete from vehicle");
 	}
 
-	// A hub at the hotel of the same name, with one available e-bike docked there.
+	// A hub at the hotel of the same name, with one available e-bike docked there. Hub names are
+	// unique, so a second bike at a hub the scenario already has is docked at that hub (RIA-54).
 	@Given("a hub {string} with an available bike {string} with {int} % battery")
 	public void aHubWithAnAvailableBike(String hubName, String code, int batteryPct) {
-		var hubId = UUID.randomUUID();
 		jdbc.update("""
 			insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
 			select ?, name, 'HOTEL', id, 40.6405, -8.6538, 10 from hotel where name = ?
-			""", hubId, hubName);
+			on conflict (name) do nothing
+			""", UUID.randomUUID(), hubName);
+		var hubId = jdbc.queryForObject("select id from hub where name = ?", UUID.class, hubName);
 		jdbc.update("""
 			insert into vehicle (id, code, type, status, hub_id, battery_pct)
 			values (?, ?, 'E_BIKE', 'AVAILABLE', ?, ?)
