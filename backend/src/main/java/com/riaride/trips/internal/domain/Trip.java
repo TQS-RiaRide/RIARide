@@ -15,12 +15,16 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
-// A guest's trip on one vehicle. It is STARTING from the request until telemetry confirms the
-// unlock; it becomes IN_USE only if that happens before the unlock timeout, and FAILED otherwise
-// (RIA-54). The timeout is passed in, so the rule does not depend on configuration.
+// A guest's trip on the bike their pass holds (Reservation). It is STARTING from the request until
+// telemetry confirms the unlock; it becomes IN_USE only if that happens before the unlock timeout,
+// and FAILED otherwise (RIA-54, BR13). The timeout is passed in, so the rule does not depend on
+// configuration.
 @Entity
 @Table(name = "trip")
 public class Trip implements Persistable<UUID> {
+
+	// How far the simulator's clock may be behind the server's, as for battery readings.
+	static final Duration MAX_CLOCK_SKEW = Duration.ofMinutes(1);
 
 	@Id
 	private UUID id;
@@ -31,11 +35,18 @@ public class Trip implements Persistable<UUID> {
 	@Column(name = "pass_id", nullable = false, updatable = false)
 	private UUID passId;
 
+	@Column(name = "reservation_id", nullable = false, updatable = false)
+	private UUID reservationId;
+
 	@Column(name = "vehicle_id", nullable = false, updatable = false)
 	private UUID vehicleId;
 
 	@Column(name = "vehicle_code", nullable = false, updatable = false, length = 32)
 	private String vehicleCode;
+
+	// The hub the bike was reserved at, where a failed start locks it again.
+	@Column(name = "hub_id", updatable = false)
+	private UUID hubId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
@@ -62,22 +73,25 @@ public class Trip implements Persistable<UUID> {
 		// for JPA
 	}
 
-	private Trip(UUID guestId, UUID passId, UUID vehicleId, String vehicleCode, Instant now) {
+	private Trip(Reservation reservation, UUID guestId, Instant now) {
 		this.id = UUID.randomUUID();
 		this.guestId = guestId;
-		this.passId = passId;
-		this.vehicleId = vehicleId;
-		this.vehicleCode = vehicleCode;
+		this.passId = reservation.getPassId();
+		this.reservationId = reservation.getId();
+		this.vehicleId = reservation.getVehicleId();
+		this.vehicleCode = reservation.getVehicleCode();
+		this.hubId = reservation.getHubId();
 		this.status = TripStatus.STARTING;
 		this.requestedAt = now;
 		this.isNew = true;
 	}
 
-	public static Trip requestStart(UUID guestId, UUID passId, UUID vehicleId, String vehicleCode, Instant now) {
-		if (guestId == null || passId == null || vehicleId == null || vehicleCode == null || now == null) {
-			throw new IllegalArgumentException("A trip needs a guest, a pass, a vehicle and a request time");
+	// The trip starts on the bike its pass holds.
+	public static Trip requestStart(Reservation reservation, UUID guestId, Instant now) {
+		if (reservation == null || guestId == null || now == null) {
+			throw new IllegalArgumentException("A trip needs a reservation, a guest and a request time");
 		}
-		return new Trip(guestId, passId, vehicleId, vehicleCode, now);
+		return new Trip(reservation, guestId, now);
 	}
 
 	// Exactly at the timeout the unlock is already late: "within 30 seconds" means before 30 s.
@@ -85,15 +99,26 @@ public class Trip implements Persistable<UUID> {
 		return !now.isBefore(requestedAt.plus(timeout));
 	}
 
-	// Returns true only when this confirmation starts the trip. A repeated or late confirmation
-	// changes nothing; a late one is left for failIfUnlockOverdue.
-	public boolean confirmUnlock(Instant now, Duration timeout) {
-		if (status != TripStatus.STARTING || isUnlockOverdue(now, timeout)) {
-			return false;
+	// What an UNLOCKED reading emitted at emittedAt, handled at now, does to this trip. A reading
+	// emitted more than MAX_CLOCK_SKEW before the request was not caused by this trip's UNLOCK (a
+	// redelivered QoS 1 message) and changes nothing. A late unlock fails the trip, so the bike is
+	// locked again instead of starting a trip the guest was told had failed.
+	public UnlockOutcome confirmUnlock(Instant emittedAt, Instant now, Duration timeout) {
+		if (emittedAt.isBefore(requestedAt.minus(MAX_CLOCK_SKEW))) {
+			return UnlockOutcome.STALE;
+		}
+		if (status == TripStatus.IN_USE) {
+			return UnlockOutcome.ALREADY_STARTED;
+		}
+		if (status == TripStatus.FAILED) {
+			return UnlockOutcome.TOO_LATE;
+		}
+		if (failIfUnlockOverdue(now, timeout)) {
+			return UnlockOutcome.TOO_LATE;
 		}
 		this.status = TripStatus.IN_USE;
 		this.startedAt = now;
-		return true;
+		return UnlockOutcome.STARTED;
 	}
 
 	// Returns true only when this call fails the trip.
@@ -130,12 +155,20 @@ public class Trip implements Persistable<UUID> {
 		return passId;
 	}
 
+	public UUID getReservationId() {
+		return reservationId;
+	}
+
 	public UUID getVehicleId() {
 		return vehicleId;
 	}
 
 	public String getVehicleCode() {
 		return vehicleCode;
+	}
+
+	public UUID getHubId() {
+		return hubId;
 	}
 
 	public TripStatus getStatus() {
