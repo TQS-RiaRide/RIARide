@@ -12,7 +12,7 @@ import logging
 import random
 from collections import OrderedDict
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
 
 from riaride_simulator import messages, topics
@@ -23,6 +23,10 @@ log = logging.getLogger(__name__)
 
 Clock = Callable[[], datetime]
 IdFactory = Callable[[], str]
+
+# BR13: the platform gives up on an unlock after 30 s, so an older command is stale. The broker
+# keeps the session while the simulator is down, so such commands can arrive after a restart.
+DEFAULT_MAX_COMMAND_AGE = timedelta(seconds=30)
 
 
 class Publisher(Protocol):
@@ -55,9 +59,12 @@ class Simulator:
         fault_probability: float = 0.0,
         rates: FleetRates | None = None,
         new_id: IdFactory = messages.new_message_id,
+        max_command_age: timedelta = DEFAULT_MAX_COMMAND_AGE,
     ) -> None:
         if not 0.0 <= fault_probability <= 1.0:
             raise ValueError("fault_probability must be between 0 and 1")
+        if max_command_age <= timedelta(0):
+            raise ValueError("max_command_age must be positive")
         self._fleet = fleet
         self._publisher = publisher
         self._clock = clock
@@ -65,6 +72,7 @@ class Simulator:
         self._fault_probability = fault_probability
         self._rates = rates or FleetRates()
         self._new_id = new_id
+        self._max_command_age = max_command_age
         self._recent_commands = _RecentIds()
         self._last_tick: datetime | None = None
 
@@ -103,8 +111,8 @@ class Simulator:
     def handle_command(self, topic: str, payload: bytes) -> None:
         """Apply an UNLOCK or LOCK command and answer with the vehicle's telemetry.
 
-        Invalid, unknown and repeated commands are logged and ignored, so a bad
-        message never stops the simulator.
+        Invalid, unknown, repeated and stale commands (older than the maximum age)
+        are logged and ignored, so a bad message never stops the simulator.
         """
         vehicle_id = topics.vehicle_id_from_command_topic(topic)
         vehicle = self._fleet.vehicles.get(vehicle_id) if vehicle_id else None
@@ -115,6 +123,15 @@ class Simulator:
             command = messages.parse_command(json.loads(payload))
         except (json.JSONDecodeError, UnicodeDecodeError, InvalidCommandError) as error:
             log.warning("Ignoring invalid command for vehicle %s: %s", vehicle_id, error)
+            return
+        age = self._clock() - command.emitted_at
+        if age > self._max_command_age:
+            log.warning(
+                "Ignoring stale command %s for vehicle %s, emitted %.0f s ago",
+                command.message_id,
+                vehicle_id,
+                age.total_seconds(),
+            )
             return
         if self._recent_commands.seen_before(command.message_id):
             log.info("Ignoring repeated command %s for vehicle %s", command.message_id, vehicle_id)

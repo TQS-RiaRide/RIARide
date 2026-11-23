@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -18,6 +19,15 @@ FAULT_DESCRIPTIONS = {
 }
 
 
+# The forms the schema's "uuid" and "date-time" formats allow (RFC 4122, RFC 3339). uuid.UUID
+# and datetime.fromisoformat alone accept more: braces, urn:uuid:, no dashes, a date with no
+# time, a time with no offset.
+_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
+_DATE_TIME = re.compile(
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})", re.ASCII
+)
+
+
 class InvalidCommandError(ValueError):
     """A command message that does not match contracts/mqtt/command.schema.json."""
 
@@ -29,7 +39,8 @@ class CommandType(StrEnum):
 
 @dataclass(frozen=True)
 class Command:
-    message_id: str
+    message_id: str  # canonical lower-case form, so one UUID written two ways is one id
+    emitted_at: datetime
     command: CommandType
     hub_id: str | None
 
@@ -84,18 +95,19 @@ def parse_command(payload: object) -> Command:
         raise InvalidCommandError(f"unknown fields: {sorted(unknown)}")
 
     message_id = payload.get("messageId")
-    try:
-        uuid.UUID(str(message_id))
-    except ValueError as error:
-        raise InvalidCommandError("messageId must be a UUID") from error
+    if not isinstance(message_id, str) or not _UUID.fullmatch(message_id):
+        raise InvalidCommandError("messageId must be a UUID")
 
-    emitted_at = payload.get("emittedAt")
-    if not isinstance(emitted_at, str):
+    raw_emitted_at = payload.get("emittedAt")
+    if not isinstance(raw_emitted_at, str):
         raise InvalidCommandError("emittedAt is required")
+    not_a_date_time = "emittedAt must be an RFC 3339 date-time with an offset"
+    if not _DATE_TIME.fullmatch(raw_emitted_at):
+        raise InvalidCommandError(not_a_date_time)
     try:
-        datetime.fromisoformat(emitted_at)
-    except ValueError as error:
-        raise InvalidCommandError("emittedAt must be an ISO 8601 date-time") from error
+        emitted_at = datetime.fromisoformat(raw_emitted_at)
+    except ValueError as error:  # matches the pattern but is not a date, such as month 13
+        raise InvalidCommandError(not_a_date_time) from error
 
     try:
         command = CommandType(payload.get("command"))
@@ -106,4 +118,4 @@ def parse_command(payload: object) -> Command:
     if hub_id is not None and (not isinstance(hub_id, str) or not hub_id):
         raise InvalidCommandError("hubId must be a non-empty string or null")
 
-    return Command(str(message_id), command, hub_id)
+    return Command(str(uuid.UUID(message_id)), emitted_at, command, hub_id)
