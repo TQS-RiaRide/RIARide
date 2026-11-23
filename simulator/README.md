@@ -7,8 +7,8 @@ A minimal Python service that stands in for the e-bikes ([ADR 0006](../docs/arch
 - Every `TELEMETRY_INTERVAL_SECONDS`, publishes each vehicle's battery, lock state, hub and position.
 - A docked, locked bike charges; an unlocked bike drains its battery and moves.
 - Raises random faults (brakes, flat tyre, battery, lock, lights) with probability `FAULT_PROBABILITY` per vehicle and tick.
-- Reacts to `UNLOCK` and `LOCK` commands, and answers each one at once with the vehicle's telemetry, which is how the platform confirms an unlock (BR13). Repeated commands (same `messageId`) are applied once; invalid ones are logged and ignored.
-- Publishes `ONLINE` on `riaride/simulator/status` (retained) and leaves `OFFLINE` as its last will.
+- Reacts to `UNLOCK` and `LOCK` commands, and answers each one at once with the vehicle's telemetry, which is how the platform confirms an unlock (BR13). Repeated commands (same `messageId`) are applied once; invalid ones, and commands older than `COMMAND_MAX_AGE_SECONDS`, are logged and ignored. The broker keeps the simulator's session while it is down, so without that limit an UNLOCK the platform gave up on (BR13) could be applied after a restart.
+- Publishes `ONLINE` on `riaride/simulator/status` (retained) each time it connects, including reconnects, leaves `OFFLINE` as its last will, and publishes `OFFLINE` itself when it stops.
 
 ## MQTT contract
 
@@ -31,7 +31,9 @@ Python 3.12 or later. From `simulator/`:
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 ruff check . && ruff format --check .     # lint and format check (ruff format . fixes)
-python -m pytest --cov --cov-report=term --cov-report=xml   # tests with coverage for SonarQube
+python -m pytest                                  # unit tests
+python -m pytest -m integration                   # integration tests against Mosquitto (needs Docker)
+python -m pytest --cov --cov-report= && python -m pytest -m integration --cov --cov-append --cov-report=term --cov-report=xml   # both, with coverage for SonarQube
 python -m pytest tests/test_simulator.py -k unlock          # a single test
 pip-audit -r requirements.txt                     # dependency vulnerabilities
 ```
@@ -48,13 +50,17 @@ docker compose -f simulator/compose.yaml exec mosquitto mosquitto_sub -t 'riarid
 | Variable | Default | Meaning |
 |---|---|---|
 | `MQTT_HOST`, `MQTT_PORT` | `localhost`, `1883` | Broker address |
+| `MQTT_KEEPALIVE_SECONDS` | `30` | MQTT keepalive; a dead connection is noticed after about twice this |
 | `MQTT_USERNAME`, `MQTT_PASSWORD` | none | Broker credentials; set both or neither |
 | `FLEET_FILE` | bundled `fleet.json` | Hubs and vehicles to simulate |
 | `TELEMETRY_INTERVAL_SECONDS` | `5` | Time between telemetry rounds |
 | `FAULT_PROBABILITY` | `0.001` | Chance of a fault per vehicle and round |
+| `COMMAND_MAX_AGE_SECONDS` | `30` | Commands older than this are ignored (BR13) |
 | `RANDOM_SEED` | none | Fixes the random faults and movement, for repeatable demos |
 | `LOG_LEVEL` | `INFO` | Python log level |
 
 ## Design
 
-`simulator.py` holds the behaviour and depends only on a `Publisher` protocol, so it is unit-tested with a fake publisher, a fixed clock and a seeded random generator. `mqtt_publisher.py` is the only module that imports paho-mqtt; it and `__main__.py` need a broker and are left out of unit-test coverage.
+`simulator.py` holds the behaviour and depends only on a `Publisher` protocol, so it is unit-tested with a fake publisher, a fixed clock and a seeded random generator. `mqtt_publisher.py` is the only module that imports paho-mqtt; it and `run()` in `__main__.py` are covered by the integration tests in `tests/integration/`, which start Mosquitto with Testcontainers.
+
+Run it with the rest of the local stack with `docker compose -f infra/compose.yaml up -d` (see [`infra/README.md`](../infra/README.md)).

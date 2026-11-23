@@ -65,7 +65,9 @@ Run from `simulator/`, with Python 3.12 or later, after `pip install -r requirem
 | Task | Command |
 |---|---|
 | Lint / check formatting (ruff) | `ruff check .` / `ruff format --check .` (`ruff format .` fixes) |
-| Unit and contract tests with coverage (`coverage.xml`, read by SonarQube) | `python -m pytest --cov --cov-report=term --cov-report=xml` |
+| Unit and contract tests | `python -m pytest` |
+| Integration tests against Mosquitto in Testcontainers (needs Docker) | `python -m pytest -m integration` |
+| Both, with coverage (`coverage.xml`, read by SonarQube) | `python -m pytest --cov --cov-report=` then `python -m pytest -m integration --cov --cov-append --cov-report=term --cov-report=xml` |
 | Single test | `python -m pytest tests/test_simulator.py -k unlock` |
 | Dependency vulnerabilities | `pip-audit -r requirements.txt` |
 | Run with a local Mosquitto (from the repository root) | `docker compose -f simulator/compose.yaml up --build` |
