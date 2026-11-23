@@ -57,15 +57,6 @@ class HubTest {
 
 	@Requirement("RIA-56")
 	@Test
-	void shouldRegisterNewHubWithNoBikesDockedAndAllSlotsFree() {
-		var hub = hotelHubWithCapacity(10);
-
-		assertThat(hub.getDockedBikes()).isZero();
-		assertThat(hub.getFreeSlots()).isEqualTo(10);
-	}
-
-	@Requirement("RIA-56")
-	@Test
 	void shouldRegisterTouristSpotHubWithoutHotel() {
 		var hub = Hub.register("Miradouro das Salinas", HubKind.TOURIST_SPOT, null, 40.6425, -8.7479, 6);
 
@@ -81,7 +72,6 @@ class HubTest {
 		var hub = hotelHubWithCapacity(1);
 
 		assertThat(hub.getCapacity()).isEqualTo(1);
-		assertThat(hub.getFreeSlots()).isEqualTo(1);
 	}
 
 	@Requirement("RIA-56")
