@@ -38,7 +38,7 @@ class VehicleTelemetryListenerTest {
 	void shouldRecordTheReportedBatteryAndKeepTheStatus() {
 		var vehicle = Vehicle.register("EB-601", VehicleType.E_BIKE, UUID.randomUUID());
 		vehicle.recordBattery(BatteryLevel.of(80), EMITTED_AT.minusSeconds(5), EMITTED_AT.minusSeconds(5));
-		when(vehicles.findByCode("EB-601")).thenReturn(Optional.of(vehicle));
+		when(vehicles.findByCodeForUpdate("EB-601")).thenReturn(Optional.of(vehicle));
 
 		listener.on(reading("EB-601", 18));
 
@@ -52,7 +52,7 @@ class VehicleTelemetryListenerTest {
 	void shouldIgnoreAReadingStampedADayAheadOfTheServerClock() {
 		var vehicle = Vehicle.register("EB-601", VehicleType.E_BIKE, UUID.randomUUID());
 		vehicle.recordBattery(BatteryLevel.of(80), EMITTED_AT.minusSeconds(5), EMITTED_AT.minusSeconds(5));
-		when(vehicles.findByCode("EB-601")).thenReturn(Optional.of(vehicle));
+		when(vehicles.findByCodeForUpdate("EB-601")).thenReturn(Optional.of(vehicle));
 		var fromTheFuture = new VehicleTelemetryReceived("EB-601", "9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d",
 			EMITTED_AT.plusSeconds(86_400), 18, null, "LOCKED");
 
@@ -65,7 +65,7 @@ class VehicleTelemetryListenerTest {
 	@Requirement("RIA-59")
 	@Test
 	void shouldIgnoreAReadingForAnUnknownVehicle() {
-		when(vehicles.findByCode("EB-999")).thenReturn(Optional.empty());
+		when(vehicles.findByCodeForUpdate("EB-999")).thenReturn(Optional.empty());
 
 		assertThatCode(() -> listener.on(reading("EB-999", 18))).doesNotThrowAnyException();
 	}
