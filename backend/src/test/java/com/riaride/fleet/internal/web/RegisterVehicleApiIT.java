@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import com.jayway.jsonpath.JsonPath;
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestcontainersConfiguration;
 import java.time.Instant;
@@ -52,6 +53,7 @@ class RegisterVehicleApiIT {
 
 	private static final String PROBLEM_JSON = "application/problem+json";
 	private static final UUID SALINAS = UUID.fromString("00000000-0000-0000-0000-00000000a157");
+	private static final UUID PRAIA = UUID.fromString("00000000-0000-0000-0000-00000000a158");
 	private static final int CAPACITY = 8;
 
 	@Autowired
@@ -68,8 +70,9 @@ class RegisterVehicleApiIT {
 		removeVehiclesAndHub();
 		jdbc.update("""
 			insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
-			values (?, 'Salinas – RIA-57 test hub', 'TOURIST_SPOT', null, 40.6510, -8.6820, ?)
-			""", SALINAS, CAPACITY);
+			values (?, 'Salinas – RIA-57 test hub', 'TOURIST_SPOT', null, 40.6510, -8.6820, ?),
+			       (?, 'Praia – RIA-57 test hub', 'TOURIST_SPOT', null, 40.6430, -8.7470, ?)
+			""", SALINAS, CAPACITY, PRAIA, CAPACITY);
 		for (var role : List.of("GUEST", "OPERATOR", "ADMIN", "HOTEL_MANAGER", "TECHNICIAN")) {
 			when(jwtDecoder.decode(role)).thenReturn(jwt(role));
 		}
@@ -78,8 +81,8 @@ class RegisterVehicleApiIT {
 	// The hub and vehicle tables are shared with other tests, so nothing is left behind.
 	@AfterEach
 	void removeVehiclesAndHub() {
-		jdbc.update("delete from vehicle where hub_id = ? or code like 'EB-4%'", SALINAS);
-		jdbc.update("delete from hub where id = ?", SALINAS);
+		jdbc.update("delete from vehicle where hub_id in (?, ?) or upper(code) like 'EB-4%'", SALINAS, PRAIA);
+		jdbc.update("delete from hub where id in (?, ?)", SALINAS, PRAIA);
 	}
 
 	private static Jwt jwt(String role) {
@@ -118,7 +121,33 @@ class RegisterVehicleApiIT {
 	}
 
 	private int vehiclesCoded(String code) {
-		return jdbc.queryForObject("select count(*) from vehicle where code = ?", Integer.class, code);
+		return jdbc.queryForObject("select count(*) from vehicle where upper(code) = upper(?)", Integer.class, code);
+	}
+
+	// Sends the registrations at the same time and returns each response's status and title.
+	private List<String> registerConcurrently(List<Callable<ResultActions>> registrations) throws Exception {
+		var start = new CountDownLatch(1);
+		var outcomes = new ArrayList<String>();
+		try (var pool = Executors.newFixedThreadPool(registrations.size())) {
+			var futures = new ArrayList<Future<String>>();
+			for (var registration : registrations) {
+				Callable<String> outcome = () -> {
+					start.await();
+					var response = registration.call().andReturn().getResponse();
+					if (response.getStatus() == 201) {
+						return "201";
+					}
+					var title = JsonPath.<String>read(response.getContentAsString(), "$.title");
+					return response.getStatus() + " " + title;
+				};
+				futures.add(pool.submit(outcome));
+			}
+			start.countDown();
+			for (var future : futures) {
+				outcomes.add(future.get());
+			}
+		}
+		return outcomes;
 	}
 
 	private int vehiclesAtSalinas() {
@@ -179,30 +208,33 @@ class RegisterVehicleApiIT {
 	}
 
 	// Two operators register a bike at the same time in the hub's last free slot: the hub row lock
-	// makes the second wait and then see the hub full, so exactly one bike is stored.
+	// makes the second wait and then see the hub full, so exactly one bike is stored and the other
+	// is refused by BR10, not by any other conflict.
 	@Requirement("RIA-57")
 	@Test
 	void shouldStoreOnlyOneBikeWhenTwoRegistrationsRaceForTheLastSlot() throws Exception {
 		dockBikes(CAPACITY - 1);
-		var start = new CountDownLatch(1);
-		var statuses = new ArrayList<Integer>();
-		try (var pool = Executors.newFixedThreadPool(2)) {
-			var futures = new ArrayList<Future<Integer>>();
-			for (var code : List.of("EB-401", "EB-402")) {
-				Callable<Integer> registration = () -> {
-					start.await();
-					return registerBike("OPERATOR", code).andReturn().getResponse().getStatus();
-				};
-				futures.add(pool.submit(registration));
-			}
-			start.countDown();
-			for (var future : futures) {
-				statuses.add(future.get());
-			}
-		}
 
-		assertThat(statuses).containsExactlyInAnyOrder(201, 409);
+		var outcomes = registerConcurrently(List.of(
+			() -> registerBike("OPERATOR", "EB-401"),
+			() -> registerBike("OPERATOR", "EB-402")));
+
+		assertThat(outcomes).containsExactlyInAnyOrder("201", "409 Hub full");
 		assertThat(vehiclesAtSalinas()).isEqualTo(CAPACITY);
+	}
+
+	// The same code registered at the same time at two hubs: the hub locks do not serialise them,
+	// so the second may pass the code check and be stopped by the unique index instead. Either way
+	// it is refused as a code in use, and one vehicle is stored.
+	@Requirement("RIA-57")
+	@Test
+	void shouldStoreOnlyOneBikeWhenTheSameCodeIsRegisteredAtTwoHubsAtOnce() throws Exception {
+		var outcomes = registerConcurrently(List.of(
+			() -> register("OPERATOR", SALINAS, bike("EB-401")),
+			() -> register("OPERATOR", PRAIA, bike("EB-401"))));
+
+		assertThat(outcomes).containsExactlyInAnyOrder("201", "409 Vehicle code already in use");
+		assertThat(vehiclesCoded("EB-401")).isEqualTo(1);
 	}
 
 	@Requirement("RIA-57")
@@ -215,6 +247,19 @@ class RegisterVehicleApiIT {
 			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
 			.andExpect(jsonPath("$.title").value("Vehicle code already in use"))
 			.andExpect(jsonPath("$.detail").value(not(containsString("EB-401"))));
+
+		assertThat(vehiclesCoded("EB-401")).isEqualTo(1);
+	}
+
+	// A code is in use whatever its case.
+	@Requirement("RIA-57")
+	@Test
+	void shouldRefuseCodeThatDiffersOnlyInCase() throws Exception {
+		registerBike("OPERATOR", "EB-401").andExpect(status().isCreated());
+
+		registerBike("OPERATOR", "eb-401")
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.title").value("Vehicle code already in use"));
 
 		assertThat(vehiclesCoded("EB-401")).isEqualTo(1);
 	}
