@@ -17,6 +17,8 @@ infra/keycloak/create-dev-users.sh      # synthetic users and a dev-only client,
 
 Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT` or `KEYCLOAK_PORT` in `.env` if the defaults are taken; then point the backend at them with `DB_URL` and `KEYCLOAK_ISSUER_URI`.
 
+The backend also subscribes to vehicle telemetry over MQTT (ADR 0006). Until Mosquitto joins this stack with the simulator (RIA-60), start the simulator's broker (`simulator/compose.yaml`) or set `MQTT_ENABLED=false`. `MQTT_URL` (default `tcp://localhost:1883`), `MQTT_USERNAME` and `MQTT_PASSWORD` point the backend at the broker; without a broker the backend still starts and retries every 5 seconds.
+
 ## Keycloak
 
 - `keycloak/riaride-realm.json` is the realm: roles `GUEST`, `OPERATOR`, `TECHNICIAN`, `HOTEL_MANAGER`, `ADMIN`; the public client `riaride-spa` (Authorization Code with PKCE); a user profile with the admin-only attribute `hotel_id`, which the token carries as the `hotel_id` claim. It contains no users and no secrets, except the service account of `riaride-backend` (below). Keycloak imports it on start only if the realm does not exist; to re-import, remove the volume (`docker compose -f infra/compose.yaml down -v`).
