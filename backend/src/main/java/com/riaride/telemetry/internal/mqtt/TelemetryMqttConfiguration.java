@@ -1,5 +1,6 @@
 package com.riaride.telemetry.internal.mqtt;
 
+import java.time.Clock;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,6 +23,12 @@ class TelemetryMqttConfiguration {
 	MqttTelemetrySubscriber mqttTelemetrySubscriber(TelemetryMqttProperties properties,
 		TelemetryMessageHandler handler) {
 		return new MqttTelemetrySubscriber(properties, handler);
+	}
+
+	@Bean
+	MqttVehicleCommandPublisher mqttVehicleCommandPublisher(TelemetryMqttProperties properties, JsonMapper json,
+		Clock clock) {
+		return new MqttVehicleCommandPublisher(properties, json, clock);
 	}
 
 }
