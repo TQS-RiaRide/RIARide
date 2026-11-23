@@ -24,18 +24,23 @@ class HubVehiclesProblemHandler {
 		return problem(HttpStatus.NOT_FOUND, "Hub not found", exception.getMessage());
 	}
 
-	// A hub id that is not a UUID, or an unknown vehicle type (RIA-53). The value is not repeated
-	// in the detail.
+	// A path or query parameter that cannot be converted: a hub id that is not a UUID, an unknown
+	// vehicle type (RIA-53), or any parameter added later. The value is not repeated in the detail.
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
 	ProblemDetail invalidArgument(MethodArgumentTypeMismatchException exception) {
-		if ("type".equals(exception.getName())) {
-			var reason = "The type must be one of: " + Arrays.stream(VehicleType.values())
-				.map(Enum::name).collect(Collectors.joining(", ")) + ".";
-			var problem = problem(HttpStatus.BAD_REQUEST, "Invalid vehicle type", reason);
-			problem.setProperty("invalid-params", List.of(Map.of("name", "type", "reason", reason)));
-			return problem;
-		}
-		return problem(HttpStatus.BAD_REQUEST, "Invalid hub id", "The hub id must be a UUID.");
+		var parameter = exception.getName();
+		return switch (parameter) {
+			case "hubId" -> problem(HttpStatus.BAD_REQUEST, "Invalid hub id", "The hub id must be a UUID.");
+			case "type" -> invalid("Invalid vehicle type", parameter, "The type must be one of: "
+				+ Arrays.stream(VehicleType.values()).map(Enum::name).collect(Collectors.joining(", ")) + ".");
+			default -> invalid("Invalid parameter", parameter, "The value does not have the expected type or format.");
+		};
+	}
+
+	private static ProblemDetail invalid(String title, String parameter, String reason) {
+		var problem = problem(HttpStatus.BAD_REQUEST, title, reason);
+		problem.setProperty("invalid-params", List.of(Map.of("name", parameter, "reason", reason)));
+		return problem;
 	}
 
 	private static ProblemDetail problem(HttpStatus status, String title, String detail) {

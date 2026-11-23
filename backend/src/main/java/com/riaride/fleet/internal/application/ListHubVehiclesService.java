@@ -24,6 +24,7 @@ public class ListHubVehiclesService {
 		this.policy = policy;
 	}
 
+	// Every type: the entry point for callers that do not filter, such as booking and trip stories.
 	@Transactional(readOnly = true)
 	public List<HubVehicle> list(UUID hubId) {
 		return list(hubId, null);
