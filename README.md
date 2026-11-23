@@ -21,7 +21,7 @@
 | Maria Mané | Team Coordinator |
 | Tomás Xavier | DevOps Master |
 | Martim Gil | QA Engineer |
-| Inês Gomes | Product Owner |
+| Inês Lourenço | Product Owner |
 
 ## Project bookmarks
 
