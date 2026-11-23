@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.TestcontainersConfiguration;
+import com.riaride.fleet.ReservedVehicle;
+import com.riaride.trips.internal.domain.Reservation;
 import com.riaride.trips.internal.domain.Trip;
 import com.riaride.trips.internal.domain.TripStatus;
 import java.time.Duration;
@@ -41,6 +43,7 @@ class TripRepositoryIT {
 	private UUID passId;
 	private UUID bike201;
 	private UUID bike202;
+	private UUID hubId;
 
 	@BeforeEach
 	void guestWithAPassAndTwoBikes() {
@@ -59,7 +62,7 @@ class TripRepositoryIT {
 			insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status)
 			values (?, ?, 'STAY', 'INACTIVE', 4000, 5000, 'HELD')
 			""", passId, guestId);
-		var hubId = UUID.randomUUID();
+		hubId = UUID.randomUUID();
 		jdbc.update("""
 			insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
 			values (?, 'Marés Centro', 'HOTEL', ?::uuid, 40.6405, -8.6538, 10)
@@ -78,7 +81,13 @@ class TripRepositoryIT {
 	}
 
 	private Trip startingTrip(UUID vehicleId, String code, Instant requestedAt) {
-		return Trip.requestStart(guestId, passId, vehicleId, code, requestedAt);
+		return startingTrip(passId, vehicleId, code, requestedAt);
+	}
+
+	private Trip startingTrip(UUID pass, UUID vehicleId, String code, Instant requestedAt) {
+		var reservation = Reservation.hold(pass, new ReservedVehicle(vehicleId, code, hubId), requestedAt,
+			Duration.ofMinutes(15));
+		return Trip.requestStart(reservation, guestId, requestedAt);
 	}
 
 	@Requirement("RIA-54")
@@ -151,7 +160,7 @@ class TripRepositoryIT {
 			insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status)
 			values (?, ?, 'STAY', 'CLOSED', 4000, 5000, 'HELD')
 			""", otherPass, guestId);
-		trips.saveAndFlush(Trip.requestStart(guestId, otherPass, bike202, "EB-202", NOW.minusSeconds(29)));
+		trips.saveAndFlush(startingTrip(otherPass, bike202, "EB-202", NOW.minusSeconds(29)));
 
 		var found = trips.findByStatusAndRequestedAtLessThanEqual(TripStatus.STARTING, NOW.minus(UNLOCK_TIMEOUT));
 
