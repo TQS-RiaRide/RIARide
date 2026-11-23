@@ -78,10 +78,11 @@ class RegisterVehicleApiIT {
 		}
 	}
 
-	// The hub and vehicle tables are shared with other tests, so nothing is left behind.
+	// The hub and vehicle tables are shared with other tests, so nothing is left behind. Every
+	// vehicle this class creates is at one of its two hubs, so only those hubs' vehicles go.
 	@AfterEach
 	void removeVehiclesAndHub() {
-		jdbc.update("delete from vehicle where hub_id in (?, ?) or upper(code) like 'EB-4%'", SALINAS, PRAIA);
+		jdbc.update("delete from vehicle where hub_id in (?, ?)", SALINAS, PRAIA);
 		jdbc.update("delete from hub where id in (?, ?)", SALINAS, PRAIA);
 	}
 
@@ -307,6 +308,7 @@ class RegisterVehicleApiIT {
 	@ValueSource(strings = {
 		"{\"code\": \"EB-401\"}",
 		"{\"code\": \"EB-401\", \"type\": \"SCOOTER\"}",
+		"{\"code\": \"EB-401\", \"type\": 0}",
 		"{\"code\": \"EB-401\", \"type\": 7}" })
 	void shouldRejectMissingOrUnknownTypeNamingTheField(String json) throws Exception {
 		register("OPERATOR", SALINAS, json)
