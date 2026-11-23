@@ -1,13 +1,14 @@
 name: PR rules
 
-# Enforces the pull request rules of the QA Manual (section 4.1 and 6.2):
+# Enforces the pull request naming rules of the QA Manual (section 4.1):
+# branch name and Jira key in the title. The AI label is checked by ai-label.yml.
+
 on:
   pull_request:
-    branches: [main]
-    # edited: title changes; labeled/unlabeled: AI label changes
-    types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
+    branches: [dev, main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
 
-permissions: {} # reads only the event payload; no checkout, no token needed
+permissions: {}
 
 concurrency:
   group: pr-rules-${{ github.event.pull_request.number }}
@@ -19,36 +20,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Check branch name, title and AI label
-        # Untrusted values (title, branch) go through env, never inlined
-        # into the script, to prevent script injection.
+      - name: Check branch name and title
+        # Untrusted values go through env, never inlined into the script.
         env:
           AUTHOR: ${{ github.event.pull_request.user.login }}
           BRANCH: ${{ github.event.pull_request.head.ref }}
+          BASE: ${{ github.event.pull_request.base.ref }}
           TITLE: ${{ github.event.pull_request.title }}
-          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           if [ "$AUTHOR" = "dependabot[bot]" ]; then
             echo "Dependabot pull request: rules do not apply."
             exit 0
           fi
+          if [ "$BRANCH" = "dev" ] && [ "$BASE" = "main" ]; then
+            echo "Release pull request from dev to main: rules do not apply."
+            exit 0
+          fi
 
           errors=0
-
           if ! [[ "$BRANCH" =~ ^(feat|fix|refactor|test|docs|chore|ci|perf)/RIA-[0-9]+-[a-z0-9-]+$ ]]; then
             echo "::error::Branch '$BRANCH' must match <type>/RIA-<n>-<short-description>, e.g. feat/RIA-31-book-vehicle."
             errors=1
           fi
-
           if ! [[ "$TITLE" =~ RIA-[0-9]+ ]]; then
             echo "::error::The pull request title must contain the Jira key (RIA-<n>)."
             errors=1
           fi
-
-          ai_count=$(echo "$LABELS" | jq '[.[] | select(startswith("ai:"))] | length')
-          if [ "$ai_count" -ne 1 ]; then
-            echo "::error::The pull request must have exactly one label of ai:none, ai:assisted or ai:generated (found $ai_count)."
-            errors=1
-          fi
-
           exit $errors
