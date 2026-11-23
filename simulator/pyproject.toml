@@ -12,7 +12,11 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "--strict-markers"
+# Integration tests need Docker and run apart: python -m pytest -m integration
+addopts = "--strict-markers -m 'not integration'"
+markers = ["integration: needs Docker; runs the simulator against Mosquitto in Testcontainers"]
+# xunit1 keeps record_property, which links each test to its story for Xray (tests/conftest.py).
+junit_family = "xunit1"
 
 [tool.coverage.run]
 source = ["riaride_simulator"]
@@ -20,9 +24,8 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
-# The entry point and the paho-mqtt wiring need a broker; they are covered
-# by running the service against Mosquitto, not by unit tests.
-omit = ["*/riaride_simulator/__main__.py", "*/riaride_simulator/mqtt_publisher.py"]
+# The paho-mqtt wiring and run() are covered by the integration tests, so the complete
+# figure comes from running both suites with --cov-append (see README).
 
 [tool.ruff]
 line-length = 100
