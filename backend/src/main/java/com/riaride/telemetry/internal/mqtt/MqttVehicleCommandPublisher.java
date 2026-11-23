@@ -24,6 +24,11 @@ class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
 	private static final int QOS = 1;
 	private static final long RETRY_SECONDS = 5;
 	private static final long DISCONNECT_TIMEOUT_MS = 2_000;
+	// How long a command waits for the broker's acknowledgement before it is logged as not sent.
+	private static final long ACK_TIMEOUT_MS = 2_000;
+	// Commands awaiting acknowledgement at once. Paho's default of 10 dropped UNLOCKs when many trips
+	// start together; this is well above the load target of 50 concurrent starts.
+	private static final int MAX_IN_FLIGHT = 1_000;
 
 	private static final Logger log = LoggerFactory.getLogger(MqttVehicleCommandPublisher.class);
 
@@ -57,10 +62,14 @@ class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
 			return;
 		}
 		try {
-			current.publish(message.topic(), message.payload(json), QOS, false);
+			// MqttClient.publish would wait for the broker's acknowledgement with no limit, holding the
+			// request or the telemetry thread that sends the command; the wait is bounded instead.
+			current.getTopic(message.topic())
+				.publish(message.payload(json), QOS, false)
+				.waitForCompletion(ACK_TIMEOUT_MS);
 		} catch (MqttException failed) {
-			log.error("{} for vehicle {} not sent (reason {})", message.command(), message.vehicleCode(),
-				failed.getReasonCode());
+			log.error("{} for vehicle {} not confirmed by the broker (reason {})", message.command(),
+				message.vehicleCode(), failed.getReasonCode());
 		}
 	}
 
@@ -104,6 +113,7 @@ class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
 	private MqttConnectOptions connectOptions() {
 		var options = new MqttConnectOptions();
 		options.setAutomaticReconnect(true);
+		options.setMaxInflight(MAX_IN_FLIGHT);
 		if (properties.hasCredentials()) {
 			options.setUserName(properties.username());
 			options.setPassword(properties.password() == null ? new char[0] : properties.password().toCharArray());

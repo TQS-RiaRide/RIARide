@@ -2,6 +2,8 @@ package com.riaride.trips.internal.application;
 
 import com.riaride.telemetry.VehicleCommands;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -11,6 +13,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 class VehicleCommandSender {
 
+	private static final Logger log = LoggerFactory.getLogger(VehicleCommandSender.class);
+
 	private final VehicleCommands commands;
 
 	VehicleCommandSender(VehicleCommands commands) {
@@ -19,12 +23,23 @@ class VehicleCommandSender {
 
 	@TransactionalEventListener
 	void on(TripStartRequested requested) {
-		commands.unlock(requested.vehicleCode());
+		send("UNLOCK", requested.vehicleCode(), () -> commands.unlock(requested.vehicleCode()));
 	}
 
 	@TransactionalEventListener
 	void on(TripFailed failed) {
-		commands.lock(failed.vehicleCode(), Objects.toString(failed.hubId(), null));
+		send("LOCK", failed.vehicleCode(),
+			() -> commands.lock(failed.vehicleCode(), Objects.toString(failed.hubId(), null)));
+	}
+
+	// The trip is already stored: a command that fails here must not turn the guest's 202 into a 500,
+	// nor stop the telemetry thread. A lost UNLOCK makes the trip time out (BR13).
+	private static void send(String command, String vehicleCode, Runnable sending) {
+		try {
+			sending.run();
+		} catch (RuntimeException failed) {
+			log.error("{} for vehicle {} not sent ({})", command, vehicleCode, failed.getClass().getSimpleName());
+		}
 	}
 
 }
