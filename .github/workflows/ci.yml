@@ -30,8 +30,6 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # full history, needed by SonarQube later
 
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
@@ -59,6 +57,20 @@ jobs:
             backend/target/xray-reports/
           if-no-files-found: ignore
 
+      # JaCoCo merges the unit and integration test runs into one report
+      # (target/jacoco.exec is appended to, not replaced). SonarQube needs
+      # the report and the compiled classes it describes.
+      - name: Upload coverage for SonarQube
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-coverage
+          path: |
+            backend/target/classes/
+            backend/target/test-classes/
+            backend/target/site/jacoco/jacoco.xml
+          if-no-files-found: error
+          retention-days: 1
+
       # Checks that the Dockerfile builds; the image is not pushed here.
       - name: Build Docker image
         run: docker build -t riaride-backend:ci .
@@ -82,24 +94,127 @@ jobs:
       - run: npm ci
       - run: npm run lint --if-present
       - run: npm run format:check --if-present
-      - run: npm test --if-present
+      # Runs the tests with coverage: coverage/lcov.info is imported by SonarQube.
+      - run: npm run test:coverage
       - run: npm run build
+
+      - name: Upload coverage for SonarQube
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 1
+
+  # SonarQube Cloud analysis of the backend and frontend, with JaCoCo and
+  # Vitest LCOV coverage (QA Manual, section 3.3). It runs after the build
+  # jobs, from their compiled classes and coverage reports.
+  #
+  # The job fails when the quality gate on new code fails, and "CI result"
+  # depends on it, so a failing gate blocks the merge (QA Manual, section
+  # 3.3). Automatic Analysis must be off in the SonarQube Cloud project, or
+  # this scan fails.
+  sonar:
+    name: SonarQube analysis
+    needs: [backend, frontend]
+    # SonarQube Cloud (free plan) only analyses the main branch and pull
+    # requests; a branch analysis of any other push is rejected ("not
+    # allowed to access data from non main branches"). Pushes to dev and
+    # main only arrive through pull requests, which are analysed here.
+    # The token is not available to pull requests from forks or Dependabot.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      ((github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
+       github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # An unset secret expands to an empty string, which would fail later
+      # with an unclear authentication error.
+      - name: Check SonarQube configuration
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::SonarQube is not configured. Missing: SONAR_TOKEN (secret). See QA Manual, section 3.3."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history, for new code detection and blame
+
+      - name: Download backend classes and coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: backend-coverage
+          path: backend/target
+
+      # The Java analyzer needs the dependency jars to resolve Spring,
+      # Modulith and JPA types; without them some rules under-report.
+      # Copied from the Maven cache the backend job fills, not uploaded.
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Copy backend dependency jars
+        working-directory: backend
+        run: ./mvnw -B -q dependency:copy-dependencies -DincludeScope=test -DoutputDirectory=target/dependency
+
+      - name: Download frontend coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+
+      # Vitest writes paths relative to frontend/ (SF:src/App.tsx); SonarQube
+      # resolves them from the repository root, so they need the prefix.
+      - name: Make LCOV paths relative to the repository root
+        run: sed -i 's|^SF:src/|SF:frontend/src/|' frontend/coverage/lcov.info
+
+      # Project settings are in sonar-project.properties at the repository root.
+      # sonar.qualitygate.wait makes the scan wait for the quality gate and
+      # fail the job when it fails; it is set here, not in the properties
+      # file, so a local scan does not wait.
+      - name: SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        with:
+          args: >-
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   result:
     name: CI result
-    needs: [backend, frontend]
+    needs: [backend, frontend, sonar]
     if: always()
     runs-on: ubuntu-latest
     steps:
       # Every job must succeed: a failed, cancelled or skipped job fails
       # the whole pipeline, so a missing build can never pass this check.
+      # One exception: the sonar job is skipped on pushes to branches other
+      # than main (not supported by the SonarQube Cloud plan) and on
+      # Dependabot and fork pull requests, which have no access to
+      # SONAR_TOKEN. Its skip is accepted
+      # only when the build jobs succeeded; if a build job fails, sonar is
+      # skipped too, but that failure already fails this check.
       - name: Check job results
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          SONAR: ${{ needs.sonar.result }}
         run: |
-          echo "Job results: $RESULTS"
-          for r in $RESULTS; do
-            if [ "$r" != "success" ]; then
-              exit 1
-            fi
-          done
+          echo "backend=$BACKEND frontend=$FRONTEND sonar=$SONAR"
+          if [ "$BACKEND" != "success" ] || [ "$FRONTEND" != "success" ]; then
+            exit 1
+          fi
+          if [ "$SONAR" = "skipped" ]; then
+            echo "::notice::SonarQube analysis skipped (push to a branch other than main, or a Dependabot or fork pull request): the quality gate was not checked."
+          elif [ "$SONAR" != "success" ]; then
+            echo "::error::SonarQube analysis failed: the quality gate on new code did not pass, or the scan failed. See the SonarQube analysis job."
+            exit 1
+          fi
