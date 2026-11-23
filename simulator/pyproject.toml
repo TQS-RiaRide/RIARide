@@ -3,8 +3,9 @@ name = "riaride-simulator"
 version = "0.1.0"
 description = "Minimal fleet telemetry simulator for RiaRide: publishes e-bike telemetry and faults over MQTT and reacts to lock commands."
 requires-python = ">=3.12"
-# Runtime and development dependencies are pinned in requirements.txt and
-# requirements-dev.txt, which Dependabot updates.
+# Runtime and development dependencies are pinned in requirements.in and requirements-dev.in;
+# requirements.txt and requirements-dev.txt are generated from them with hashes (pip-compile).
+# Dependabot updates both.
 
 [tool.setuptools.packages.find]
 where = ["src"]
