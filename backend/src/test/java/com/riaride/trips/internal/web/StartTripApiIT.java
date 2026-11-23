@@ -77,9 +77,9 @@ class StartTripApiIT {
 		when(jwtDecoder.decode(TOMAS)).thenReturn(jwt(TOMAS, TOMAS_SUBJECT, "GUEST"));
 		when(jwtDecoder.decode(NO_PASS)).thenReturn(jwt(NO_PASS, NO_PASS_SUBJECT, "GUEST"));
 		when(jwtDecoder.decode(OPERATOR)).thenReturn(jwt(OPERATOR, UUID.randomUUID().toString(), "OPERATOR"));
-		givenPass(givenGuest(RITA_SUBJECT, "TRIPA234", "rita.almeida@example.test"));
-		givenPass(givenGuest(TOMAS_SUBJECT, "TRIPB234", "tomas.ferreira@example.test"));
-		givenGuest(NO_PASS_SUBJECT, "TRIPC234", "ines.costa@example.test");
+		givenPass(givenGuest(RITA_SUBJECT, "TRPA2345", "rita.almeida@example.test"));
+		givenPass(givenGuest(TOMAS_SUBJECT, "TRPB2345", "tomas.ferreira@example.test"));
+		givenGuest(NO_PASS_SUBJECT, "TRPC2345", "ines.costa@example.test");
 		var hubId = UUID.randomUUID();
 		jdbc.update("""
 			insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
