@@ -38,6 +38,14 @@ python -m pytest tests/test_simulator.py -k unlock          # a single test
 pip-audit -r requirements.txt                     # dependency vulnerabilities
 ```
 
+Dependencies are pinned in `requirements.in` (runtime) and `requirements-dev.in` (development). The `.txt` files are generated from them with every file's hash, and CI and the Docker image install them with `--only-binary :all: --require-hashes`, so no setup script runs and nothing unpinned is installed. After changing a `.in` file, regenerate both (Dependabot does this itself):
+
+```bash
+pip install pip-tools
+pip-compile --generate-hashes --allow-unsafe -o requirements.txt requirements.in
+pip-compile --generate-hashes --allow-unsafe -o requirements-dev.txt requirements-dev.in
+```
+
 Run it with a local Mosquitto broker (from the repository root):
 
 ```bash

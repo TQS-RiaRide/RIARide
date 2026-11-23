@@ -71,6 +71,7 @@ Run from `simulator/`, with Python 3.12 or later, after `pip install -r requirem
 | Both, with coverage (`coverage.xml`, read by SonarQube) | `python -m pytest --cov --cov-report=` then `python -m pytest -m integration --cov --cov-append --cov-report=term --cov-report=xml` |
 | Single test | `python -m pytest tests/test_simulator.py -k unlock` |
 | Dependency vulnerabilities | `pip-audit -r requirements.txt` |
+| Regenerate the hashed requirements after changing a `.in` file | `pip-compile --generate-hashes --allow-unsafe -o requirements.txt requirements.in` (and the same for `requirements-dev`) |
 | Run with a local Mosquitto (from the repository root) | `docker compose -f simulator/compose.yaml up --build` |
 | Docker image | `docker build -t riaride-simulator .` |
 
