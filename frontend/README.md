@@ -1,6 +1,6 @@
 # RiaRide frontend
 
-Walking skeleton of the RiaRide web UI, following [ADR 0005](../docs/architecture/adr/0005-react-frontend.md): React, Vite and TypeScript, with react-i18next for Portuguese and English (texts in `src/locales/*.json`) and Vitest for unit tests. It shows whether the backend is reachable and switches language.
+Walking skeleton of the RiaRide web UI, following [ADR 0005](../docs/architecture/adr/0005-react-frontend.md): React, Vite and TypeScript, with react-i18next for Portuguese and English (texts in `src/locales/<language>/<namespace>.json`; see [`src/i18n/README.md`](src/i18n/README.md)) and Vitest for unit tests. It shows whether the backend is reachable and switches language.
 
 ## Commands
 
