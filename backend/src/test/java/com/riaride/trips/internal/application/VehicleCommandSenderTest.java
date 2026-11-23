@@ -1,5 +1,7 @@
 package com.riaride.trips.internal.application;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -38,6 +40,24 @@ class VehicleCommandSenderTest {
 		sender.on(new TripFailed("EB-201", null));
 
 		verify(commands).lock("EB-201", null);
+	}
+
+	// The command is sent after the trip is stored: a failure there must not turn the guest's 202 into
+	// a 500 for a trip that exists. The trip then times out (BR13).
+	@Requirement("RIA-54")
+	@Test
+	void shouldNotFailTheCallerWhenTheUnlockCannotBeSent() {
+		doThrow(new IllegalStateException("broker gone")).when(commands).unlock("EB-201");
+
+		assertThatCode(() -> sender.on(new TripStartRequested("EB-201"))).doesNotThrowAnyException();
+	}
+
+	@Requirement("RIA-54")
+	@Test
+	void shouldNotFailTheCallerWhenTheLockCannotBeSent() {
+		doThrow(new IllegalStateException("broker gone")).when(commands).lock("EB-201", null);
+
+		assertThatCode(() -> sender.on(new TripFailed("EB-201", null))).doesNotThrowAnyException();
 	}
 
 }

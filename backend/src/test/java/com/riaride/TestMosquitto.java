@@ -35,6 +35,17 @@ public final class TestMosquitto {
 		return "tcp://" + CONTAINER.getHost() + ":" + CONTAINER.getMappedPort(MQTT_PORT);
 	}
 
+	// Freezes the broker (docker pause): connections stay open but nothing is answered, as with an
+	// overloaded broker or a half-open connection. Always resume it, since the broker is shared.
+	public static void pause() {
+		url();
+		CONTAINER.getDockerClient().pauseContainerCmd(CONTAINER.getContainerId()).exec();
+	}
+
+	public static void resume() {
+		CONTAINER.getDockerClient().unpauseContainerCmd(CONTAINER.getContainerId()).exec();
+	}
+
 	// Turns on the platform's MQTT adapter against this broker.
 	public static void registerProperties(DynamicPropertyRegistry registry) {
 		registry.add("riaride.telemetry.mqtt.enabled", () -> "true");

@@ -1,6 +1,7 @@
 package com.riaride.telemetry.internal.mqtt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.awaitility.Awaitility.await;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
@@ -13,6 +14,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -118,6 +122,45 @@ class MqttVehicleCommandsIT {
 		await().atMost(MQTT_DELIVERY).until(() -> !unlockedEvents.of("EB-204").isEmpty());
 		assertThat(unlockedEvents.of("EB-204")).singleElement()
 			.satisfies(event -> assertThat(event.emittedAt()).isEqualTo(Instant.parse("2026-11-30T10:00:08Z")));
+	}
+
+	// A command is sent in the request (after commit) or on the telemetry thread: a broker that
+	// stops answering must not hold either for longer than a few seconds. The command is dropped and
+	// the trip times out.
+	@Requirement("RIA-54")
+	@Test
+	void shouldReturnWithinSecondsWhenTheBrokerStopsAnswering() {
+		TestMosquitto.pause();
+		try {
+			assertTimeoutPreemptively(Duration.ofSeconds(5), () -> vehicleCommands.unlock("EB-205"));
+		} finally {
+			TestMosquitto.resume();
+		}
+	}
+
+	// k6 starts trips with 50 virtual users: every UNLOCK sent at the same moment must reach the
+	// broker, none dropped because too many wait for their acknowledgement.
+	@Requirement("RIA-54")
+	@Test
+	void shouldPublishEveryUnlockWhenManyTripsStartAtOnce() throws Exception {
+		var trips = 50;
+		try (var recorder = TestMosquitto.recordCommands(); var threads = Executors.newFixedThreadPool(trips)) {
+			var go = new CountDownLatch(1);
+			var sent = IntStream.range(0, trips)
+				.mapToObj(i -> threads.submit(() -> {
+					go.await();
+					vehicleCommands.unlock("EB-5" + String.format("%02d", i));
+					return null;
+				}))
+				.toList();
+			go.countDown();
+			for (var send : sent) {
+				send.get();
+			}
+
+			await().atMost(MQTT_DELIVERY).until(() -> recorder.commands().stream()
+				.filter(command -> command.vehicleCode().startsWith("EB-5")).count() == trips);
+		}
 	}
 
 }
