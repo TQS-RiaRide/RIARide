@@ -4,15 +4,14 @@ package com.riaride.fleet.internal.domain;
 // explains the rule and never repeats the rejected value (QA Manual 3.4).
 public class InvalidHubException extends RuntimeException {
 
-	private final String field;
+  private final String field;
 
-	public InvalidHubException(String field, String message) {
-		super(message);
-		this.field = field;
-	}
+  public InvalidHubException(String field, String message) {
+    super(message);
+    this.field = field;
+  }
 
-	public String getField() {
-		return field;
-	}
-
+  public String getField() {
+    return field;
+  }
 }

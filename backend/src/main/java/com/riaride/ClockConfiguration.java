@@ -10,11 +10,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 class ClockConfiguration {
 
-	static final ZoneId VILA_RIA = ZoneId.of("Europe/Lisbon");
+  static final ZoneId VILA_RIA = ZoneId.of("Europe/Lisbon");
 
-	@Bean
-	Clock clock() {
-		return Clock.system(VILA_RIA);
-	}
-
+  @Bean
+  Clock clock() {
+    return Clock.system(VILA_RIA);
+  }
 }

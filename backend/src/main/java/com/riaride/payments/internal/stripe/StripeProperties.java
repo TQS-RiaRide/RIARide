@@ -12,17 +12,21 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("riaride.payments.stripe")
 @Validated
 record StripeProperties(
-	@NotBlank String secretKey,
-	@DefaultValue("https://api.stripe.com") String apiBase,
-	@DefaultValue("5s") Duration connectTimeout,
-	@DefaultValue("20s") Duration readTimeout) {
+    @NotBlank String secretKey,
+    @DefaultValue("https://api.stripe.com") String apiBase,
+    @DefaultValue("5s") Duration connectTimeout,
+    @DefaultValue("20s") Duration readTimeout) {
 
-	static final String TEST_MODE_PREFIX = "sk_test_";
+  static final String TEST_MODE_PREFIX = "sk_test_";
 
-	@Override
-	public String toString() {
-		return "StripeProperties[secretKey=********, apiBase=" + apiBase + ", connectTimeout=" + connectTimeout
-			+ ", readTimeout=" + readTimeout + "]";
-	}
-
+  @Override
+  public String toString() {
+    return "StripeProperties[secretKey=********, apiBase="
+        + apiBase
+        + ", connectTimeout="
+        + connectTimeout
+        + ", readTimeout="
+        + readTimeout
+        + "]";
+  }
 }

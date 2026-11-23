@@ -14,43 +14,48 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RegisterStayService {
 
-	static final int MAX_CODE_ATTEMPTS = 5;
+  static final int MAX_CODE_ATTEMPTS = 5;
 
-	private final HotelRepository hotels;
-	private final StayRepository stays;
-	private final StayCodeGenerator codes;
-	private final Clock clock;
+  private final HotelRepository hotels;
+  private final StayRepository stays;
+  private final StayCodeGenerator codes;
+  private final Clock clock;
 
-	public RegisterStayService(HotelRepository hotels, StayRepository stays, StayCodeGenerator codes,
-		Clock clock) {
-		this.hotels = hotels;
-		this.stays = stays;
-		this.codes = codes;
-		this.clock = clock;
-	}
+  public RegisterStayService(
+      HotelRepository hotels, StayRepository stays, StayCodeGenerator codes, Clock clock) {
+    this.hotels = hotels;
+    this.stays = stays;
+    this.codes = codes;
+    this.clock = clock;
+  }
 
-	@Transactional
-	public Stay register(RegisterStayCommand command, StayRegistrar registrar) {
-		if (!registrar.canRegisterAt(command.hotelId())) {
-			throw new HotelAccessDeniedException();
-		}
-		if (!hotels.existsById(command.hotelId())) {
-			throw new HotelNotFoundException(command.hotelId());
-		}
-		var stay = Stay.register(command.hotelId(), command.guestName(), freeCode(), command.checkIn(),
-			command.checkOut(), LocalDate.now(clock));
-		return stays.save(stay);
-	}
+  @Transactional
+  public Stay register(RegisterStayCommand command, StayRegistrar registrar) {
+    if (!registrar.canRegisterAt(command.hotelId())) {
+      throw new HotelAccessDeniedException();
+    }
+    if (!hotels.existsById(command.hotelId())) {
+      throw new HotelNotFoundException(command.hotelId());
+    }
+    var stay =
+        Stay.register(
+            command.hotelId(),
+            command.guestName(),
+            freeCode(),
+            command.checkIn(),
+            command.checkOut(),
+            LocalDate.now(clock));
+    return stays.save(stay);
+  }
 
-	// The unique constraint on stay_code is the final guard against a concurrent duplicate.
-	private StayCode freeCode() {
-		for (int attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
-			var code = codes.next();
-			if (!stays.existsByStayCode(code)) {
-				return code;
-			}
-		}
-		throw new StayCodeUnavailableException(MAX_CODE_ATTEMPTS);
-	}
-
+  // The unique constraint on stay_code is the final guard against a concurrent duplicate.
+  private StayCode freeCode() {
+    for (int attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+      var code = codes.next();
+      if (!stays.existsByStayCode(code)) {
+        return code;
+      }
+    }
+    throw new StayCodeUnavailableException(MAX_CODE_ATTEMPTS);
+  }
 }

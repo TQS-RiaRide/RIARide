@@ -25,54 +25,57 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RegisterHubServiceTest {
 
-	private static final String TOURIST_SPOT_REASON = "must not belong to a hotel";
+  private static final String TOURIST_SPOT_REASON = "must not belong to a hotel";
 
-	@Mock
-	private HubRepository hubs;
+  @Mock private HubRepository hubs;
 
-	@Mock
-	private HotelDirectory hotels;
+  @Mock private HotelDirectory hotels;
 
-	private RegisterHubService service;
+  private RegisterHubService service;
 
-	@BeforeEach
-	void setUp() {
-		service = new RegisterHubService(hubs, hotels);
-	}
+  @BeforeEach
+  void setUp() {
+    service = new RegisterHubService(hubs, hotels);
+  }
 
-	private static RegisterHubCommand touristSpotHubAtHotel(String hotelName) {
-		return new RegisterHubCommand("Miradouro das Salinas", HubKind.TOURIST_SPOT, hotelName, 40.6425, -8.7479, 6);
-	}
+  private static RegisterHubCommand touristSpotHubAtHotel(String hotelName) {
+    return new RegisterHubCommand(
+        "Miradouro das Salinas", HubKind.TOURIST_SPOT, hotelName, 40.6425, -8.7479, 6);
+  }
 
-	@Requirement("RIA-56")
-	@ParameterizedTest
-	@ValueSource(strings = { "Hotel Inexistente", "Marés Praia" })
-	void shouldRejectTouristSpotHubWithHotelBeforeLookingUpTheHotel(String hotelName) {
-		assertThatThrownBy(() -> service.register(touristSpotHubAtHotel(hotelName)))
-			.isInstanceOfSatisfying(InvalidHubException.class, invalid -> {
-				assertThat(invalid.getField()).isEqualTo("hotel");
-				assertThat(invalid.getMessage())
-					.contains(TOURIST_SPOT_REASON)
-					.doesNotContain("No hotel of the group has this name");
-			});
+  @Requirement("RIA-56")
+  @ParameterizedTest
+  @ValueSource(strings = {"Hotel Inexistente", "Marés Praia"})
+  void shouldRejectTouristSpotHubWithHotelBeforeLookingUpTheHotel(String hotelName) {
+    assertThatThrownBy(() -> service.register(touristSpotHubAtHotel(hotelName)))
+        .isInstanceOfSatisfying(
+            InvalidHubException.class,
+            invalid -> {
+              assertThat(invalid.getField()).isEqualTo("hotel");
+              assertThat(invalid.getMessage())
+                  .contains(TOURIST_SPOT_REASON)
+                  .doesNotContain("No hotel of the group has this name");
+            });
 
-		verifyNoInteractions(hotels, hubs);
-	}
+    verifyNoInteractions(hotels, hubs);
+  }
 
-	@Requirement("RIA-56")
-	@Test
-	void shouldRejectHotelHubWhoseHotelIsNotInTheGroup() {
-		when(hotels.findByName("Hotel Inexistente")).thenReturn(Optional.empty());
-		var command = new RegisterHubCommand("Marés Praia – Beach Front", HubKind.HOTEL, "Hotel Inexistente", 40.6405,
-			-8.7538, 10);
+  @Requirement("RIA-56")
+  @Test
+  void shouldRejectHotelHubWhoseHotelIsNotInTheGroup() {
+    when(hotels.findByName("Hotel Inexistente")).thenReturn(Optional.empty());
+    var command =
+        new RegisterHubCommand(
+            "Marés Praia – Beach Front", HubKind.HOTEL, "Hotel Inexistente", 40.6405, -8.7538, 10);
 
-		assertThatThrownBy(() -> service.register(command))
-			.isInstanceOfSatisfying(InvalidHubException.class, invalid -> {
-				assertThat(invalid.getField()).isEqualTo("hotel");
-				assertThat(invalid.getMessage()).contains("No hotel of the group has this name");
-			});
+    assertThatThrownBy(() -> service.register(command))
+        .isInstanceOfSatisfying(
+            InvalidHubException.class,
+            invalid -> {
+              assertThat(invalid.getField()).isEqualTo("hotel");
+              assertThat(invalid.getMessage()).contains("No hotel of the group has this name");
+            });
 
-		verifyNoInteractions(hubs);
-	}
-
+    verifyNoInteractions(hubs);
+  }
 }

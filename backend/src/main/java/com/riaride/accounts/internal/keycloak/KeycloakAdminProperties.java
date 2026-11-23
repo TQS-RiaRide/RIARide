@@ -7,10 +7,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("riaride.keycloak.admin")
 record KeycloakAdminProperties(String baseUrl, String realm, String clientId, String clientSecret) {
 
-	@Override
-	public String toString() {
-		return "KeycloakAdminProperties[baseUrl=" + baseUrl + ", realm=" + realm + ", clientId=" + clientId
-			+ ", clientSecret=********]";
-	}
-
+  @Override
+  public String toString() {
+    return "KeycloakAdminProperties[baseUrl="
+        + baseUrl
+        + ", realm="
+        + realm
+        + ", clientId="
+        + clientId
+        + ", clientSecret=********]";
+  }
 }

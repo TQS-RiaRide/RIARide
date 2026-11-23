@@ -27,38 +27,37 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @Import(FixedClockConfiguration.class)
 public class CucumberSpringConfiguration {
 
-	static final String REALM = TestKeycloak.REALM;
+  static final String REALM = TestKeycloak.REALM;
 
-	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
+  static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
 
-	// Shared with the integration tests, so Keycloak starts once per build.
-	static final KeycloakContainer KEYCLOAK = TestKeycloak.container();
+  // Shared with the integration tests, so Keycloak starts once per build.
+  static final KeycloakContainer KEYCLOAK = TestKeycloak.container();
 
-	// The Stripe API, stubbed for the payment scenarios (ADR 0008): CI needs no network or key.
-	static final WireMockServer STRIPE = new WireMockServer(WireMockConfiguration.options().dynamicPort());
+  // The Stripe API, stubbed for the payment scenarios (ADR 0008): CI needs no network or key.
+  static final WireMockServer STRIPE =
+      new WireMockServer(WireMockConfiguration.options().dynamicPort());
 
-	static {
-		POSTGRES.start();
-		STRIPE.start();
-	}
+  static {
+    POSTGRES.start();
+    STRIPE.start();
+  }
 
-	@DynamicPropertySource
-	static void containerProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-		registry.add("spring.datasource.username", POSTGRES::getUsername);
-		registry.add("spring.datasource.password", POSTGRES::getPassword);
-		// Token validation and the Admin API client used by guest sign-up (RIA-51).
-		TestKeycloak.registerProperties(registry);
-		registry.add("riaride.payments.stripe.api-base", STRIPE::baseUrl);
-	}
+  @DynamicPropertySource
+  static void containerProperties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+    registry.add("spring.datasource.username", POSTGRES::getUsername);
+    registry.add("spring.datasource.password", POSTGRES::getPassword);
+    // Token validation and the Admin API client used by guest sign-up (RIA-51).
+    TestKeycloak.registerProperties(registry);
+    registry.add("riaride.payments.stripe.api-base", STRIPE::baseUrl);
+  }
 
-	@LocalServerPort
-	int port;
+  @LocalServerPort int port;
 
-	@Before
-	public void configureRestAssured() {
-		RestAssured.port = port;
-		RestAssured.basePath = "";
-	}
-
+  @Before
+  public void configureRestAssured() {
+    RestAssured.port = port;
+    RestAssured.basePath = "";
+  }
 }
