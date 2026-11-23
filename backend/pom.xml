@@ -20,9 +20,12 @@
 		<java.version>21</java.version>
 		<spring-modulith.version>2.1.2</spring-modulith.version>
 		<jacoco.version>0.8.16</jacoco.version>
+		<cucumber.version>8.1.0</cucumber.version>
+		<rest-assured.version>6.3.0</rest-assured.version>
 		<stripe-java.version>34.2.0</stripe-java.version>
 		<wiremock.version>3.13.2</wiremock.version>
 		<xray-junit-extensions.version>1.1.0</xray-junit-extensions.version>
+		<testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
 		<!-- Set to true to run only integration tests: ./mvnw verify -DskipUnitTests=true -->
 		<skipUnitTests>false</skipUnitTests>
 	</properties>
@@ -43,6 +46,28 @@
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
 			<artifactId>spring-modulith-starter-core</artifactId>
+		</dependency>
+		<!-- OAuth2 resource server: validates Keycloak JWTs against the realm's JWKS. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
 		</dependency>
 
 		<!-- Stripe test mode behind the PaymentGateway port (ADR 0008). -->
@@ -72,11 +97,66 @@
 			<artifactId>spring-modulith-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Acceptance tests (BDD): Cucumber JVM with REST Assured, run by Failsafe (CucumberIT). -->
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-java</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-spring</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-junit-platform-engine</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-suite</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.rest-assured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>${rest-assured.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<!-- Links JUnit tests to Jira stories in Xray: @Requirement("RIA-n") (QA Manual 2.3). -->
 		<dependency>
 			<groupId>app.getxray</groupId>
 			<artifactId>xray-junit-extensions</artifactId>
 			<version>${xray-junit-extensions.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Keycloak in Testcontainers for the acceptance tests: real tokens from the realm in infra/keycloak. -->
+		<dependency>
+			<groupId>com.github.dasniko</groupId>
+			<artifactId>testcontainers-keycloak</artifactId>
+			<version>${testcontainers-keycloak.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<!-- Stubs of the Stripe API for the payment adapter's integration tests (ADR 0008). -->
@@ -97,10 +177,30 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<dependency>
+				<groupId>io.cucumber</groupId>
+				<artifactId>cucumber-bom</artifactId>
+				<version>${cucumber.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
 	<build>
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<!-- The Keycloak realm used in the Compose stack, imported as-is by the acceptance tests. -->
+			<testResource>
+				<directory>${project.basedir}/../infra/keycloak</directory>
+				<includes>
+					<include>riaride-realm.json</include>
+				</includes>
+				<targetPath>keycloak</targetPath>
+			</testResource>
+		</testResources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

@@ -55,6 +55,8 @@ jobs:
           path: |
             backend/target/surefire-reports/
             backend/target/failsafe-reports/
+            backend/target/cucumber-reports/
+            backend/target/xray-reports/
           if-no-files-found: ignore
 
       # Checks that the Dockerfile builds; the image is not pushed here.

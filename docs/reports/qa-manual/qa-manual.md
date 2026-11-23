@@ -50,7 +50,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | AI3 | AI-assisted code review | E | Partial | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Its first runs posted no review; evidence is a PR with AI comments and a filled findings table |
 | AI4 | Specification-driven generation (≥ 2 stories) | E | Decided (I2) | Section 6.5 |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.7; data collected from every PR from now on |
-| AI6 | Coordination of several agents | V | Decided (I2) | Section 6.3; the agents are defined with the first generated story (AI4) and use the Jira and SonarQube integrations of section 6.4 |
+| AI6 | Coordination of several agents | V | Decided (I2) | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), and the `Agent boundaries` CI check enforces their roles |
 | AI7 | Agents in the CI pipeline | V | Decided (I3) | Section 6.6: PR summary and failure triage. The AI review job counts as AI3, not here |
 
 ## 2. Project management
@@ -81,7 +81,7 @@ Every member also develops stories.
 ### 2.3 Requirements coverage tracking
 
 - **Source of truth:** Gherkin scenarios live in the repository, never edited in Jira.
-- **Linking:** each scenario is tagged with its story key (`@RIA-31`), so Xray links the Test it creates to that story. Xray creates one Test per scenario, so a Test key belongs to a single scenario. Each story planned for an iteration has one Test created in Jira beforehand (for I2, RIA-147 to RIA-156): only the story's main scenario, the first in its feature file, carries that key (`@RIA-50 @TEST_RIA-147`), so the import updates that Test instead of creating a duplicate. The story's other scenarios carry only the story key, and the first import creates their Tests, linked to the story. JUnit tests that verify a story declare it with `@Requirement("RIA-31")` from the Xray JUnit extensions.
+- **Linking:** each scenario is tagged with its story key (`@RIA-31`), so Xray links the Test it creates to that story. Xray creates one Test per scenario, so a Test key belongs to a single scenario. Each story planned for an iteration has one Test created in Jira beforehand (for I2, RIA-147 to RIA-156): only the story's main scenario, the first in its feature file, carries that key (`@RIA-50 @TEST_RIA-147`), so the import updates that Test instead of creating a duplicate. The story's other scenarios carry only the story key, and the first import creates their Tests, linked to the story. JUnit tests that verify a story declare it with `@Requirement("RIA-31")` from the Xray JUnit extensions, on each test method (the extensions ignore it on the class). CI sends every JUnit result to Xray through the extensions' report, so tests without a story are imported too, unlinked.
 - **Import:** after every CI run on `main`, the `Xray import` workflow sends the JUnit XML and Cucumber JSON reports to the Xray Cloud API. Xray imports each format through its own endpoint, so a run creates up to two Test Executions: one for JUnit and one for Cucumber. The workflow reads the organization secrets `XRAY_CLIENT_ID` and `XRAY_CLIENT_SECRET` and the organization variable `XRAY_TEST_PLAN_KEY`, and fails with a clear message if any of them is empty.
 - **Plans:** one Test Plan per iteration groups the Test Executions of that iteration. At the start of each iteration, the QA Engineer creates the new Test Plan and updates `XRAY_TEST_PLAN_KEY` to its key; until then, executions go to the previous iteration's plan.
 - **Coverage:** the Xray requirement coverage report is checked at each checkpoint. A story without linked tests is not *Done*; any exception is explained in the story.
@@ -120,7 +120,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 
 - Arrange, act, assert, with names that state the behaviour: `shouldRejectBookingWhenBatteryBelow20Percent`.
 - One behaviour per test; no logic or sleeps in tests. Use deterministic waits and fixed clocks for time rules.
-- Gherkin scenarios are tagged with the story key and the business rule they cover, for example `@RIA-31 @BR1`.
+- Gherkin scenarios are tagged with the story key and the business rule they cover, for example `@RIA-31 @BR1`. The rule IDs (BR1 to BR13) are in the business rules table of [`CLAUDE.md`](../../../CLAUDE.md).
 
 ### 3.2 Code review practice
 
@@ -420,11 +420,13 @@ The QA Engineer maintains them. A pull request that changes a practice in this m
 
 | Step | Agent | Input | Output | Human checkpoint |
 |---|---|---|---|---|
-| 1 | Test author | Approved Gherkin scenarios or OpenSpec proposal, read from the Jira story | Step definitions and unit tests that fail | Developer checks that the tests express the criteria, then commits them |
+| 1 | Test author | Approved Gherkin scenarios or OpenSpec proposal, read from the Jira story | Step definitions, unit tests and integration tests that fail | Developer checks that the tests express the criteria, then commits them |
 | 2 | Implementer | Failing tests; SonarQube issues and coverage gaps on the branch | Implementation that makes them pass, without changing the tests | Developer reviews the diff and runs CI |
 | 3 | Reviewer | Pull request diff, quality gate status | Review findings | Developer records findings; another member approves |
 
 The implementer must not edit the tests written in step 1; any needed change goes back to step 1.
+
+**How the roles are enforced.** The developer commits each agent step with a trailer naming the agent (`Agent: test-author` or `Agent: implementer`). On a pull request labelled `ai:generated`, the [`Agent boundaries`](../../../.github/workflows/agent-boundaries.yml) check fails when an implementer commit touches `backend/src/test/` or a test-author commit touches `backend/src/main/`. The reviewer agent's tools allow only read-only commands, so it cannot comment, approve, merge or push. The agents need the claude.ai Atlassian connector for Jira; without it, the test author stops instead of guessing the criteria.
 
 ### 6.4 Agent integration with Jira and SonarQube
 
@@ -439,7 +441,7 @@ How they fit the workflow:
 
 - **Before coding**, the agent reads the story from Jira instead of a copy pasted into the prompt, so the tests follow the acceptance criteria approved by the Product Owner. Gherkin scenarios stay in the repository (section 2.3); the agent never edits them in Jira.
 - **While coding**, when the quality gate fails on a pull request, the agent lists the new issues and uncovered lines and proposes fixes. The fix is a commit like any other, and CI runs the gate again: the agent cannot make the gate pass by changing it.
-- **At review**, the reviewer agent (section 6.3) reads the gate status with the diff, and the human reviewer still reviews every hotspot (review checklist, section 3.2).
+- **At review**, the reviewer agent (section 6.3) reads the gate status through the pull request's checks (`gh pr checks`), with the diff, and the human reviewer still reviews every hotspot (review checklist, section 3.2).
 - **Data:** stories and code are synthetic and fictional (section 3.1), so sending them to the AI service exposes no personal data. Tokens are never pasted into prompts or committed.
 
 *Evidence (to be linked in I2): a Jira story with an agent comment that links its pull request, and a pull request where an agent fixed a SonarQube issue that failed the gate.*
