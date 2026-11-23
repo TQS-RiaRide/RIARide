@@ -1,6 +1,7 @@
 package com.riaride.trips.internal.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.FixedClockConfiguration;
@@ -181,6 +182,15 @@ class TripTest {
 	@Test
 	void shouldCountStartingAndInUseAsActive() {
 		assertThat(TripStatus.ACTIVE).containsExactlyInAnyOrder(TripStatus.STARTING, TripStatus.IN_USE);
+	}
+
+	// A public set that any caller could change would change BR6 for the whole application. remove
+	// of a status that is not in the set changes nothing, so the check cannot corrupt the set.
+	@Requirement("RIA-54")
+	@Test
+	void shouldNotLetCallersChangeTheActiveStatuses() {
+		assertThatThrownBy(() -> TripStatus.ACTIVE.remove(TripStatus.FAILED))
+			.isInstanceOf(UnsupportedOperationException.class);
 	}
 
 }
