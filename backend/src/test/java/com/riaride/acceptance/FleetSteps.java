@@ -5,17 +5,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.riaride.TestMosquitto;
+import io.cucumber.datatable.DataTable;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// Steps for the fleet's vehicles and their telemetry (RIA-59), reusable by RIA-53 and RIA-58.
+// Steps for the fleet's vehicles and their telemetry (RIA-59, RIA-53), reusable by RIA-58.
 public class FleetSteps {
 
 	// The telemetry lag bound of RIA-58.
@@ -40,15 +43,34 @@ public class FleetSteps {
 	// A hub at the hotel of the same name, with one available e-bike docked there.
 	@Given("a hub {string} with an available bike {string} with {int} % battery")
 	public void aHubWithAnAvailableBike(String hubName, String code, int batteryPct) {
+		insertBike(code, "AVAILABLE", batteryPct, aHotelHub(hubName));
+	}
+
+	// A hub at the hotel of the same name, with the e-bikes of the table docked there. Columns:
+	// code, status ("available", "in use", ...) and battery (%).
+	@Given("a hub {string} with these bikes:")
+	public void aHubWithTheseBikes(String hubName, DataTable bikes) {
+		var hubId = aHotelHub(hubName);
+		for (var bike : bikes.asMaps()) {
+			var status = bike.get("status").trim().toUpperCase(Locale.ROOT).replace(' ', '_');
+			insertBike(bike.get("code"), status, Integer.valueOf(bike.get("battery")), hubId);
+		}
+	}
+
+	private UUID aHotelHub(String hubName) {
 		var hubId = UUID.randomUUID();
 		jdbc.update("""
 			insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
 			select ?, name, 'HOTEL', id, 40.6405, -8.6538, 10 from hotel where name = ?
 			""", hubId, hubName);
+		return hubId;
+	}
+
+	private void insertBike(String code, String status, int batteryPct, UUID hubId) {
 		jdbc.update("""
 			insert into vehicle (id, code, type, status, hub_id, battery_pct)
-			values (?, ?, 'E_BIKE', 'AVAILABLE', ?, ?)
-			""", UUID.randomUUID(), code, hubId, batteryPct);
+			values (?, ?, 'E_BIKE', ?, ?, ?)
+			""", UUID.randomUUID(), code, status, hubId, batteryPct);
 	}
 
 	// Published over MQTT as the simulator does; the step returns once the platform has stored the
@@ -68,6 +90,17 @@ public class FleetSteps {
 			.auth().oauth2(context.accessToken())
 			.when()
 			.get("/api/v1/hubs/{hubId}/vehicles", hubId));
+	}
+
+	// The codes of the bookable bikes in the last listing, in the order listed, for example
+	// "EB-101, EB-102".
+	@Then("the bookable bikes are {string}")
+	public void theBookableBikesAre(String codes) {
+		var response = context.lastResponse();
+		assertThat(response.statusCode()).isEqualTo(200);
+		var expected = Arrays.stream(codes.split(",")).map(String::trim).toList();
+		assertThat(response.jsonPath().getList("findAll { it.bookable }.code", String.class))
+			.containsExactlyElementsOf(expected);
 	}
 
 	@Then("bike {string} is not bookable")

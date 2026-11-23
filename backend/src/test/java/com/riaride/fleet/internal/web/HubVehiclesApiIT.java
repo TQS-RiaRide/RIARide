@@ -144,7 +144,35 @@ class HubVehiclesApiIT {
 		mvc.perform(get("/api/v1/hubs/{hubId}/vehicles", "not-a-uuid")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
 			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+			.andExpect(jsonPath("$.title").value("Invalid hub id"));
+	}
+
+	// RIA-53: find the vehicles at a hub by type.
+
+	@Requirement("RIA-53")
+	@Test
+	void shouldListTheVehiclesOfTheRequestedType() throws Exception {
+		mvc.perform(get("/api/v1/hubs/{hubId}/vehicles", HUB).param("type", "E_BIKE")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[*].code").value(org.hamcrest.Matchers.contains("EB-601", "EB-602", "EB-603", "EB-604")))
+			.andExpect(jsonPath("$[*].type").value(org.hamcrest.Matchers.everyItem(
+				org.hamcrest.Matchers.is("E_BIKE"))));
+	}
+
+	@Requirement("RIA-53")
+	@ParameterizedTest
+	@ValueSource(strings = { "SCOOTER", "e_bike", "0" })
+	void shouldAnswer400ProblemNamingTheTypeForAnUnknownType(String type) throws Exception {
+		mvc.perform(get("/api/v1/hubs/{hubId}/vehicles", HUB).param("type", type)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+			.andExpect(jsonPath("$.title").value("Invalid vehicle type"))
+			.andExpect(jsonPath("$['invalid-params'][0].name").value("type"))
+			.andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.not(
+				org.hamcrest.Matchers.containsString(type))));
 	}
 
 }
