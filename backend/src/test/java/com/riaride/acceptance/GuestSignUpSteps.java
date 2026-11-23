@@ -35,7 +35,7 @@ public class GuestSignUpSteps {
 		this.clock = clock;
 	}
 
-	// Before the stay steps' cleanup (default order 10000): guests reference stays.
+	// Before the stay steps' cleanup (order 10000): guests reference stays.
 	@Before(order = 9000)
 	public void deleteGuests() {
 		for (var email : jdbc.queryForList("select email from guest", String.class)) {

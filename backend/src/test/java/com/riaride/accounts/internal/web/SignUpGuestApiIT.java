@@ -20,11 +20,14 @@ import com.riaride.TestcontainersConfiguration;
 import com.riaride.accounts.internal.domain.Guest;
 import com.riaride.accounts.internal.persistence.GuestRepository;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
+import org.keycloak.admin.client.CreatedResponseUtil;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -290,6 +293,32 @@ class SignUpGuestApiIT {
 		assertThat(TestKeycloak.usersWithEmail(EMAIL)).singleElement()
 			.satisfies(user -> assertThat(user.getId()).isEqualTo(keycloakId));
 		assertThat(TestKeycloak.canLogIn(EMAIL, PASSWORD)).isTrue();
+	}
+
+	// The orphan age compares Keycloak's own creation time with the real time, not the business
+	// clock: here that clock is fixed at 30 November 2026, days after the user was created, and a
+	// user created moments ago must still count as a sign-up in progress (review of #28).
+	@Requirement("RIA-51")
+	@Test
+	void shouldNotTakeOverAGuestUserCreatedMomentsAgoEvenWhenTheBusinessClockIsLater() throws Exception {
+		givenActiveStay();
+		var user = new UserRepresentation();
+		user.setUsername(EMAIL);
+		user.setEmail(EMAIL);
+		user.setFirstName("Rita");
+		user.setLastName("Almeida");
+		user.setEnabled(true);
+		String id;
+		try (var response = TestKeycloak.realm().users().create(user)) {
+			id = CreatedResponseUtil.getCreatedId(response);
+		}
+		var guestRole = TestKeycloak.realm().roles().get("GUEST").toRepresentation();
+		TestKeycloak.realm().users().get(id).roles().realmLevel().add(List.of(guestRole));
+
+		signUp(body(EMAIL, PASSWORD, ACTIVE_CODE)).andExpect(status().isConflict());
+
+		assertThat(guestRows()).isZero();
+		assertThat(TestKeycloak.canLogIn(EMAIL, PASSWORD)).isFalse();
 	}
 
 	@Requirement("RIA-51")
