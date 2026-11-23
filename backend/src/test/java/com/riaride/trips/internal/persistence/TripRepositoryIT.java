@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,6 +44,9 @@ class TripRepositoryIT {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+
+	@Autowired
+	private TestEntityManager entityManager;
 
 	private UUID guestId;
 	private UUID passId;
@@ -104,6 +108,8 @@ class TripRepositoryIT {
 	void shouldStoreAStartingTripWithItsReservation() {
 		var reservation = reservation(passId, bike201, "EB-201", NOW);
 		var trip = startingTrip(reservation, NOW);
+		// Read back from the database, not from the persistence context.
+		entityManager.clear();
 
 		assertThat(trips.findById(trip.getId()))
 			.get()

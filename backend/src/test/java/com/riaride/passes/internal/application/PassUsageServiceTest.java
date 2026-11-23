@@ -94,6 +94,18 @@ class PassUsageServiceTest {
 		assertThat(service.findUsablePass(GUEST)).isEmpty();
 	}
 
+	// A pass whose end is now has ended.
+	@Requirement("RIA-54")
+	@Test
+	void shouldNotFindActivePassThatExpiresNow() {
+		var pass = paidPass();
+		pass.activate(NOW.minusSeconds(3600));
+		ReflectionTestUtils.setField(pass, "expiresAt", NOW);
+		givenOpenPass(pass);
+
+		assertThat(service.findUsablePass(GUEST)).isEmpty();
+	}
+
 	@Requirement("RIA-54")
 	@Test
 	void shouldFindActivePassThatHasNotExpired() {

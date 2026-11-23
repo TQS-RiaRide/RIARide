@@ -29,6 +29,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -111,6 +113,20 @@ class UnlockConfirmationListenerTest {
 		verify(vehicles, never()).startRide(any());
 		verifyNoInteractions(passes);
 		assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+	}
+
+	// The timeout counts when the reading is handled: emitted at 29 s but handled at 30 s or later
+	// (exactly 30 s is already late), the trip fails and the bike is locked again.
+	@Requirement("RIA-54")
+	@ParameterizedTest(name = "emitted at 29 s, handled at {0} s")
+	@ValueSource(longs = { 30, 31 })
+	void shouldFailAndLockWhenAnUnlockEmittedInTimeIsHandledLate(long handledAt) {
+		listenerAt(handledAt).on(unlockedAt(REQUESTED.plusSeconds(29)));
+
+		assertThat(trip.getStatus()).isEqualTo(TripStatus.FAILED);
+		verify(events).publishEvent(new TripFailed("EB-201", HUB));
+		verify(vehicles, never()).startRide(any());
+		verifyNoInteractions(passes);
 	}
 
 	// The timeout job failed the trip and sent LOCK, but the bike unlocked anyway (or the LOCK was
