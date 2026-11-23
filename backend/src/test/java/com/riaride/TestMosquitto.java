@@ -1,6 +1,7 @@
 package com.riaride;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -41,12 +42,22 @@ public final class TestMosquitto {
 		registry.add("riaride.telemetry.mqtt.client-id", () -> "riaride-backend-test-" + UUID.randomUUID());
 	}
 
+	private static final Instant DEFAULT_EMITTED_AT = Instant.parse("2026-11-30T10:00:05Z");
+
 	// Publishes a telemetry reading as the simulator does (contracts/mqtt/telemetry.schema.json).
 	public static void publishTelemetry(String vehicleCode, int batteryPct, String hubId) {
+		publishTelemetry(vehicleCode, batteryPct, hubId, "LOCKED", DEFAULT_EMITTED_AT);
+	}
+
+	// The same, with the lock state and emission time the scenario needs (RIA-54: the simulator
+	// answers UNLOCK with an UNLOCKED reading).
+	public static void publishTelemetry(String vehicleCode, int batteryPct, String hubId, String lockState,
+		Instant emittedAt) {
 		var payload = """
-			{"messageId": "%s", "emittedAt": "2026-11-30T10:00:05.000Z", "batteryPct": %d, "lockState": "LOCKED",
+			{"messageId": "%s", "emittedAt": "%s", "batteryPct": %d, "lockState": "%s",
 			 "hubId": %s, "position": {"lat": 40.6405, "lon": -8.6538}}
-			""".formatted(UUID.randomUUID(), batteryPct, hubId == null ? "null" : "\"" + hubId + "\"");
+			""".formatted(UUID.randomUUID(), emittedAt, batteryPct, lockState,
+			hubId == null ? "null" : "\"" + hubId + "\"");
 		try (var client = new MqttClient(url(), "riaride-simulator-test-" + UUID.randomUUID(), new MemoryPersistence())) {
 			client.connect();
 			client.publish("riaride/vehicles/" + vehicleCode + "/telemetry", payload.getBytes(StandardCharsets.UTF_8), 1,
@@ -64,12 +75,14 @@ public final class TestMosquitto {
 		return new CommandRecorder(url());
 	}
 
-	public record RecordedCommand(String vehicleCode, String payload) {
+	// command is UNLOCK or LOCK, read from the payload; payload is the JSON as published.
+	public record RecordedCommand(String vehicleCode, String command, String payload) {
 	}
 
 	public static final class CommandRecorder implements AutoCloseable {
 
 		private static final Pattern COMMAND_TOPIC = Pattern.compile("riaride/vehicles/([^/]+)/commands");
+		private static final Pattern COMMAND_FIELD = Pattern.compile("\"command\"\\s*:\\s*\"([A-Z]+)\"");
 
 		private final List<RecordedCommand> commands = new CopyOnWriteArrayList<>();
 		private final MqttClient client;
@@ -81,8 +94,10 @@ public final class TestMosquitto {
 				client.subscribe("riaride/vehicles/+/commands", 1, (topic, message) -> {
 					var match = COMMAND_TOPIC.matcher(topic);
 					if (match.matches()) {
-						commands.add(new RecordedCommand(match.group(1),
-							new String(message.getPayload(), StandardCharsets.UTF_8)));
+						var payload = new String(message.getPayload(), StandardCharsets.UTF_8);
+						var command = COMMAND_FIELD.matcher(payload);
+						commands.add(new RecordedCommand(match.group(1), command.find() ? command.group(1) : null,
+							payload));
 					}
 				});
 			} catch (MqttException failed) {

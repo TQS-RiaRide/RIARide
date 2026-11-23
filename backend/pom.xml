@@ -27,6 +27,7 @@
 		<xray-junit-extensions.version>1.1.0</xray-junit-extensions.version>
 		<testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
 		<paho-mqttv3.version>1.2.5</paho-mqttv3.version>
+		<json-schema-validator.version>1.5.9</json-schema-validator.version>
 		<!-- Set to true to run only integration tests: ./mvnw verify -DskipUnitTests=true -->
 		<skipUnitTests>false</skipUnitTests>
 	</properties>
@@ -166,6 +167,13 @@
 			<artifactId>awaitility</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Contract tests: MQTT messages are validated against contracts/mqtt/*.schema.json. -->
+		<dependency>
+			<groupId>com.networknt</groupId>
+			<artifactId>json-schema-validator</artifactId>
+			<version>${json-schema-validator.version}</version>
+			<scope>test</scope>
+		</dependency>
 		<!-- Keycloak in Testcontainers for the acceptance tests: real tokens from the realm in infra/keycloak. -->
 		<dependency>
 			<groupId>com.github.dasniko</groupId>
@@ -213,6 +221,11 @@
 					<include>riaride-realm.json</include>
 				</includes>
 				<targetPath>keycloak</targetPath>
+			</testResource>
+			<!-- The MQTT message contracts shared with the simulator (RIA-60), validated by the adapter's tests. -->
+			<testResource>
+				<directory>${project.basedir}/../contracts/mqtt</directory>
+				<targetPath>contracts/mqtt</targetPath>
 			</testResource>
 		</testResources>
 		<plugins>

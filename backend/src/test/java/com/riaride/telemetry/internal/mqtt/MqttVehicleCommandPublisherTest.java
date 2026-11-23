@@ -39,4 +39,19 @@ class MqttVehicleCommandPublisherTest {
 		assertThatCode(() -> new DisabledVehicleCommands().unlock("EB-201")).doesNotThrowAnyException();
 	}
 
+	@Requirement("RIA-54")
+	@Test
+	void shouldDropALockWhenNotConnected() {
+		var publisher = new MqttVehicleCommandPublisher(PROPERTIES, JsonMapper.builder().build(), CLOCK);
+
+		assertThatCode(() -> publisher.lock("EB-201", "ded64655-0ca3-5c5c-9dd8-c641407a63c5"))
+			.doesNotThrowAnyException();
+	}
+
+	@Requirement("RIA-54")
+	@Test
+	void shouldDropALockWhenMqttIsTurnedOff() {
+		assertThatCode(() -> new DisabledVehicleCommands().lock("EB-201", null)).doesNotThrowAnyException();
+	}
+
 }
