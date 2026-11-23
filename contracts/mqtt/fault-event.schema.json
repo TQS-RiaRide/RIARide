@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://riaride.example/contracts/mqtt/fault-event.schema.json",
+  "title": "Vehicle fault event",
+  "description": "Published by the simulator on riaride/vehicles/{vehicleId}/events, QoS 1. Each fault has its own messageId; a repeated message keeps the same messageId, so the platform opens one ticket per fault.",
+  "type": "object",
+  "required": ["messageId", "emittedAt", "faultCode", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": { "type": "string", "format": "uuid" },
+    "emittedAt": { "type": "string", "format": "date-time" },
+    "faultCode": { "enum": ["BRAKES", "FLAT_TYRE", "BATTERY", "LOCK", "LIGHTS"] },
+    "description": { "type": "string", "minLength": 1 }
+  }
+}

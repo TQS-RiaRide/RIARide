@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Group project for the TQS course: a *light-mobility fleet-as-a-service* platform, graded on both the product and the evidence that quality was built in from the start. A practice only counts if the QA Manual's compliance table links to evidence of it working.
 
-The backend (Spring Boot 4.1, Java 21, Spring Modulith, Maven) and frontend (React, Vite, TypeScript) walking skeletons exist. `simulator/` is still empty; document its commands here when it lands.
+The backend (Spring Boot 4.1, Java 21, Spring Modulith, Maven) and frontend (React, Vite, TypeScript) walking skeletons exist. The minimal fleet simulator (Python, MQTT) is in `simulator/`; its message formats are the JSON Schemas in `contracts/mqtt/`.
 
 ### Backend commands
 
@@ -29,7 +29,7 @@ To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds 
 
 The backend reads `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `KEYCLOAK_ISSUER_URI`; the defaults point at the local stack. Integration tests never use these: they start their own containers.
 
-### Local stack (PostgreSQL and Keycloak)
+### Local stack (PostgreSQL, Keycloak and Mosquitto)
 
 Run from the repository root; details in [`infra/README.md`](infra/README.md).
 
@@ -37,6 +37,7 @@ Run from the repository root; details in [`infra/README.md`](infra/README.md).
 |---|---|
 | First time | `cp infra/.env.example infra/.env`, then set every password |
 | Start | `docker compose -f infra/compose.yaml up -d` |
+| Start the whole platform in containers (backend, frontend, simulator) | `docker compose -f infra/compose.yaml --profile app --profile sim up -d --build` |
 | Create synthetic users (idempotent) | `infra/keycloak/create-dev-users.sh` |
 | Reset (re-imports the realm) | `docker compose -f infra/compose.yaml down -v` |
 
@@ -57,6 +58,22 @@ Run from `frontend/`, with Node.js 22.22.2 or later in the 22 line, or 24.15.0 o
 | Single test file or test | `npx vitest run src/features/health/api.test.ts -t "unreachable"` |
 | Type check and production build (`dist/`) | `npm run build` |
 | Docker image | `docker build -t riaride-frontend .` |
+
+### Simulator commands
+
+Run from `simulator/`, with Python 3.12 or later, after `pip install -r requirements-dev.txt` in a virtual environment. Details in [`simulator/README.md`](simulator/README.md).
+
+| Task | Command |
+|---|---|
+| Lint / check formatting (ruff) | `ruff check .` / `ruff format --check .` (`ruff format .` fixes) |
+| Unit and contract tests | `python -m pytest` |
+| Integration tests against Mosquitto in Testcontainers (needs Docker) | `python -m pytest -m integration` |
+| Both, with coverage (`coverage.xml`, read by SonarQube) | `python -m pytest --cov --cov-report=` then `python -m pytest -m integration --cov --cov-append --cov-report=term --cov-report=xml` |
+| Single test | `python -m pytest tests/test_simulator.py -k unlock` |
+| Dependency vulnerabilities | `pip-audit -r requirements.txt` |
+| Regenerate the hashed requirements after changing a `.in` file | `pip-compile --generate-hashes --allow-unsafe -o requirements.txt requirements.in` (and the same for `requirements-dev`) |
+| Run with a local Mosquitto (from the repository root) | `docker compose -f simulator/compose.yaml up --build` |
+| Docker image | `docker build -t riaride-simulator .` |
 
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
@@ -166,7 +183,7 @@ Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement(
 Full guidelines and review checklist: QA Manual, section 3.1 and 3.2.
 
 - **Java:** Google Java Style, enforced by Spotless (google-java-format). Package by Spring Modulith module, not by layer; constructor injection only; business rules in the domain, not in controllers; errors as RFC 9457 problem details.
-- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through translation files.
+- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through the translation files in `frontend/src/locales/<language>/<namespace>.json`, one namespace per feature (`frontend/src/i18n/README.md`).
 - **Python:** ruff for lint and format; type hints on public functions.
 - **Tests:** arrange, act, assert; names state the behaviour (`shouldRejectBookingWhenBatteryBelow20Percent`); fixed clocks for time rules, no sleeps; Gherkin scenarios tagged with the story key and business rule (`@RIA-31 @BR1`).
 
