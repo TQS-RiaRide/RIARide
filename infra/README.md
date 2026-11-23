@@ -1,6 +1,6 @@
 # Infrastructure
 
-Docker Compose for the local development stack. For now it runs PostgreSQL, Keycloak, Mosquitto and the fleet simulator; the other services join as their stories land (architecture, section 4).
+Docker Compose for the local development stack. By default it runs the infrastructure (PostgreSQL, Keycloak and Mosquitto), so the backend and frontend can run from the IDE. Two profiles add the rest of the platform in containers: `app` (backend and frontend) and `sim` (vehicle simulator). Monitoring joins when its story lands (architecture, section 4).
 
 ## Start
 
@@ -10,14 +10,27 @@ docker compose -f infra/compose.yaml up -d
 infra/keycloak/create-dev-users.sh      # synthetic users and a dev-only client, idempotent
 ```
 
+The whole platform in containers (builds the images first):
+
+```sh
+docker compose -f infra/compose.yaml --profile app --profile sim up -d --build
+docker compose -f infra/compose.yaml ps    # every service should become "healthy"
+```
+
+Pass the same profiles to `down`, or the profile services keep running.
+
 | Service | Address | Notes |
 |---|---|---|
 | PostgreSQL | `localhost:5432` | Databases `riaride` (backend, owner `riaride`) and `keycloak` |
 | Keycloak | `http://localhost:8180` | Realm `riaride`; admin console with `KEYCLOAK_ADMIN_*` from `.env` |
-| Mosquitto | `localhost:1883` | Anonymous, local development only; watch with `docker compose -f infra/compose.yaml exec mosquitto mosquitto_sub -t 'riaride/#' -v` |
-| Fleet simulator | none | Publishes the demo fleet over MQTT ([`simulator/README.md`](../simulator/README.md)) |
+| Mosquitto | `localhost:1883` | MQTT broker for the simulator (ADR 0006); anonymous access, local stack only. Watch with `docker compose -f infra/compose.yaml exec mosquitto mosquitto_sub -t 'riaride/#' -v` |
+| Backend (`app`) | `http://localhost:8080` | Health at `/actuator/health` |
+| Frontend (`app`) | `http://localhost:8081` | nginx; forwards `/api/v1` to the backend |
+| Simulator (`sim`) | none | Publishes the demo fleet over MQTT to `mosquitto:1883` ([`simulator/README.md`](../simulator/README.md)) |
 
-Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT`, `KEYCLOAK_PORT` or `MQTT_PORT` in `.env` if the defaults are taken; then point the backend at them with `DB_URL` and `KEYCLOAK_ISSUER_URI`.
+Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT`, `KEYCLOAK_PORT`, `MQTT_PORT`, `BACKEND_PORT` or `FRONTEND_PORT` in `.env` if the defaults are taken; a backend run from the IDE then needs `DB_URL` and `KEYCLOAK_ISSUER_URI` pointed at them.
+
+In the `app` profile the backend reaches the other services through the Compose network. Keycloak sets `KC_HOSTNAME` to `http://localhost:8180`, so tokens carry the same issuer whether the browser or the backend container asked for them. `STRIPE_SECRET_KEY` may stay empty: the backend container then starts with a placeholder test mode key, and only pass purchases fail.
 
 ## Keycloak
 

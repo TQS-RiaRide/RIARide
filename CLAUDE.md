@@ -29,7 +29,7 @@ To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds 
 
 The backend reads `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `KEYCLOAK_ISSUER_URI`; the defaults point at the local stack. Integration tests never use these: they start their own containers.
 
-### Local stack (PostgreSQL and Keycloak)
+### Local stack (PostgreSQL, Keycloak and Mosquitto)
 
 Run from the repository root; details in [`infra/README.md`](infra/README.md).
 
@@ -37,6 +37,7 @@ Run from the repository root; details in [`infra/README.md`](infra/README.md).
 |---|---|
 | First time | `cp infra/.env.example infra/.env`, then set every password |
 | Start | `docker compose -f infra/compose.yaml up -d` |
+| Start the whole platform in containers (backend, frontend, simulator) | `docker compose -f infra/compose.yaml --profile app --profile sim up -d --build` |
 | Create synthetic users (idempotent) | `infra/keycloak/create-dev-users.sh` |
 | Reset (re-imports the realm) | `docker compose -f infra/compose.yaml down -v` |
 
@@ -181,7 +182,7 @@ Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement(
 Full guidelines and review checklist: QA Manual, section 3.1 and 3.2.
 
 - **Java:** Google Java Style, enforced by Spotless (google-java-format). Package by Spring Modulith module, not by layer; constructor injection only; business rules in the domain, not in controllers; errors as RFC 9457 problem details.
-- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through translation files.
+- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through the translation files in `frontend/src/locales/<language>/<namespace>.json`, one namespace per feature (`frontend/src/i18n/README.md`).
 - **Python:** ruff for lint and format; type hints on public functions.
 - **Tests:** arrange, act, assert; names state the behaviour (`shouldRejectBookingWhenBatteryBelow20Percent`); fixed clocks for time rules, no sleeps; Gherkin scenarios tagged with the story key and business rule (`@RIA-31 @BR1`).
 
