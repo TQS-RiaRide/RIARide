@@ -110,10 +110,10 @@ jobs:
   # Vitest LCOV coverage (QA Manual, section 3.3). It runs after the build
   # jobs, from their compiled classes and coverage reports.
   #
-  # Not part of "CI result": SonarQube Cloud reports the quality gate as its
-  # own check ("SonarCloud Code Analysis"), which branch protection requires
-  # separately (RIA-160, RIA-161). Automatic Analysis must be off in the
-  # SonarQube Cloud project, or this scan fails.
+  # The job fails when the quality gate on new code fails, and "CI result"
+  # depends on it, so a failing gate blocks the merge (QA Manual, section
+  # 3.3). Automatic Analysis must be off in the SonarQube Cloud project, or
+  # this scan fails.
   sonar:
     name: SonarQube analysis
     needs: [backend, frontend]
@@ -171,26 +171,43 @@ jobs:
         run: sed -i 's|^SF:src/|SF:frontend/src/|' frontend/coverage/lcov.info
 
       # Project settings are in sonar-project.properties at the repository root.
+      # sonar.qualitygate.wait makes the scan wait for the quality gate and
+      # fail the job when it fails; it is set here, not in the properties
+      # file, so a local scan does not wait.
       - name: SonarQube scan
         uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        with:
+          args: >-
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   result:
     name: CI result
-    needs: [backend, frontend]
+    needs: [backend, frontend, sonar]
     if: always()
     runs-on: ubuntu-latest
     steps:
       # Every job must succeed: a failed, cancelled or skipped job fails
       # the whole pipeline, so a missing build can never pass this check.
+      # One exception: the sonar job is skipped on Dependabot and fork pull
+      # requests, which have no access to SONAR_TOKEN. Its skip is accepted
+      # only when the build jobs succeeded; if a build job fails, sonar is
+      # skipped too, but that failure already fails this check.
       - name: Check job results
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          SONAR: ${{ needs.sonar.result }}
         run: |
-          echo "Job results: $RESULTS"
-          for r in $RESULTS; do
-            if [ "$r" != "success" ]; then
-              exit 1
-            fi
-          done
+          echo "backend=$BACKEND frontend=$FRONTEND sonar=$SONAR"
+          if [ "$BACKEND" != "success" ] || [ "$FRONTEND" != "success" ]; then
+            exit 1
+          fi
+          if [ "$SONAR" = "skipped" ]; then
+            echo "::notice::SonarQube analysis skipped (Dependabot or fork pull request): the quality gate was not checked."
+          elif [ "$SONAR" != "success" ]; then
+            echo "::error::SonarQube analysis failed: the quality gate on new code did not pass, or the scan failed. See the SonarQube analysis job."
+            exit 1
+          fi
