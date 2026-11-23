@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://riaride.example/contracts/mqtt/simulator-status.schema.json",
+  "title": "Simulator status",
+  "description": "Published retained on riaride/simulator/status. ONLINE when the simulator connects; OFFLINE as its last will, sent by the broker when the simulator disconnects without notice, so the platform marks telemetry as stale.",
+  "type": "object",
+  "required": ["status"],
+  "additionalProperties": false,
+  "properties": {
+    "status": { "enum": ["ONLINE", "OFFLINE"] },
+    "emittedAt": { "type": "string", "format": "date-time" }
+  }
+}
