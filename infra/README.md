@@ -23,10 +23,10 @@ Pass the same profiles to `down`, or the profile services keep running.
 |---|---|---|
 | PostgreSQL | `localhost:5432` | Databases `riaride` (backend, owner `riaride`) and `keycloak` |
 | Keycloak | `http://localhost:8180` | Realm `riaride`; admin console with `KEYCLOAK_ADMIN_*` from `.env` |
-| Mosquitto | `localhost:1883` | MQTT broker for the simulator (ADR 0006); anonymous access, local stack only |
+| Mosquitto | `localhost:1883` | MQTT broker for the simulator (ADR 0006); anonymous access, local stack only. Watch with `docker compose -f infra/compose.yaml exec mosquitto mosquitto_sub -t 'riaride/#' -v` |
 | Backend (`app`) | `http://localhost:8080` | Health at `/actuator/health` |
 | Frontend (`app`) | `http://localhost:8081` | nginx; forwards `/api/v1` to the backend |
-| Simulator (`sim`) | none | Placeholder image until the simulator story lands; connects to Mosquitto at `mosquitto:1883` |
+| Simulator (`sim`) | none | Publishes the demo fleet over MQTT to `mosquitto:1883` ([`simulator/README.md`](../simulator/README.md)) |
 
 Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT`, `KEYCLOAK_PORT`, `MQTT_PORT`, `BACKEND_PORT` or `FRONTEND_PORT` in `.env` if the defaults are taken; a backend run from the IDE then needs `DB_URL` and `KEYCLOAK_ISSUER_URI` pointed at them.
 
