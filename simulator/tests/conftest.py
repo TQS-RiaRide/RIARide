@@ -13,9 +13,16 @@ from riaride_simulator.fleet import Fleet
 from riaride_simulator.simulator import Simulator
 
 CONTRACTS = Path(__file__).resolve().parents[2] / "contracts" / "mqtt"
+STORY = "RIA-60"
 
 HUB_PRAIA = "11111111-1111-4111-8111-111111111111"
 HUB_SALINAS = "22222222-2222-4222-8222-222222222222"
+
+
+@pytest.fixture(autouse=True)
+def _xray_requirement(record_property):
+    """Links every test to its story in the JUnit report CI imports into Xray (QA Manual 2.3)."""
+    record_property("requirements", STORY)
 
 
 class FakePublisher:
@@ -87,10 +94,15 @@ def schemas() -> dict[str, dict]:
     }
 
 
-def command(name: str, hub_id: str | None = None, message_id: str | None = None) -> bytes:
+def command(
+    name: str,
+    hub_id: str | None = None,
+    message_id: str | None = None,
+    emitted_at: str = "2026-11-20T10:00:00Z",
+) -> bytes:
     payload = {
         "messageId": message_id or str(uuid.uuid4()),
-        "emittedAt": "2026-11-20T10:00:00Z",
+        "emittedAt": emitted_at,
         "command": name,
     }
     if hub_id is not None:

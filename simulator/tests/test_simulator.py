@@ -1,5 +1,6 @@
 import json
 import random
+from datetime import timedelta
 
 import pytest
 
@@ -103,8 +104,15 @@ def _with(**changes) -> bytes:
         b"\xff\xfe",
         b"[]",
         _with(messageId="not-a-uuid"),
+        _with(messageId=int("6f1c2a1052b44a8e9a311f0f7a1d9c11", 16)),
+        _with(messageId="{6f1c2a10-52b4-4a8e-9a31-1f0f7a1d9c11}"),
+        _with(messageId="urn:uuid:6f1c2a10-52b4-4a8e-9a31-1f0f7a1d9c11"),
+        _with(messageId="6f1c2a1052b44a8e9a311f0f7a1d9c11"),
         _with(emittedAt=...),
         _with(emittedAt="yesterday"),
+        _with(emittedAt="2026-11-20"),
+        _with(emittedAt="2026-11-20T10:00:00"),
+        _with(emittedAt="2026-13-20T10:00:00Z"),
         _with(command="EXPLODE"),
         _with(command="LOCK", hubId=""),
         _with(extra=1),
@@ -118,6 +126,65 @@ def test_invalid_commands_are_ignored(simulator, publisher, fleet, payload):
 
     assert fleet.vehicles["EB-101"].lock_state is LockState.LOCKED
     assert len(publisher.published) == published_before
+
+
+def test_the_same_uuid_in_upper_case_is_a_repeated_command(simulator, publisher, fleet):
+    simulator.start()
+    simulator.handle_command(COMMANDS_101, command("UNLOCK", message_id=VALID["messageId"]))
+    simulator.handle_command(COMMANDS_101, command("LOCK", hub_id=HUB_PRAIA))
+
+    simulator.handle_command(COMMANDS_101, command("UNLOCK", message_id=VALID["messageId"].upper()))
+
+    assert fleet.vehicles["EB-101"].lock_state is LockState.LOCKED
+
+
+def test_command_with_another_offset_is_accepted(simulator, fleet):
+    simulator.start()
+
+    simulator.handle_command(
+        COMMANDS_101, command("UNLOCK", emitted_at="2026-11-20T10:00:00.250+00:00")
+    )
+
+    assert fleet.vehicles["EB-101"].lock_state is LockState.UNLOCKED
+
+
+# BR13: the platform gives up on an unlock after 30 s, so an older command is stale.
+def test_command_at_the_maximum_age_is_applied(simulator, fleet, clock):
+    simulator.start()
+    clock.advance(seconds=30)
+
+    simulator.handle_command(COMMANDS_101, command("UNLOCK"))
+
+    assert fleet.vehicles["EB-101"].lock_state is LockState.UNLOCKED
+
+
+def test_command_older_than_the_maximum_age_is_ignored(simulator, publisher, fleet, clock):
+    simulator.start()
+    published_before = len(publisher.published)
+    clock.advance(seconds=31)
+
+    simulator.handle_command(COMMANDS_101, command("UNLOCK"))
+
+    assert fleet.vehicles["EB-101"].lock_state is LockState.LOCKED
+    assert len(publisher.published) == published_before
+
+
+def test_maximum_command_age_is_configurable(fleet, publisher, clock, ids):
+    simulator = Simulator(
+        fleet, publisher, clock, random.Random(1), new_id=ids, max_command_age=timedelta(seconds=5)
+    )
+    simulator.start()
+    clock.advance(seconds=6)
+
+    simulator.handle_command(COMMANDS_101, command("UNLOCK"))
+
+    assert fleet.vehicles["EB-101"].lock_state is LockState.LOCKED
+
+
+@pytest.mark.parametrize("age", [timedelta(0), timedelta(seconds=-1)])
+def test_maximum_command_age_must_be_positive(fleet, publisher, clock, age):
+    with pytest.raises(ValueError):
+        Simulator(fleet, publisher, clock, random.Random(1), max_command_age=age)
 
 
 @pytest.mark.parametrize(
