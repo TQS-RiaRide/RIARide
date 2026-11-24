@@ -11,6 +11,7 @@ import com.riaride.fleet.internal.domain.HubKind;
 import com.riaride.fleet.internal.domain.Vehicle;
 import com.riaride.fleet.internal.domain.VehicleStatus;
 import com.riaride.fleet.internal.domain.VehicleType;
+import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +22,9 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
-// Integration test (Failsafe): the vehicle table (Flyway V5) and its constraints on PostgreSQL in
+// Integration test (Failsafe): the vehicle table (Flyway V5), its constraints and its optimistic lock on PostgreSQL in
 // Testcontainers.
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -39,6 +41,9 @@ class VehicleRepositoryIT {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+
+	@Autowired
+	private EntityManager entityManager;
 
 	private UUID hubId;
 
@@ -94,6 +99,22 @@ class VehicleRepositoryIT {
 
 		assertThatThrownBy(() -> jdbc.update("update vehicle set battery_pct = 101 where id = ?", vehicle.getId()))
 			.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	// A telemetry transaction that loaded the vehicle before another change (a booking or
+	// maintenance, in later stories) must not write the old status back.
+	@Requirement("RIA-59")
+	@Test
+	void shouldRejectASaveOfAVehicleChangedSinceItWasLoaded() {
+		vehicles.saveAndFlush(Vehicle.register("EB-601", VehicleType.E_BIKE, hubId));
+		entityManager.clear();
+		var loaded = vehicles.findByCode("EB-601").orElseThrow();
+		jdbc.update("update vehicle set status = 'RESERVED', version = version + 1 where id = ?", loaded.getId());
+
+		loaded.recordBattery(BatteryLevel.of(18), READ_AT, READ_AT);
+
+		assertThatThrownBy(() -> vehicles.saveAndFlush(loaded))
+			.isInstanceOf(ObjectOptimisticLockingFailureException.class);
 	}
 
 }
