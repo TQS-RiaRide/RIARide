@@ -31,14 +31,18 @@ class VehicleTelemetryListener {
     this.clock = clock;
   }
 
-  // In the publisher's transaction. An unknown vehicle is logged at DEBUG: the simulator's demo
-  // fleet publishes every 5 s, before RIA-57 lets operators register those bikes.
+  // In the publisher's transaction: the reading is stored before the MQTT message is acknowledged.
+  // The row is locked: the update writes the whole vehicle, so without the lock a reading would
+  // put back the status it read and undo a reservation made in the meantime (RIA-54). Lock order
+  // on this path is vehicle, then trip; starting a trip locks only the vehicle. An unknown vehicle
+  // is logged at DEBUG: the simulator's demo fleet publishes every 5 s, also for bikes that no
+  // operator has registered (RIA-57).
   @EventListener
   @Transactional
   void on(VehicleTelemetryReceived reading) {
     var now = clock.instant();
     vehicles
-        .findByCode(reading.vehicleCode())
+        .findByCodeForUpdate(reading.vehicleCode())
         .ifPresentOrElse(
             vehicle ->
                 vehicle.recordBattery(
