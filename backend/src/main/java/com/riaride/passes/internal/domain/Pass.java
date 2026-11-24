@@ -86,6 +86,26 @@ public class Pass implements Persistable<UUID> {
     this.status = PassStatus.INACTIVE;
   }
 
+  // BR4: the first trip activates the pass; later trips keep the first activation time. Setting
+  // expiresAt per pass type belongs to the pass-expiry story.
+  public void activate(Instant at) {
+    if (status == PassStatus.ACTIVE) {
+      return;
+    }
+    if (status != PassStatus.INACTIVE) {
+      throw new IllegalStateException("Only a paid pass can be activated");
+    }
+    this.status = PassStatus.ACTIVE;
+    this.activatedAt = at;
+  }
+
+  // A pass can be used for a trip once paid and until it ends. expiresAt is not set yet: setting it
+  // per pass type (BR2) belongs to the pass-expiry story, so an active pass has no end until then.
+  public boolean isUsableAt(Instant now) {
+    return status == PassStatus.INACTIVE
+        || status == PassStatus.ACTIVE && (expiresAt == null || expiresAt.isAfter(now));
+  }
+
   // BR3 and BR5: the price and the deposit are charged together at purchase.
   public Money amountToCharge() {
     return Money.cents((long) priceCents + depositCents);

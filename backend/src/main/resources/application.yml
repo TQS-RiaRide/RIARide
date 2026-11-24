@@ -52,6 +52,16 @@ riaride:
   fleet:
     # BR12: a vehicle below this battery cannot be booked. Moves to the backoffice usage rule later.
     min-booking-battery-pct: 20
+  trips:
+    # BR13: a trip whose unlock telemetry does not confirm within this time fails. A trip still
+    # starting exactly at the timeout has failed (RIA-54).
+    unlock-timeout: 30s
+    # BR11: how long a bike stays reserved for the pass.
+    reservation-hold: 15m
+    # How often UnlockTimeoutJob looks for starts that are overdue.
+    unlock-timeout-check-interval: 5s
+    # How often ReservationExpiryJob looks for holds that ended unused (BR11).
+    reservation-expiry-check-interval: 30s
 
 management:
   endpoints:

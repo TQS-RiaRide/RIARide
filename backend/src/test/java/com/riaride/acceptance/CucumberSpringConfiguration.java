@@ -2,7 +2,7 @@ package com.riaride.acceptance;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.riaride.FixedClockConfiguration;
+import com.riaride.TestClock;
 import com.riaride.TestKeycloak;
 import com.riaride.TestMosquitto;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
@@ -22,11 +22,13 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 // (never an in-memory database) and by Keycloak with the realm from
 // infra/keycloak, so tokens are real and validated against its JWKS, and by Mosquitto for
 // telemetry.
-// The containers start once per JVM. Today is fixed (FixedClockConfiguration),
-// so date rules do not depend on when the build runs.
+// The containers start once per JVM. Today is fixed: the TestClock starts each scenario at the
+// instant of FixedClockConfiguration, so date rules do not depend on when the build runs, and only
+// a
+// step moves it (the 30-second unlock timeout of RIA-54).
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@Import(FixedClockConfiguration.class)
+@Import(TestClock.class)
 public class CucumberSpringConfiguration {
 
   static final String REALM = TestKeycloak.REALM;
