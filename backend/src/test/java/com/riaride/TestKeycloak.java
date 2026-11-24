@@ -139,40 +139,49 @@ public final class TestKeycloak {
     realm().clients().create(client).close();
   }
 
-  // Creates a synthetic user with one realm role and returns an access token for them, issued by
-  // the login-check client with the SPA's token mappers, so it carries the same claims as a token
-  // of the web app.
-  public static String accessTokenFor(String role) {
+  // A synthetic user logged in to the realm: their Keycloak id and an access token.
+  public record TestUser(String id, String accessToken) {}
+
+  // Creates a synthetic user with one realm role, or none when role is null, and logs them in
+  // through the login-check client, which has the SPA's token mappers, so the token carries the
+  // same claims as a token of the web app. Delete the user with deleteUser when done.
+  public static TestUser logInWithRole(String role) {
     createLoginCheckClientIfMissing();
     var username = "user-" + UUID.randomUUID();
     var password = UUID.randomUUID().toString();
-    createUserWithRole(username, password, role);
-    return given()
-        .baseUri(container().getAuthServerUrl())
-        .port(container().getHttpPort())
-        .basePath("")
-        .formParams(
-            Map.of(
-                "grant_type", "password",
-                "client_id", LOGIN_CHECK_CLIENT,
-                "scope", "openid",
-                "username", username,
-                "password", password))
-        .when()
-        .post("/realms/" + REALM + "/protocol/openid-connect/token")
-        .then()
-        .statusCode(200)
-        .extract()
-        .path("access_token");
+    var userId = createUserWithRole(username, password, role);
+    String token =
+        given()
+            .baseUri(container().getAuthServerUrl())
+            .port(container().getHttpPort())
+            .basePath("")
+            .formParams(
+                Map.of(
+                    "grant_type", "password",
+                    "client_id", LOGIN_CHECK_CLIENT,
+                    "scope", "openid",
+                    "username", username,
+                    "password", password))
+            .when()
+            .post("/realms/" + REALM + "/protocol/openid-connect/token")
+            .then()
+            .statusCode(200)
+            .extract()
+            .path("access_token");
+    return new TestUser(userId, token);
   }
 
-  private static void createUserWithRole(String username, String password, String role) {
+  public static void deleteUser(String userId) {
+    realm().users().delete(userId).close();
+  }
+
+  private static String createUserWithRole(String username, String password, String role) {
     var user = new UserRepresentation();
     user.setUsername(username);
     user.setEmail(username + "@example.test");
     user.setEmailVerified(true);
     user.setFirstName("Test");
-    user.setLastName(role);
+    user.setLastName(role == null ? "NoRole" : role);
     user.setEnabled(true);
     var credential = new CredentialRepresentation();
     credential.setType(CredentialRepresentation.PASSWORD);
@@ -183,8 +192,11 @@ public final class TestKeycloak {
     try (var response = realm().users().create(user)) {
       userId = CreatedResponseUtil.getCreatedId(response);
     }
-    var realmRole = realm().roles().get(role).toRepresentation();
-    realm().users().get(userId).roles().realmLevel().add(List.of(realmRole));
+    if (role != null) {
+      var realmRole = realm().roles().get(role).toRepresentation();
+      realm().users().get(userId).roles().realmLevel().add(List.of(realmRole));
+    }
+    return userId;
   }
 
   // Points the application's token validation and its Admin API client at the container.
