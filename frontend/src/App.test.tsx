@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
 import i18n from './i18n';
+import AuthProvider from './features/auth/AuthProvider';
+import type { AuthClient } from './features/auth/authClient';
+import type { CurrentUser } from './features/auth/api';
 
 // Reset the language before each test, while no component is mounted.
 // Doing it in afterEach would re-render a still-mounted App outside act.
@@ -14,14 +17,28 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-async function renderApp(health: { ok: boolean; status?: string }) {
+function authClient(authenticated: boolean): AuthClient {
+  return {
+    init: vi.fn().mockResolvedValue(authenticated),
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn().mockResolvedValue(undefined),
+    getToken: vi.fn().mockResolvedValue('access-token'),
+  };
+}
+
+async function renderApp(health: { ok: boolean; status?: string }, user?: CurrentUser) {
   vi.stubGlobal(
     'fetch',
     vi.fn().mockResolvedValue({ ok: health.ok, json: async () => ({ status: health.status }) }),
   );
-  // The health check resolves after the first render, so flush it inside act
+  // The health check and the session check resolve after the first render, so flush them
+  // inside act
   await act(async () => {
-    render(<App />);
+    render(
+      <AuthProvider client={authClient(user !== undefined)} loadUser={async () => user!}>
+        <App />
+      </AuthProvider>,
+    );
   });
 }
 
@@ -55,5 +72,32 @@ describe('App', () => {
     await renderApp({ ok: false });
 
     expect(screen.getByText('Unreachable')).toBeInTheDocument();
+  });
+
+  it('invites a visitor to log in before showing any workspace', async () => {
+    await renderApp({ ok: true, status: 'UP' });
+
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByText('Log in to see the features of your role.')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Workspaces' })).not.toBeInTheDocument();
+  });
+
+  // Acceptance criterion of RIA-86.
+  it('shows a logged-in operator the operator dashboard and not the hotel backoffice', async () => {
+    await renderApp(
+      { ok: true, status: 'UP' },
+      {
+        id: 'user-1',
+        name: 'Rui Almeida',
+        email: 'rui.almeida@example.test',
+        roles: ['OPERATOR'],
+        workspaces: ['OPERATOR_DASHBOARD', 'MAINTENANCE_TICKETS'],
+      },
+    );
+
+    const menu = screen.getByRole('navigation', { name: 'Workspaces' });
+    expect(menu).toHaveTextContent('Operator dashboard');
+    expect(menu).not.toHaveTextContent('Hotel backoffice');
+    expect(screen.queryByText('Log in to see the features of your role.')).not.toBeInTheDocument();
   });
 });
