@@ -25,51 +25,58 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StartTripService {
 
-	private final GuestDirectory guests;
-	private final PassUsage passes;
-	private final VehicleReservations vehicles;
-	private final ReservationRepository reservations;
-	private final TripRepository trips;
-	private final ApplicationEventPublisher events;
-	private final Clock clock;
-	private final TripsProperties properties;
+  private final GuestDirectory guests;
+  private final PassUsage passes;
+  private final VehicleReservations vehicles;
+  private final ReservationRepository reservations;
+  private final TripRepository trips;
+  private final ApplicationEventPublisher events;
+  private final Clock clock;
+  private final TripsProperties properties;
 
-	public StartTripService(GuestDirectory guests, PassUsage passes, VehicleReservations vehicles,
-		ReservationRepository reservations, TripRepository trips, ApplicationEventPublisher events, Clock clock,
-		TripsProperties properties) {
-		this.guests = guests;
-		this.passes = passes;
-		this.vehicles = vehicles;
-		this.reservations = reservations;
-		this.trips = trips;
-		this.events = events;
-		this.clock = clock;
-		this.properties = properties;
-	}
+  public StartTripService(
+      GuestDirectory guests,
+      PassUsage passes,
+      VehicleReservations vehicles,
+      ReservationRepository reservations,
+      TripRepository trips,
+      ApplicationEventPublisher events,
+      Clock clock,
+      TripsProperties properties) {
+    this.guests = guests;
+    this.passes = passes;
+    this.vehicles = vehicles;
+    this.reservations = reservations;
+    this.trips = trips;
+    this.events = events;
+    this.clock = clock;
+    this.properties = properties;
+  }
 
-	@Transactional
-	public Trip start(StartTripCommand command) {
-		var guest = guests.findActiveGuest(command.keycloakId()).orElseThrow(NoActiveStayException::new);
-		var pass = passes.findUsablePass(guest.guestId()).orElseThrow(NoUsablePassException::new);
-		if (trips.existsByPassIdAndStatusIn(pass.passId(), TripStatus.ACTIVE)) {
-			throw new TripAlreadyInProgressException();
-		}
-		var now = clock.instant();
-		var held = reservations.findByPassIdAndStatus(pass.passId(), ReservationStatus.ACTIVE);
-		Reservation reservation;
-		if (held.isPresent()) {
-			if (!held.get().isFor(command.vehicleCode())) {
-				throw new ReservationHeldForAnotherBikeException();
-			}
-			reservation = held.get();
-		} else {
-			var bike = vehicles.reserve(command.vehicleCode());
-			reservation = reservations.saveAndFlush(
-				Reservation.hold(pass.passId(), bike, now, properties.reservationHold()));
-		}
-		var trip = trips.saveAndFlush(Trip.requestStart(reservation, guest.guestId(), now));
-		events.publishEvent(new TripStartRequested(trip.getVehicleCode()));
-		return trip;
-	}
-
+  @Transactional
+  public Trip start(StartTripCommand command) {
+    var guest =
+        guests.findActiveGuest(command.keycloakId()).orElseThrow(NoActiveStayException::new);
+    var pass = passes.findUsablePass(guest.guestId()).orElseThrow(NoUsablePassException::new);
+    if (trips.existsByPassIdAndStatusIn(pass.passId(), TripStatus.ACTIVE)) {
+      throw new TripAlreadyInProgressException();
+    }
+    var now = clock.instant();
+    var held = reservations.findByPassIdAndStatus(pass.passId(), ReservationStatus.ACTIVE);
+    Reservation reservation;
+    if (held.isPresent()) {
+      if (!held.get().isFor(command.vehicleCode())) {
+        throw new ReservationHeldForAnotherBikeException();
+      }
+      reservation = held.get();
+    } else {
+      var bike = vehicles.reserve(command.vehicleCode());
+      reservation =
+          reservations.saveAndFlush(
+              Reservation.hold(pass.passId(), bike, now, properties.reservationHold()));
+    }
+    var trip = trips.saveAndFlush(Trip.requestStart(reservation, guest.guestId(), now));
+    events.publishEvent(new TripStartRequested(trip.getVehicleCode()));
+    return trip;
+  }
 }

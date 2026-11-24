@@ -13,24 +13,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ListHubVehiclesService {
 
-	private final HubRepository hubs;
-	private final VehicleRepository vehicles;
-	private final BookingBatteryPolicy policy;
+  private final HubRepository hubs;
+  private final VehicleRepository vehicles;
+  private final BookingBatteryPolicy policy;
 
-	public ListHubVehiclesService(HubRepository hubs, VehicleRepository vehicles, BookingBatteryPolicy policy) {
-		this.hubs = hubs;
-		this.vehicles = vehicles;
-		this.policy = policy;
-	}
+  public ListHubVehiclesService(
+      HubRepository hubs, VehicleRepository vehicles, BookingBatteryPolicy policy) {
+    this.hubs = hubs;
+    this.vehicles = vehicles;
+    this.policy = policy;
+  }
 
-	@Transactional(readOnly = true)
-	public List<HubVehicle> list(UUID hubId) {
-		if (!hubs.existsById(hubId)) {
-			throw new HubNotFoundException();
-		}
-		return vehicles.findByHubIdOrderByCode(hubId).stream()
-			.map(vehicle -> HubVehicle.of(vehicle, vehicle.isBookable(policy)))
-			.toList();
-	}
-
+  @Transactional(readOnly = true)
+  public List<HubVehicle> list(UUID hubId) {
+    if (!hubs.existsById(hubId)) {
+      throw new HubNotFoundException();
+    }
+    return vehicles.findByHubIdOrderByCode(hubId).stream()
+        .map(vehicle -> HubVehicle.of(vehicle, vehicle.isBookable(policy)))
+        .toList();
+  }
 }

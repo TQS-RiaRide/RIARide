@@ -15,28 +15,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class VehicleReservationService implements VehicleReservations {
 
-	private final VehicleRepository vehicles;
-	private final BookingBatteryPolicy policy;
+  private final VehicleRepository vehicles;
+  private final BookingBatteryPolicy policy;
 
-	VehicleReservationService(VehicleRepository vehicles, BookingBatteryPolicy policy) {
-		this.vehicles = vehicles;
-		this.policy = policy;
-	}
+  VehicleReservationService(VehicleRepository vehicles, BookingBatteryPolicy policy) {
+    this.vehicles = vehicles;
+    this.policy = policy;
+  }
 
-	@Override
-	@Transactional(propagation = Propagation.MANDATORY)
-	public ReservedVehicle reserve(String vehicleCode) {
-		var vehicle = vehicles.findByCodeForUpdate(vehicleCode).orElseThrow(VehicleNotFoundException::new);
-		vehicle.reserve(policy);
-		return new ReservedVehicle(vehicle.getId(), vehicle.getCode(), vehicle.getHubId());
-	}
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public ReservedVehicle reserve(String vehicleCode) {
+    var vehicle =
+        vehicles.findByCodeForUpdate(vehicleCode).orElseThrow(VehicleNotFoundException::new);
+    vehicle.reserve(policy);
+    return new ReservedVehicle(vehicle.getId(), vehicle.getCode(), vehicle.getHubId());
+  }
 
-	@Override
-	@Transactional(propagation = Propagation.MANDATORY)
-	public void startRide(UUID vehicleId) {
-		var vehicle = vehicles.findByIdForUpdate(vehicleId)
-			.orElseThrow(() -> new IllegalStateException("A reserved vehicle no longer exists"));
-		vehicle.startRide();
-	}
-
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void startRide(UUID vehicleId) {
+    var vehicle =
+        vehicles
+            .findByIdForUpdate(vehicleId)
+            .orElseThrow(() -> new IllegalStateException("A reserved vehicle no longer exists"));
+    vehicle.startRide();
+  }
 }

@@ -4,8 +4,7 @@ package com.riaride.trips.internal.web;
 // its existence is not revealed.
 class TripNotFoundException extends RuntimeException {
 
-	TripNotFoundException() {
-		super("You have no trip with this id.");
-	}
-
+  TripNotFoundException() {
+    super("You have no trip with this id.");
+  }
 }

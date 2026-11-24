@@ -8,5 +8,4 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(TripsProperties.class)
 @EnableScheduling
-class TripsConfiguration {
-}
+class TripsConfiguration {}

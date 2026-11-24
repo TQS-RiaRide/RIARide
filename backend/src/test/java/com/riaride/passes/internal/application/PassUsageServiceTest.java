@@ -29,123 +29,123 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class PassUsageServiceTest {
 
-	private static final Instant NOW = Instant.parse("2026-11-30T10:00:00Z");
-	private static final UUID GUEST = UUID.fromString("5b7f0c2e-0d1a-4a7e-9a55-3c2d1e0f4a11");
-	private static final PassPrice STAY_PRICE = new PassPrice(PassType.STAY, 2500, 5000);
+  private static final Instant NOW = Instant.parse("2026-11-30T10:00:00Z");
+  private static final UUID GUEST = UUID.fromString("5b7f0c2e-0d1a-4a7e-9a55-3c2d1e0f4a11");
+  private static final PassPrice STAY_PRICE = new PassPrice(PassType.STAY, 2500, 5000);
 
-	@Mock
-	private PassRepository passes;
+  @Mock private PassRepository passes;
 
-	private PassUsageService service;
+  private PassUsageService service;
 
-	@BeforeEach
-	void setUp() {
-		service = new PassUsageService(passes, Clock.fixed(NOW, ZoneOffset.UTC));
-	}
+  @BeforeEach
+  void setUp() {
+    service = new PassUsageService(passes, Clock.fixed(NOW, ZoneOffset.UTC));
+  }
 
-	private static Pass pendingPass() {
-		return Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1");
-	}
+  private static Pass pendingPass() {
+    return Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1");
+  }
 
-	private static Pass paidPass() {
-		var pass = pendingPass();
-		pass.confirmPayment();
-		return pass;
-	}
+  private static Pass paidPass() {
+    var pass = pendingPass();
+    pass.confirmPayment();
+    return pass;
+  }
 
-	private void givenOpenPass(Pass pass) {
-		when(passes.findFirstByGuestIdAndStatusIn(GUEST, PassStatus.OPEN)).thenReturn(Optional.of(pass));
-	}
+  private void givenOpenPass(Pass pass) {
+    when(passes.findFirstByGuestIdAndStatusIn(GUEST, PassStatus.OPEN))
+        .thenReturn(Optional.of(pass));
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldFindInactivePassAsUsable() {
-		var pass = paidPass();
-		givenOpenPass(pass);
+  @Requirement("RIA-54")
+  @Test
+  void shouldFindInactivePassAsUsable() {
+    var pass = paidPass();
+    givenOpenPass(pass);
 
-		assertThat(service.findUsablePass(GUEST)).contains(new UsablePass(pass.getId()));
-	}
+    assertThat(service.findUsablePass(GUEST)).contains(new UsablePass(pass.getId()));
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldNotFindPendingPassAsUsable() {
-		givenOpenPass(pendingPass());
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotFindPendingPassAsUsable() {
+    givenOpenPass(pendingPass());
 
-		assertThat(service.findUsablePass(GUEST)).isEmpty();
-	}
+    assertThat(service.findUsablePass(GUEST)).isEmpty();
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldNotFindAnyPassForAGuestWithoutAnOpenPass() {
-		when(passes.findFirstByGuestIdAndStatusIn(GUEST, PassStatus.OPEN)).thenReturn(Optional.empty());
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotFindAnyPassForAGuestWithoutAnOpenPass() {
+    when(passes.findFirstByGuestIdAndStatusIn(GUEST, PassStatus.OPEN)).thenReturn(Optional.empty());
 
-		assertThat(service.findUsablePass(GUEST)).isEmpty();
-	}
+    assertThat(service.findUsablePass(GUEST)).isEmpty();
+  }
 
-	// Setting expiresAt per pass type is the pass-expiry story, so the test sets it.
-	@Requirement("RIA-54")
-	@Test
-	void shouldNotFindActivePassThatExpired() {
-		var pass = paidPass();
-		pass.activate(NOW.minusSeconds(3600));
-		ReflectionTestUtils.setField(pass, "expiresAt", NOW.minusSeconds(1));
-		givenOpenPass(pass);
+  // Setting expiresAt per pass type is the pass-expiry story, so the test sets it.
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotFindActivePassThatExpired() {
+    var pass = paidPass();
+    pass.activate(NOW.minusSeconds(3600));
+    ReflectionTestUtils.setField(pass, "expiresAt", NOW.minusSeconds(1));
+    givenOpenPass(pass);
 
-		assertThat(service.findUsablePass(GUEST)).isEmpty();
-	}
+    assertThat(service.findUsablePass(GUEST)).isEmpty();
+  }
 
-	// A pass whose end is now has ended.
-	@Requirement("RIA-54")
-	@Test
-	void shouldNotFindActivePassThatExpiresNow() {
-		var pass = paidPass();
-		pass.activate(NOW.minusSeconds(3600));
-		ReflectionTestUtils.setField(pass, "expiresAt", NOW);
-		givenOpenPass(pass);
+  // A pass whose end is now has ended.
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotFindActivePassThatExpiresNow() {
+    var pass = paidPass();
+    pass.activate(NOW.minusSeconds(3600));
+    ReflectionTestUtils.setField(pass, "expiresAt", NOW);
+    givenOpenPass(pass);
 
-		assertThat(service.findUsablePass(GUEST)).isEmpty();
-	}
+    assertThat(service.findUsablePass(GUEST)).isEmpty();
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldFindActivePassThatHasNotExpired() {
-		var pass = paidPass();
-		pass.activate(NOW.minusSeconds(3600));
-		ReflectionTestUtils.setField(pass, "expiresAt", NOW.plusSeconds(1));
-		givenOpenPass(pass);
+  @Requirement("RIA-54")
+  @Test
+  void shouldFindActivePassThatHasNotExpired() {
+    var pass = paidPass();
+    pass.activate(NOW.minusSeconds(3600));
+    ReflectionTestUtils.setField(pass, "expiresAt", NOW.plusSeconds(1));
+    givenOpenPass(pass);
 
-		assertThat(service.findUsablePass(GUEST)).contains(new UsablePass(pass.getId()));
-	}
+    assertThat(service.findUsablePass(GUEST)).contains(new UsablePass(pass.getId()));
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldFindActivePassWithNoEndYetAsUsable() {
-		var pass = paidPass();
-		pass.activate(NOW.minusSeconds(3600));
-		givenOpenPass(pass);
+  @Requirement("RIA-54")
+  @Test
+  void shouldFindActivePassWithNoEndYetAsUsable() {
+    var pass = paidPass();
+    pass.activate(NOW.minusSeconds(3600));
+    givenOpenPass(pass);
 
-		assertThat(service.findUsablePass(GUEST)).contains(new UsablePass(pass.getId()));
-	}
+    assertThat(service.findUsablePass(GUEST)).contains(new UsablePass(pass.getId()));
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldActivatePassOnFirstTrip() {
-		var pass = paidPass();
-		when(passes.findById(pass.getId())).thenReturn(Optional.of(pass));
+  @Requirement("RIA-54")
+  @Test
+  void shouldActivatePassOnFirstTrip() {
+    var pass = paidPass();
+    when(passes.findById(pass.getId())).thenReturn(Optional.of(pass));
 
-		service.activateOnFirstTrip(pass.getId(), NOW);
+    service.activateOnFirstTrip(pass.getId(), NOW);
 
-		assertThat(pass.getStatus()).isEqualTo(PassStatus.ACTIVE);
-		assertThat(pass.getActivatedAt()).isEqualTo(NOW);
-	}
+    assertThat(pass.getStatus()).isEqualTo(PassStatus.ACTIVE);
+    assertThat(pass.getActivatedAt()).isEqualTo(NOW);
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldRefuseToActivateAnUnknownPass() {
-		var unknown = UUID.randomUUID();
-		when(passes.findById(unknown)).thenReturn(Optional.empty());
+  @Requirement("RIA-54")
+  @Test
+  void shouldRefuseToActivateAnUnknownPass() {
+    var unknown = UUID.randomUUID();
+    when(passes.findById(unknown)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.activateOnFirstTrip(unknown, NOW)).isInstanceOf(IllegalStateException.class);
-	}
-
+    assertThatThrownBy(() -> service.activateOnFirstTrip(unknown, NOW))
+        .isInstanceOf(IllegalStateException.class);
+  }
 }

@@ -14,21 +14,20 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice(assignableTypes = HubVehiclesController.class)
 class HubVehiclesProblemHandler {
 
-	@ExceptionHandler(HubNotFoundException.class)
-	ProblemDetail hubNotFound(HubNotFoundException exception) {
-		return problem(HttpStatus.NOT_FOUND, "Hub not found", exception.getMessage());
-	}
+  @ExceptionHandler(HubNotFoundException.class)
+  ProblemDetail hubNotFound(HubNotFoundException exception) {
+    return problem(HttpStatus.NOT_FOUND, "Hub not found", exception.getMessage());
+  }
 
-	// The value is not repeated in the detail.
-	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	ProblemDetail invalidHubId(MethodArgumentTypeMismatchException exception) {
-		return problem(HttpStatus.BAD_REQUEST, "Invalid hub id", "The hub id must be a UUID.");
-	}
+  // The value is not repeated in the detail.
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  ProblemDetail invalidHubId(MethodArgumentTypeMismatchException exception) {
+    return problem(HttpStatus.BAD_REQUEST, "Invalid hub id", "The hub id must be a UUID.");
+  }
 
-	private static ProblemDetail problem(HttpStatus status, String title, String detail) {
-		var problem = ProblemDetail.forStatusAndDetail(status, detail);
-		problem.setTitle(title);
-		return problem;
-	}
-
+  private static ProblemDetail problem(HttpStatus status, String title, String detail) {
+    var problem = ProblemDetail.forStatusAndDetail(status, detail);
+    problem.setTitle(title);
+    return problem;
+  }
 }

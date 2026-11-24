@@ -14,21 +14,21 @@ import tools.jackson.databind.json.JsonMapper;
 @ConditionalOnBooleanProperty("riaride.telemetry.mqtt.enabled")
 class TelemetryMqttConfiguration {
 
-	@Bean
-	TelemetryMessageHandler telemetryMessageHandler(JsonMapper json, ApplicationEventPublisher events) {
-		return new TelemetryMessageHandler(new TelemetryMessageMapper(json), events);
-	}
+  @Bean
+  TelemetryMessageHandler telemetryMessageHandler(
+      JsonMapper json, ApplicationEventPublisher events) {
+    return new TelemetryMessageHandler(new TelemetryMessageMapper(json), events);
+  }
 
-	@Bean
-	MqttTelemetrySubscriber mqttTelemetrySubscriber(TelemetryMqttProperties properties,
-		TelemetryMessageHandler handler) {
-		return new MqttTelemetrySubscriber(properties, handler);
-	}
+  @Bean
+  MqttTelemetrySubscriber mqttTelemetrySubscriber(
+      TelemetryMqttProperties properties, TelemetryMessageHandler handler) {
+    return new MqttTelemetrySubscriber(properties, handler);
+  }
 
-	@Bean
-	MqttVehicleCommandPublisher mqttVehicleCommandPublisher(TelemetryMqttProperties properties, JsonMapper json,
-		Clock clock) {
-		return new MqttVehicleCommandPublisher(properties, json, clock);
-	}
-
+  @Bean
+  MqttVehicleCommandPublisher mqttVehicleCommandPublisher(
+      TelemetryMqttProperties properties, JsonMapper json, Clock clock) {
+    return new MqttVehicleCommandPublisher(properties, json, clock);
+  }
 }

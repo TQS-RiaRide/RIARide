@@ -22,33 +22,35 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequestMapping("/api/v1/trips")
 class TripController {
 
-	private final StartTripService startTrip;
-	private final TripQueryService trips;
+  private final StartTripService startTrip;
+  private final TripQueryService trips;
 
-	TripController(StartTripService startTrip, TripQueryService trips) {
-		this.startTrip = startTrip;
-		this.trips = trips;
-	}
+  TripController(StartTripService startTrip, TripQueryService trips) {
+    this.startTrip = startTrip;
+    this.trips = trips;
+  }
 
-	@PostMapping
-	@PreAuthorize("hasRole('GUEST')")
-	ResponseEntity<TripResponse> start(@Valid @RequestBody StartTripRequest request,
-		JwtAuthenticationToken authentication) {
-		var trip = startTrip.start(new StartTripCommand(authentication.getName(), request.vehicleCode()));
-		// fromCurrentRequestUri leaves out the query string of the request.
-		var location = ServletUriComponentsBuilder.fromCurrentRequestUri()
-			.path("/{id}")
-			.buildAndExpand(trip.getId())
-			.toUri();
-		return ResponseEntity.accepted().location(location).body(TripResponse.from(trip));
-	}
+  @PostMapping
+  @PreAuthorize("hasRole('GUEST')")
+  ResponseEntity<TripResponse> start(
+      @Valid @RequestBody StartTripRequest request, JwtAuthenticationToken authentication) {
+    var trip =
+        startTrip.start(new StartTripCommand(authentication.getName(), request.vehicleCode()));
+    // fromCurrentRequestUri leaves out the query string of the request.
+    var location =
+        ServletUriComponentsBuilder.fromCurrentRequestUri()
+            .path("/{id}")
+            .buildAndExpand(trip.getId())
+            .toUri();
+    return ResponseEntity.accepted().location(location).body(TripResponse.from(trip));
+  }
 
-	@GetMapping("/{id}")
-	@PreAuthorize("hasRole('GUEST')")
-	TripResponse read(@PathVariable UUID id, JwtAuthenticationToken authentication) {
-		return trips.findForGuest(authentication.getName(), id)
-			.map(TripResponse::from)
-			.orElseThrow(TripNotFoundException::new);
-	}
-
+  @GetMapping("/{id}")
+  @PreAuthorize("hasRole('GUEST')")
+  TripResponse read(@PathVariable UUID id, JwtAuthenticationToken authentication) {
+    return trips
+        .findForGuest(authentication.getName(), id)
+        .map(TripResponse::from)
+        .orElseThrow(TripNotFoundException::new);
+  }
 }

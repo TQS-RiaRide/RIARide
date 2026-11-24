@@ -28,56 +28,55 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class VehicleReservationServiceTest {
 
-	private static final UUID HUB = UUID.fromString("00000000-0000-0000-0000-00000000a001");
-	private static final Instant READ_AT = Instant.parse("2026-11-30T10:00:00Z");
+  private static final UUID HUB = UUID.fromString("00000000-0000-0000-0000-00000000a001");
+  private static final Instant READ_AT = Instant.parse("2026-11-30T10:00:00Z");
 
-	@Mock
-	private VehicleRepository vehicles;
+  @Mock private VehicleRepository vehicles;
 
-	private VehicleReservationService service;
+  private VehicleReservationService service;
 
-	@BeforeEach
-	void setUp() {
-		service = new VehicleReservationService(vehicles, new BookingBatteryPolicy(20));
-	}
+  @BeforeEach
+  void setUp() {
+    service = new VehicleReservationService(vehicles, new BookingBatteryPolicy(20));
+  }
 
-	private static Vehicle availableBike(String code, int batteryPct) {
-		var vehicle = Vehicle.register(code, VehicleType.E_BIKE, HUB);
-		vehicle.recordBattery(BatteryLevel.of(batteryPct), READ_AT, READ_AT);
-		return vehicle;
-	}
+  private static Vehicle availableBike(String code, int batteryPct) {
+    var vehicle = Vehicle.register(code, VehicleType.E_BIKE, HUB);
+    vehicle.recordBattery(BatteryLevel.of(batteryPct), READ_AT, READ_AT);
+    return vehicle;
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldReserveBookableVehicleLockedByCode() {
-		var bike = availableBike("EB-201", 80);
-		when(vehicles.findByCodeForUpdate("EB-201")).thenReturn(Optional.of(bike));
+  @Requirement("RIA-54")
+  @Test
+  void shouldReserveBookableVehicleLockedByCode() {
+    var bike = availableBike("EB-201", 80);
+    when(vehicles.findByCodeForUpdate("EB-201")).thenReturn(Optional.of(bike));
 
-		var reserved = service.reserve("EB-201");
+    var reserved = service.reserve("EB-201");
 
-		assertThat(reserved).isEqualTo(new ReservedVehicle(bike.getId(), "EB-201", HUB));
-		assertThat(bike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
-	}
+    assertThat(reserved).isEqualTo(new ReservedVehicle(bike.getId(), "EB-201", HUB));
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldThrowNotFoundForUnknownCode() {
-		when(vehicles.findByCodeForUpdate("EB-999")).thenReturn(Optional.empty());
+  @Requirement("RIA-54")
+  @Test
+  void shouldThrowNotFoundForUnknownCode() {
+    when(vehicles.findByCodeForUpdate("EB-999")).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.reserve("EB-999")).isInstanceOf(VehicleNotFoundException.class);
-	}
+    assertThatThrownBy(() -> service.reserve("EB-999"))
+        .isInstanceOf(VehicleNotFoundException.class);
+  }
 
-	@Requirement("RIA-54")
-	@Test
-	void shouldStartRideOfReservedVehicle() {
-		var bike = availableBike("EB-201", 80);
-		bike.reserve(new BookingBatteryPolicy(20));
-		when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+  @Requirement("RIA-54")
+  @Test
+  void shouldStartRideOfReservedVehicle() {
+    var bike = availableBike("EB-201", 80);
+    bike.reserve(new BookingBatteryPolicy(20));
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
 
-		service.startRide(bike.getId());
+    service.startRide(bike.getId());
 
-		assertThat(bike.getStatus()).isEqualTo(VehicleStatus.IN_USE);
-		assertThat(bike.getHubId()).isNull();
-	}
-
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.IN_USE);
+    assertThat(bike.getHubId()).isNull();
+  }
 }

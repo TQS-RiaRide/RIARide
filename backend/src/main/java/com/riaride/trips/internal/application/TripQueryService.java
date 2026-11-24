@@ -12,18 +12,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TripQueryService {
 
-	private final GuestDirectory guests;
-	private final TripRepository trips;
+  private final GuestDirectory guests;
+  private final TripRepository trips;
 
-	public TripQueryService(GuestDirectory guests, TripRepository trips) {
-		this.guests = guests;
-		this.trips = trips;
-	}
+  public TripQueryService(GuestDirectory guests, TripRepository trips) {
+    this.guests = guests;
+    this.trips = trips;
+  }
 
-	// Empty when the trip does not exist or belongs to someone else.
-	@Transactional(readOnly = true)
-	public Optional<Trip> findForGuest(String keycloakId, UUID tripId) {
-		return guests.findGuestId(keycloakId).flatMap(guestId -> trips.findByIdAndGuestId(tripId, guestId));
-	}
-
+  // Empty when the trip does not exist or belongs to someone else.
+  @Transactional(readOnly = true)
+  public Optional<Trip> findForGuest(String keycloakId, UUID tripId) {
+    return guests
+        .findGuestId(keycloakId)
+        .flatMap(guestId -> trips.findByIdAndGuestId(tripId, guestId));
+  }
 }

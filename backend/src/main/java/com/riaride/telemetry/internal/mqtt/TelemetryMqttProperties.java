@@ -9,11 +9,14 @@ import org.springframework.validation.annotation.Validated;
 // publish commands) gets them from MQTT_USERNAME and MQTT_PASSWORD, never from the repository.
 @ConfigurationProperties("riaride.telemetry.mqtt")
 @Validated
-record TelemetryMqttProperties(boolean enabled, @NotBlank String url, @NotBlank String clientId, String username,
-	String password) {
+record TelemetryMqttProperties(
+    boolean enabled,
+    @NotBlank String url,
+    @NotBlank String clientId,
+    String username,
+    String password) {
 
-	boolean hasCredentials() {
-		return username != null && !username.isBlank();
-	}
-
+  boolean hasCredentials() {
+    return username != null && !username.isBlank();
+  }
 }

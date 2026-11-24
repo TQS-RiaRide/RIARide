@@ -10,9 +10,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnBooleanProperty(value = "riaride.telemetry.mqtt.enabled", havingValue = false)
 class DisabledMqttConfiguration {
 
-	@Bean
-	DisabledVehicleCommands disabledVehicleCommands() {
-		return new DisabledVehicleCommands();
-	}
-
+  @Bean
+  DisabledVehicleCommands disabledVehicleCommands() {
+    return new DisabledVehicleCommands();
+  }
 }

@@ -13,33 +13,38 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 class VehicleCommandSender {
 
-	private static final Logger log = LoggerFactory.getLogger(VehicleCommandSender.class);
+  private static final Logger log = LoggerFactory.getLogger(VehicleCommandSender.class);
 
-	private final VehicleCommands commands;
+  private final VehicleCommands commands;
 
-	VehicleCommandSender(VehicleCommands commands) {
-		this.commands = commands;
-	}
+  VehicleCommandSender(VehicleCommands commands) {
+    this.commands = commands;
+  }
 
-	@TransactionalEventListener
-	void on(TripStartRequested requested) {
-		send("UNLOCK", requested.vehicleCode(), () -> commands.unlock(requested.vehicleCode()));
-	}
+  @TransactionalEventListener
+  void on(TripStartRequested requested) {
+    send("UNLOCK", requested.vehicleCode(), () -> commands.unlock(requested.vehicleCode()));
+  }
 
-	@TransactionalEventListener
-	void on(TripFailed failed) {
-		send("LOCK", failed.vehicleCode(),
-			() -> commands.lock(failed.vehicleCode(), Objects.toString(failed.hubId(), null)));
-	}
+  @TransactionalEventListener
+  void on(TripFailed failed) {
+    send(
+        "LOCK",
+        failed.vehicleCode(),
+        () -> commands.lock(failed.vehicleCode(), Objects.toString(failed.hubId(), null)));
+  }
 
-	// The trip is already stored: a command that fails here must not turn the guest's 202 into a 500,
-	// nor stop the telemetry thread. A lost UNLOCK makes the trip time out (BR13).
-	private static void send(String command, String vehicleCode, Runnable sending) {
-		try {
-			sending.run();
-		} catch (RuntimeException failed) {
-			log.error("{} for vehicle {} not sent ({})", command, vehicleCode, failed.getClass().getSimpleName());
-		}
-	}
-
+  // The trip is already stored: a command that fails here must not turn the guest's 202 into a 500,
+  // nor stop the telemetry thread. A lost UNLOCK makes the trip time out (BR13).
+  private static void send(String command, String vehicleCode, Runnable sending) {
+    try {
+      sending.run();
+    } catch (RuntimeException failed) {
+      log.error(
+          "{} for vehicle {} not sent ({})",
+          command,
+          vehicleCode,
+          failed.getClass().getSimpleName());
+    }
+  }
 }

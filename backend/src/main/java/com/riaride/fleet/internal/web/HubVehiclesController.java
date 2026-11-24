@@ -16,16 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/hubs/{hubId}/vehicles")
 class HubVehiclesController {
 
-	private final ListHubVehiclesService listHubVehicles;
+  private final ListHubVehiclesService listHubVehicles;
 
-	HubVehiclesController(ListHubVehiclesService listHubVehicles) {
-		this.listHubVehicles = listHubVehicles;
-	}
+  HubVehiclesController(ListHubVehiclesService listHubVehicles) {
+    this.listHubVehicles = listHubVehicles;
+  }
 
-	@GetMapping
-	@PreAuthorize("hasAnyRole('GUEST', 'OPERATOR', 'ADMIN')")
-	List<HubVehicle> list(@PathVariable UUID hubId) {
-		return listHubVehicles.list(hubId);
-	}
-
+  @GetMapping
+  @PreAuthorize("hasAnyRole('GUEST', 'OPERATOR', 'ADMIN')")
+  List<HubVehicle> list(@PathVariable UUID hubId) {
+    return listHubVehicles.list(hubId);
+  }
 }

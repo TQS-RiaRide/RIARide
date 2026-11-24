@@ -17,30 +17,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class PassUsageService implements PassUsage {
 
-	private final PassRepository passes;
-	private final Clock clock;
+  private final PassRepository passes;
+  private final Clock clock;
 
-	PassUsageService(PassRepository passes, Clock clock) {
-		this.passes = passes;
-		this.clock = clock;
-	}
+  PassUsageService(PassRepository passes, Clock clock) {
+    this.passes = passes;
+    this.clock = clock;
+  }
 
-	@Override
-	@Transactional(readOnly = true)
-	public Optional<UsablePass> findUsablePass(UUID guestId) {
-		var now = clock.instant();
-		return passes.findFirstByGuestIdAndStatusIn(guestId, PassStatus.OPEN)
-			.filter(pass -> pass.isUsableAt(now))
-			.map(pass -> new UsablePass(pass.getId()));
-	}
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<UsablePass> findUsablePass(UUID guestId) {
+    var now = clock.instant();
+    return passes
+        .findFirstByGuestIdAndStatusIn(guestId, PassStatus.OPEN)
+        .filter(pass -> pass.isUsableAt(now))
+        .map(pass -> new UsablePass(pass.getId()));
+  }
 
-	// MANDATORY: the pass is activated in the same transaction that starts the trip, or not at all.
-	@Override
-	@Transactional(propagation = Propagation.MANDATORY)
-	public void activateOnFirstTrip(UUID passId, Instant at) {
-		passes.findById(passId)
-			.orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"))
-			.activate(at);
-	}
-
+  // MANDATORY: the pass is activated in the same transaction that starts the trip, or not at all.
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void activateOnFirstTrip(UUID passId, Instant at) {
+    passes
+        .findById(passId)
+        .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"))
+        .activate(at);
+  }
 }

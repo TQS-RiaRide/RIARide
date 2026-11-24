@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReservationRepository extends JpaRepository<Reservation, UUID> {
 
-	// A pass has one active reservation at most (uq_reservation_active_per_pass).
-	Optional<Reservation> findByPassIdAndStatus(UUID passId, ReservationStatus status);
-
+  // A pass has one active reservation at most (uq_reservation_active_per_pass).
+  Optional<Reservation> findByPassIdAndStatus(UUID passId, ReservationStatus status);
 }

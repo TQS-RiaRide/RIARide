@@ -16,22 +16,22 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequestMapping("/api/v1/hubs")
 class HubController {
 
-	private final RegisterHubService registerHub;
+  private final RegisterHubService registerHub;
 
-	HubController(RegisterHubService registerHub) {
-		this.registerHub = registerHub;
-	}
+  HubController(RegisterHubService registerHub) {
+    this.registerHub = registerHub;
+  }
 
-	@PostMapping
-	@PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
-	ResponseEntity<HubResponse> register(@Valid @RequestBody RegisterHubRequest request) {
-		var registered = registerHub.register(request.toCommand());
-		// fromCurrentRequestUri leaves out the query string of the request.
-		var location = ServletUriComponentsBuilder.fromCurrentRequestUri()
-			.path("/{id}")
-			.buildAndExpand(registered.hub().getId())
-			.toUri();
-		return ResponseEntity.created(location).body(HubResponse.from(registered));
-	}
-
+  @PostMapping
+  @PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
+  ResponseEntity<HubResponse> register(@Valid @RequestBody RegisterHubRequest request) {
+    var registered = registerHub.register(request.toCommand());
+    // fromCurrentRequestUri leaves out the query string of the request.
+    var location =
+        ServletUriComponentsBuilder.fromCurrentRequestUri()
+            .path("/{id}")
+            .buildAndExpand(registered.hub().getId())
+            .toUri();
+    return ResponseEntity.created(location).body(HubResponse.from(registered));
+  }
 }

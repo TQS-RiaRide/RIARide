@@ -14,40 +14,39 @@ import org.springframework.context.annotation.Primary;
 @Primary
 public class TestClock extends Clock {
 
-	private final AtomicReference<Instant> now;
-	private final ZoneId zone;
+  private final AtomicReference<Instant> now;
+  private final ZoneId zone;
 
-	public TestClock() {
-		this(new AtomicReference<>(FixedClockConfiguration.NOW), FixedClockConfiguration.VILA_RIA);
-	}
+  public TestClock() {
+    this(new AtomicReference<>(FixedClockConfiguration.NOW), FixedClockConfiguration.VILA_RIA);
+  }
 
-	private TestClock(AtomicReference<Instant> now, ZoneId zone) {
-		this.now = now;
-		this.zone = zone;
-	}
+  private TestClock(AtomicReference<Instant> now, ZoneId zone) {
+    this.now = now;
+    this.zone = zone;
+  }
 
-	public void advance(Duration duration) {
-		now.updateAndGet(instant -> instant.plus(duration));
-	}
+  public void advance(Duration duration) {
+    now.updateAndGet(instant -> instant.plus(duration));
+  }
 
-	public void reset() {
-		now.set(FixedClockConfiguration.NOW);
-	}
+  public void reset() {
+    now.set(FixedClockConfiguration.NOW);
+  }
 
-	@Override
-	public Instant instant() {
-		return now.get();
-	}
+  @Override
+  public Instant instant() {
+    return now.get();
+  }
 
-	@Override
-	public ZoneId getZone() {
-		return zone;
-	}
+  @Override
+  public ZoneId getZone() {
+    return zone;
+  }
 
-	// The same time in another zone: both clocks move together.
-	@Override
-	public Clock withZone(ZoneId otherZone) {
-		return new TestClock(now, otherZone);
-	}
-
+  // The same time in another zone: both clocks move together.
+  @Override
+  public Clock withZone(ZoneId otherZone) {
+    return new TestClock(now, otherZone);
+  }
 }

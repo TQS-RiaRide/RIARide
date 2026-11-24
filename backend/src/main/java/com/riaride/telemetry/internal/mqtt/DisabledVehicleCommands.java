@@ -8,16 +8,15 @@ import org.slf4j.LoggerFactory;
 // are logged and dropped, so the modules that send them still start.
 class DisabledVehicleCommands implements VehicleCommands {
 
-	private static final Logger log = LoggerFactory.getLogger(DisabledVehicleCommands.class);
+  private static final Logger log = LoggerFactory.getLogger(DisabledVehicleCommands.class);
 
-	@Override
-	public void unlock(String vehicleCode) {
-		log.warn("MQTT is turned off; UNLOCK for vehicle {} dropped", vehicleCode);
-	}
+  @Override
+  public void unlock(String vehicleCode) {
+    log.warn("MQTT is turned off; UNLOCK for vehicle {} dropped", vehicleCode);
+  }
 
-	@Override
-	public void lock(String vehicleCode, String hubId) {
-		log.warn("MQTT is turned off; LOCK for vehicle {} dropped", vehicleCode);
-	}
-
+  @Override
+  public void lock(String vehicleCode, String hubId) {
+    log.warn("MQTT is turned off; LOCK for vehicle {} dropped", vehicleCode);
+  }
 }

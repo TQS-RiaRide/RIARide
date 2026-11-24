@@ -12,41 +12,40 @@ import org.junit.jupiter.params.provider.ValueSource;
 // Boundary values around the threshold: 19 is blocked, 20 and 21 are allowed.
 class BookingBatteryPolicyTest {
 
-	private static final BookingBatteryPolicy POLICY = new BookingBatteryPolicy(20);
+  private static final BookingBatteryPolicy POLICY = new BookingBatteryPolicy(20);
 
-	@Requirement("RIA-59")
-	@ParameterizedTest
-	@ValueSource(ints = { 20, 21, 100 })
-	void shouldAllowBookingWhenBatteryAtOrAbove20Percent(int percent) {
-		var allowed = POLICY.allowsBooking(BatteryLevel.of(percent));
+  @Requirement("RIA-59")
+  @ParameterizedTest
+  @ValueSource(ints = {20, 21, 100})
+  void shouldAllowBookingWhenBatteryAtOrAbove20Percent(int percent) {
+    var allowed = POLICY.allowsBooking(BatteryLevel.of(percent));
 
-		assertThat(allowed).isTrue();
-	}
+    assertThat(allowed).isTrue();
+  }
 
-	@Requirement("RIA-59")
-	@ParameterizedTest
-	@ValueSource(ints = { 0, 18, 19 })
-	void shouldBlockBookingWhenBatteryBelow20Percent(int percent) {
-		var allowed = POLICY.allowsBooking(BatteryLevel.of(percent));
+  @Requirement("RIA-59")
+  @ParameterizedTest
+  @ValueSource(ints = {0, 18, 19})
+  void shouldBlockBookingWhenBatteryBelow20Percent(int percent) {
+    var allowed = POLICY.allowsBooking(BatteryLevel.of(percent));
 
-		assertThat(allowed).isFalse();
-	}
+    assertThat(allowed).isFalse();
+  }
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldBlockBookingWhenNoBatteryReadingYet() {
-		var allowed = POLICY.allowsBooking(null);
+  @Requirement("RIA-59")
+  @Test
+  void shouldBlockBookingWhenNoBatteryReadingYet() {
+    var allowed = POLICY.allowsBooking(null);
 
-		assertThat(allowed).isFalse();
-	}
+    assertThat(allowed).isFalse();
+  }
 
-	@Requirement("RIA-59")
-	@ParameterizedTest
-	@ValueSource(ints = { -1, 101 })
-	void shouldRejectMinimumBatteryOutside0To100Percent(int minimumPercent) {
-		assertThatThrownBy(() -> new BookingBatteryPolicy(minimumPercent))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining(String.valueOf(minimumPercent));
-	}
-
+  @Requirement("RIA-59")
+  @ParameterizedTest
+  @ValueSource(ints = {-1, 101})
+  void shouldRejectMinimumBatteryOutside0To100Percent(int minimumPercent) {
+    assertThatThrownBy(() -> new BookingBatteryPolicy(minimumPercent))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(String.valueOf(minimumPercent));
+  }
 }

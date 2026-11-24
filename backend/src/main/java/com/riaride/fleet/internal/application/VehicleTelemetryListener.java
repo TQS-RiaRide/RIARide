@@ -16,27 +16,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 class VehicleTelemetryListener {
 
-	private static final Logger log = LoggerFactory.getLogger(VehicleTelemetryListener.class);
+  private static final Logger log = LoggerFactory.getLogger(VehicleTelemetryListener.class);
 
-	private final VehicleRepository vehicles;
-	private final Clock clock;
+  private final VehicleRepository vehicles;
+  private final Clock clock;
 
-	VehicleTelemetryListener(VehicleRepository vehicles, Clock clock) {
-		this.vehicles = vehicles;
-		this.clock = clock;
-	}
+  VehicleTelemetryListener(VehicleRepository vehicles, Clock clock) {
+    this.vehicles = vehicles;
+    this.clock = clock;
+  }
 
-	// Synchronous, in the publisher's transaction: the reading is stored before the MQTT message is
-	// acknowledged. The row is locked: the update writes the whole vehicle, so without the lock a
-	// reading would put back the status it read and undo a reservation made in the meantime (RIA-54).
-	// Lock order on this path is vehicle, then trip; starting a trip locks only the vehicle.
-	@EventListener
-	@Transactional
-	void on(VehicleTelemetryReceived reading) {
-		var now = clock.instant();
-		vehicles.findByCodeForUpdate(reading.vehicleCode()).ifPresentOrElse(
-			vehicle -> vehicle.recordBattery(BatteryLevel.of(reading.batteryPct()), reading.emittedAt(), now),
-			() -> log.warn("Telemetry for unknown vehicle {} ignored", reading.vehicleCode()));
-	}
-
+  // Synchronous, in the publisher's transaction: the reading is stored before the MQTT message is
+  // acknowledged. The row is locked: the update writes the whole vehicle, so without the lock a
+  // reading would put back the status it read and undo a reservation made in the meantime (RIA-54).
+  // Lock order on this path is vehicle, then trip; starting a trip locks only the vehicle.
+  @EventListener
+  @Transactional
+  void on(VehicleTelemetryReceived reading) {
+    var now = clock.instant();
+    vehicles
+        .findByCodeForUpdate(reading.vehicleCode())
+        .ifPresentOrElse(
+            vehicle ->
+                vehicle.recordBattery(
+                    BatteryLevel.of(reading.batteryPct()), reading.emittedAt(), now),
+            () -> log.warn("Telemetry for unknown vehicle {} ignored", reading.vehicleCode()));
+  }
 }
