@@ -15,7 +15,7 @@ The [traceability table](../../architecture/README.md#traceability-to-the-assign
 
 ## 4.2 Non-functional requirements and SLOs
 
-*Proposed by the QA Engineer; pending team confirmation (RIA-163).*
+*Proposed by the QA Engineer and confirmed by the team (RIA-163).*
 
 The SLOs cover what a guest notices first (booking speed and failures), what the fleet depends on (fresh telemetry) and whether the service is up. Each one is measured from the backend's own metrics, so the alerts and the tests use the same numbers.
 

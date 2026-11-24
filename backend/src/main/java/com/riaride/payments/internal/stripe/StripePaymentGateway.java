@@ -79,8 +79,8 @@ class StripePaymentGateway implements PaymentGateway {
                       .setAutomaticPaymentMethods(noRedirects())
                       .build(),
                   idempotent(request.idempotencyKey()));
-      requireSucceeded(intent);
-      return new PurchaseResult(intent.getId(), customer.getId(), intent.getPaymentMethod());
+      var current = requireSucceeded(intent);
+      return new PurchaseResult(current.getId(), customer.getId(), current.getPaymentMethod());
     } catch (StripeException error) {
       throw StripeFailures.classify(error);
     }
@@ -103,8 +103,7 @@ class StripePaymentGateway implements PaymentGateway {
                       .setOffSession(true)
                       .build(),
                   idempotent(charge.idempotencyKey()));
-      requireSucceeded(intent);
-      return intent.getId();
+      return requireSucceeded(intent).getId();
     } catch (StripeException error) {
       throw StripeFailures.classify(error);
     }
@@ -146,13 +145,20 @@ class StripePaymentGateway implements PaymentGateway {
         .build();
   }
 
-  // processing may still succeed, so it is transient and keeps the intent: the caller retries with
-  // the same key and gets the same intent. Any other status is final; the intent is cancelled so it
-  // does not stay open at Stripe. requires_action means 3-D Secure, which the MVP has no step for.
-  private void requireSucceeded(PaymentIntent intent) {
+  // A create that reuses an idempotency key gets Stripe's saved response replayed, not the intent's
+  // current state, so a retried create keeps saying processing even after the payment settled.
+  // A processing intent is therefore read again before deciding. If it is still processing, that
+  // is transient and keeps the intent: the caller retries with the same key, and that retry reads
+  // the intent again. Any other status is final; the intent is cancelled so it does not stay open
+  // at Stripe. requires_action means 3-D Secure, which the MVP has no step for.
+  private PaymentIntent requireSucceeded(PaymentIntent created) throws StripeException {
+    var intent =
+        PROCESSING.equals(created.getStatus())
+            ? stripe.v1().paymentIntents().retrieve(created.getId())
+            : created;
     var status = intent.getStatus();
     if (SUCCEEDED.equals(status)) {
-      return;
+      return intent;
     }
     if (PROCESSING.equals(status)) {
       throw new TransientPaymentException(

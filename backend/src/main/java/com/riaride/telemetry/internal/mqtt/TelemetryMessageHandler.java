@@ -36,7 +36,10 @@ class TelemetryMessageHandler {
       }
     } catch (InvalidTelemetryMessageException invalid) {
       // The payload is not logged: it is not ours to trust or to keep.
-      log.warn("Invalid telemetry message on {} dropped: {}", topic, invalid.getMessage());
+      log.warn(
+          "Invalid telemetry message on {} dropped: {}",
+          LogSafeTopic.of(topic),
+          invalid.getMessage());
     }
   }
 }

@@ -20,6 +20,10 @@ public final class TestMosquitto {
 
   private static final int MQTT_PORT = 1883;
 
+  // Just after the tests' fixed clock: the platform ignores readings more than a minute ahead of
+  // its clock, so the timestamp follows FixedClockConfiguration.NOW instead of a literal.
+  private static final Instant EMITTED_AT = FixedClockConfiguration.NOW.plusSeconds(5);
+
   @SuppressWarnings("resource")
   private static final GenericContainer<?> CONTAINER =
       new GenericContainer<>("eclipse-mosquitto:2.0")
@@ -55,11 +59,9 @@ public final class TestMosquitto {
         "riaride.telemetry.mqtt.client-id", () -> "riaride-backend-test-" + UUID.randomUUID());
   }
 
-  private static final Instant DEFAULT_EMITTED_AT = Instant.parse("2026-11-30T10:00:05Z");
-
   // Publishes a telemetry reading as the simulator does (contracts/mqtt/telemetry.schema.json).
   public static void publishTelemetry(String vehicleCode, int batteryPct, String hubId) {
-    publishTelemetry(vehicleCode, batteryPct, hubId, "LOCKED", DEFAULT_EMITTED_AT);
+    publishTelemetry(vehicleCode, batteryPct, hubId, "LOCKED", EMITTED_AT);
   }
 
   // The same, with the lock state and emission time the scenario needs (RIA-54: the simulator

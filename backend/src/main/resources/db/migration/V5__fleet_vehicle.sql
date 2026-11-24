@@ -12,6 +12,8 @@ create table vehicle (
     -- Latest battery reading from telemetry; null until the first one arrives.
     battery_pct       integer,
     last_telemetry_at timestamptz,
+    -- Optimistic lock: a transaction that loaded an older state cannot overwrite a newer one.
+    version           bigint      not null default 0,
     created_at        timestamptz not null default now(),
     constraint uq_vehicle_code unique (code),
     constraint ck_vehicle_type check (type in ('E_BIKE')),

@@ -10,6 +10,7 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -55,6 +56,10 @@ public class Vehicle implements Persistable<UUID> {
 
   @Column(name = "last_telemetry_at")
   private Instant lastTelemetryAt;
+
+  // Telemetry updates the battery while bookings and maintenance change the status: without the
+  // lock, a transaction that loaded the vehicle earlier would write its old status back.
+  @Version private long version;
 
   // The id is assigned in the domain, so JPA cannot tell a new vehicle from an existing one.
   @Transient private boolean isNew;

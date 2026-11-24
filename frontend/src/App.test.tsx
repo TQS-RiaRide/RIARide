@@ -11,35 +11,49 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  window.localStorage.clear();
 });
+
+async function renderApp(health: { ok: boolean; status?: string }) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({ ok: health.ok, json: async () => ({ status: health.status }) }),
+  );
+  // The health check resolves after the first render, so flush it inside act
+  await act(async () => {
+    render(<App />);
+  });
+}
+
+async function chooseLanguage(label: string, language: string) {
+  // changeLanguage is asynchronous: wait for i18next to emit languageChanged
+  // and for React to re-render, all inside act
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText(label), { target: { value: language } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
 
 describe('App', () => {
   it('shows the backend as online and switches language both ways', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'UP' }) }),
-    );
-    // The health check resolves after the first render, so flush it inside act
-    await act(async () => {
-      render(<App />);
-    });
+    await renderApp({ ok: true, status: 'UP' });
 
     expect(screen.getByText('Online')).toBeInTheDocument();
+    expect(screen.getByText('Backend status:')).toBeInTheDocument();
 
-    // changeLanguage is asynchronous: wait for i18next to emit languageChanged
-    // and for React to re-render, all inside act
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Português' }));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await chooseLanguage('Language', 'pt');
     expect(screen.getByText('Disponível')).toBeInTheDocument();
+    expect(screen.getByText('Estado do backend:')).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('pt');
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'English' }));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await chooseLanguage('Língua', 'en');
     expect(screen.getByText('Online')).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('en');
+  });
+
+  it('shows the backend as unreachable when the health check fails', async () => {
+    await renderApp({ ok: false });
+
+    expect(screen.getByText('Unreachable')).toBeInTheDocument();
   });
 });
