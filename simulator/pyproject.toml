@@ -1,0 +1,38 @@
+[project]
+name = "riaride-simulator"
+version = "0.1.0"
+description = "Minimal fleet telemetry simulator for RiaRide: publishes e-bike telemetry and faults over MQTT and reacts to lock commands."
+requires-python = ">=3.12"
+# Runtime and development dependencies are pinned in requirements.in and requirements-dev.in;
+# requirements.txt and requirements-dev.txt are generated from them with hashes (pip-compile).
+# Dependabot updates both.
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+# Integration tests need Docker and run apart: python -m pytest -m integration
+addopts = "--strict-markers -m 'not integration'"
+markers = ["integration: needs Docker; runs the simulator against Mosquitto in Testcontainers"]
+# xunit1 keeps record_property, which links each test to its story for Xray (tests/conftest.py).
+junit_family = "xunit1"
+
+[tool.coverage.run]
+source = ["riaride_simulator"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# The paho-mqtt wiring and run() are covered by the integration tests, so the complete
+# figure comes from running both suites with --cov-append (see README).
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pep8-naming, pyupgrade, bugbear, simplify
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM"]
