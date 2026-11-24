@@ -20,6 +20,16 @@
 		<java.version>21</java.version>
 		<spring-modulith.version>2.1.2</spring-modulith.version>
 		<jacoco.version>0.8.16</jacoco.version>
+		<cucumber.version>8.1.0</cucumber.version>
+		<rest-assured.version>6.3.0</rest-assured.version>
+		<stripe-java.version>34.2.0</stripe-java.version>
+		<wiremock.version>3.13.2</wiremock.version>
+		<xray-junit-extensions.version>1.1.0</xray-junit-extensions.version>
+		<testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
+		<spotless.version>3.12.0</spotless.version>
+		<google-java-format.version>2.0.0</google-java-format.version>
+		<paho-mqttv3.version>1.2.5</paho-mqttv3.version>
+		<json-schema-validator.version>1.5.9</json-schema-validator.version>
 		<!-- Set to true to run only integration tests: ./mvnw verify -DskipUnitTests=true -->
 		<skipUnitTests>false</skipUnitTests>
 	</properties>
@@ -40,6 +50,42 @@
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
 			<artifactId>spring-modulith-starter-core</artifactId>
+		</dependency>
+		<!-- OAuth2 resource server: validates Keycloak JWTs against the realm's JWKS. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- MQTT client for the telemetry adapter (ADR 0006): the simulator's only integration interface. -->
+		<dependency>
+			<groupId>org.eclipse.paho</groupId>
+			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+			<version>${paho-mqttv3.version}</version>
+		</dependency>
+
+		<!-- Stripe test mode behind the PaymentGateway port (ADR 0008). -->
+		<dependency>
+			<groupId>com.stripe</groupId>
+			<artifactId>stripe-java</artifactId>
+			<version>${stripe-java.version}</version>
 		</dependency>
 
 		<dependency>
@@ -62,6 +108,88 @@
 			<artifactId>spring-modulith-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Acceptance tests (BDD): Cucumber JVM with REST Assured, run by Failsafe (CucumberIT). -->
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-java</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-spring</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-junit-platform-engine</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-suite</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.rest-assured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>${rest-assured.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Links JUnit tests to Jira stories in Xray: @Requirement("RIA-n") (QA Manual 2.3). -->
+		<dependency>
+			<groupId>app.getxray</groupId>
+			<artifactId>xray-junit-extensions</artifactId>
+			<version>${xray-junit-extensions.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Waits on asynchronous outcomes, such as a telemetry message being stored, without sleeps. -->
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Contract tests: MQTT messages are validated against contracts/mqtt/*.schema.json. -->
+		<dependency>
+			<groupId>com.networknt</groupId>
+			<artifactId>json-schema-validator</artifactId>
+			<version>${json-schema-validator.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Keycloak in Testcontainers for the acceptance tests: real tokens from the realm in infra/keycloak. -->
+		<dependency>
+			<groupId>com.github.dasniko</groupId>
+			<artifactId>testcontainers-keycloak</artifactId>
+			<version>${testcontainers-keycloak.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Stubs of the Stripe API for the payment adapter's integration tests (ADR 0008). -->
+		<dependency>
+			<groupId>org.wiremock</groupId>
+			<artifactId>wiremock-standalone</artifactId>
+			<version>${wiremock.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
@@ -73,10 +201,35 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<dependency>
+				<groupId>io.cucumber</groupId>
+				<artifactId>cucumber-bom</artifactId>
+				<version>${cucumber.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
 	<build>
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<!-- The Keycloak realm used in the Compose stack, imported as-is by the acceptance tests. -->
+			<testResource>
+				<directory>${project.basedir}/../infra/keycloak</directory>
+				<includes>
+					<include>riaride-realm.json</include>
+				</includes>
+				<targetPath>keycloak</targetPath>
+			</testResource>
+			<!-- The MQTT message contracts shared with the simulator (RIA-60), validated by the adapter's tests. -->
+			<testResource>
+				<directory>${project.basedir}/../contracts/mqtt</directory>
+				<targetPath>contracts/mqtt</targetPath>
+			</testResource>
+		</testResources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
@@ -96,6 +249,30 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
+			</plugin>
+
+			<!-- Google Java Style (QA Manual 3.1). ./mvnw spotless:apply formats the code;
+			     spotless:check runs in verify and fails the build on unformatted code. -->
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>${spotless.version}</version>
+				<configuration>
+					<java>
+						<googleJavaFormat>
+							<version>${google-java-format.version}</version>
+							<style>GOOGLE</style>
+						</googleJavaFormat>
+						<removeUnusedImports/>
+					</java>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 
 			<!-- Coverage for unit and integration tests, imported by SonarQube. -->

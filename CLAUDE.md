@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Group project for the TQS course: a *light-mobility fleet-as-a-service* platform, graded on both the product and the evidence that quality was built in from the start. A practice only counts if the QA Manual's compliance table links to evidence of it working.
 
-The backend walking skeleton exists (Spring Boot 4.1, Java 21, Spring Modulith, Maven). `frontend/` and `simulator/` are still empty; document their commands here when they land.
+The backend (Spring Boot 4.1, Java 21, Spring Modulith, Maven) and frontend (React, Vite, TypeScript) walking skeletons exist. The minimal fleet simulator (Python, MQTT) is in `simulator/`; its message formats are the JSON Schemas in `contracts/mqtt/`.
 
 ### Backend commands
 
@@ -15,14 +15,66 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | Task | Command |
 |---|---|
 | Unit tests (Surefire, `*Test.java` / `*Tests.java`) | `./mvnw test` |
-| Integration tests only (Failsafe, `*IT.java`) | `./mvnw verify -DskipUnitTests=true` |
+| Integration tests only (Failsafe, `*IT.java`; need Docker for PostgreSQL and Keycloak containers) | `./mvnw verify -DskipUnitTests=true` |
 | All tests and JaCoCo report | `./mvnw verify` |
+| Format / check formatting (Spotless, Google Java Style; the check also runs in `verify` and CI) | `./mvnw spotless:apply` / `./mvnw spotless:check` |
 | Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
 | Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
-| Run the app | `./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
+| Acceptance tests (Cucumber, Failsafe; needs Docker) | `./mvnw verify -DskipUnitTests=true -Dit.test=CucumberIT` (reports in `target/cucumber-reports/`; `@wip` scenarios are excluded) |
+| Run the app | Start `infra/compose.yaml` first (below), then `DB_PASSWORD=<POSTGRES_PASSWORD from infra/.env> ./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`). Without an MQTT broker the backend still starts and retries every 5 s; `MQTT_ENABLED=false` turns the telemetry adapter off |
 | Docker image | `docker build -t riaride-backend .` |
 
+Payments use Stripe test mode behind the `PaymentGateway` port (ADR 0008). The backend reads the secret key from `STRIPE_SECRET_KEY` and fails at startup if the key is missing or is not a test mode key (`sk_test_...`). To run the app without making payments, any `sk_test_` value works. The tests stub Stripe with WireMock and use a dummy key from `src/test/resources/config/application.yml`, so they need no real key or network access.
+
 To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds Surefire's `skipTests` to `skipUnitTests`, so `-DskipTests` does not skip them.
+
+The backend reads `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `KEYCLOAK_ISSUER_URI`, and for vehicle telemetry `MQTT_ENABLED`, `MQTT_URL` (default `tcp://localhost:1883`), `MQTT_CLIENT_ID`, `MQTT_USERNAME` and `MQTT_PASSWORD`; the defaults point at the local stack. The MQTT session is kept per client id, so run one backend instance per `MQTT_CLIENT_ID`. Integration tests never use these: they start their own containers, and turn MQTT off unless they start Mosquitto.
+
+### Local stack (PostgreSQL, Keycloak and Mosquitto)
+
+Run from the repository root; details in [`infra/README.md`](infra/README.md).
+
+| Task | Command |
+|---|---|
+| First time | `cp infra/.env.example infra/.env`, then set every password |
+| Start | `docker compose -f infra/compose.yaml up -d` |
+| Start the whole platform in containers (backend, frontend, simulator) | `docker compose -f infra/compose.yaml --profile app --profile sim up -d --build` |
+| Create synthetic users (idempotent) | `infra/keycloak/create-dev-users.sh` |
+| Reset (re-imports the realm) | `docker compose -f infra/compose.yaml down -v` |
+
+The Keycloak realm is `infra/keycloak/riaride-realm.json`; the Cucumber tests import the same file. Hotel managers carry the hotel they manage in the `hotel_id` token claim.
+
+### Frontend commands
+
+Run from `frontend/`, with Node.js 22.22.2 or later in the 22 line, or 24.15.0 or later (24 LTS recommended). Details in [`frontend/README.md`](frontend/README.md).
+
+| Task | Command |
+|---|---|
+| Install dependencies | `npm ci` |
+| Dev server (`/api/v1` forwarded to `http://localhost:8080`; `VITE_BACKEND_URL` overrides it) | `npm run dev` (at `http://localhost:5173`) |
+| Lint (typescript-eslint strict, react-hooks) | `npm run lint` |
+| Format / check formatting (Prettier) | `npm run format` / `npm run format:check` |
+| Unit tests (Vitest, React Testing Library) | `npm test` |
+| Tests with LCOV coverage (`coverage/`, read by SonarQube) | `npm run test:coverage` |
+| Single test file or test | `npx vitest run src/features/health/api.test.ts -t "unreachable"` |
+| Type check and production build (`dist/`) | `npm run build` |
+| Docker image | `docker build -t riaride-frontend .` |
+
+### Simulator commands
+
+Run from `simulator/`, with Python 3.12 or later, after `pip install -r requirements-dev.txt` in a virtual environment. Details in [`simulator/README.md`](simulator/README.md).
+
+| Task | Command |
+|---|---|
+| Lint / check formatting (ruff) | `ruff check .` / `ruff format --check .` (`ruff format .` fixes) |
+| Unit and contract tests | `python -m pytest` |
+| Integration tests against Mosquitto in Testcontainers (needs Docker) | `python -m pytest -m integration` |
+| Both, with coverage (`coverage.xml`, read by SonarQube) | `python -m pytest --cov --cov-report=` then `python -m pytest -m integration --cov --cov-append --cov-report=term --cov-report=xml` |
+| Single test | `python -m pytest tests/test_simulator.py -k unlock` |
+| Dependency vulnerabilities | `pip-audit -r requirements.txt` |
+| Regenerate the hashed requirements after changing a `.in` file | `pip-compile --generate-hashes --allow-unsafe -o requirements.txt requirements.in` (and the same for `requirements-dev`) |
+| Run with a local Mosquitto (from the repository root) | `docker compose -f simulator/compose.yaml up --build` |
+| Docker image | `docker build -t riaride-simulator .` |
 
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
@@ -43,20 +95,23 @@ Product definitions and backlog:
 
 ### Business rules (draft)
 
-| Rule | Proposal |
-|---|---|
-| Access | Only guests with an active stay can register and book |
-| Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
-| Pricing | One base price, used by all hotels in the group |
-| Activation | On the first trip, not at purchase |
-| Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |
-| One bike at a time | Each pass can only have one vehicle in use |
-| Maximum trip duration | 3 h; beyond that, overtime is charged per 15 min |
-| Pass expires during a trip | The trip continues; time after expiry is charged as overtime |
-| Check-out | The stay pass ends at check-out; if the bike was not returned, the extra time is overtime |
-| End of trip | Only at a hub with a free slot; capacity is defined by the client |
-| Booking | Can be made in advance; the bike is held for 15 min |
-| Battery | A vehicle below 20 % cannot be booked (value comes from telemetry) |
+| ID | Rule | Proposal |
+|---|---|---|
+| BR1 | Access | Only guests with an active stay can register and book |
+| BR2 | Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
+| BR3 | Pricing | One base price, used by all hotels in the group |
+| BR4 | Activation | On the first trip, not at purchase |
+| BR5 | Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |
+| BR6 | One bike at a time | Each pass can only have one vehicle in use |
+| BR7 | Maximum trip duration | 3 h; beyond that, overtime is charged per 15 min |
+| BR8 | Pass expires during a trip | The trip continues; time after expiry is charged as overtime |
+| BR9 | Check-out | The stay pass ends at check-out; if the bike was not returned, the extra time is overtime |
+| BR10 | End of trip | Only at a hub with a free slot; capacity is defined by the client |
+| BR11 | Booking | Can be made in advance; the bike is held for 15 min |
+| BR12 | Battery | A vehicle below 20 % cannot be booked (value comes from telemetry) |
+| BR13 | Unlock timeout | A trip whose unlock is not confirmed by telemetry within 30 s fails; the pass stays inactive and the bike stays reserved until the booking expires (BR11) |
+
+Gherkin scenarios tag the rules they cover with these IDs (`@BR10`); hub capacity is part of BR10.
 
 Payments are always made by the guest. Invoicing the hotel is out of scope.
 
@@ -96,11 +151,11 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 
 ### Git and Jira
 
-- One feature branch per story; protected `main`; merges only through a pull request approved by another member.
+- One feature branch per story, created from `dev` and merged into `dev`; merges only through a pull request approved by another member. `main` is the release branch: `dev` is merged into it by a pull request at the end of each iteration, before the tag. Nobody pushes directly to `dev` or `main`.
 - The Jira key (for example, `RIA-12`) must appear in the branch name, the commits and the pull request.
-- Branch names: `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`.
+- Branch names: `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`. The `PR rules` check (`.github/workflows/pr-rules.yml`) enforces the branch name and the Jira key in the pull request title; Dependabot and the `dev` → `main` release pull request are exempt.
 - Commits: Conventional Commits with the key, for example `feat: RIA-31 add booking endpoint`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
-- Merge with a merge commit, never squash, so test-first (TDD) commits stay in `main`'s history. For TDD components, commit the failing test before the implementation.
+- Merge with a merge commit, never squash, so test-first (TDD) commits stay in the history of `dev` and `main`. For TDD components, commit the failing test before the implementation.
 - Tags at the end of each iteration: `iter1`, `iter2`, ..., `final_v1`. At each tag, a PDF of each report goes in `docs/`.
 
 ### Expected tests
@@ -129,7 +184,7 @@ Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement(
 Full guidelines and review checklist: QA Manual, section 3.1 and 3.2.
 
 - **Java:** Google Java Style, enforced by Spotless (google-java-format). Package by Spring Modulith module, not by layer; constructor injection only; business rules in the domain, not in controllers; errors as RFC 9457 problem details.
-- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through translation files.
+- **TypeScript/React:** `strict` mode, typescript-eslint strict and react-hooks rules, Prettier. Organize by feature; UI text only through the translation files in `frontend/src/locales/<language>/<namespace>.json`, one namespace per feature (`frontend/src/i18n/README.md`).
 - **Python:** ruff for lint and format; type hints on public functions.
 - **Tests:** arrange, act, assert; names state the behaviour (`shouldRejectBookingWhenBatteryBelow20Percent`); fixed clocks for time rules, no sleeps; Gherkin scenarios tagged with the story key and business rule (`@RIA-31 @BR1`).
 
@@ -143,8 +198,10 @@ A story is done when: acceptance criteria met (Gherkin + Cucumber for core stori
 - Do not give AI services secrets, credentials or personal data. Use synthetic data only.
 - AI review on pull requests, recording accepted and rejected findings (see `.github/pull_request_template.md`).
 - At least two stories must be agent-generated from Gherkin or an OpenSpec proposal and delivered as pull requests.
-- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`; a CI check to enforce it is planned (I2), and until then the reviewer checks it.
-- Agent-generated stories follow test author → implementer → reviewer, with a human checkpoint after each step; the implementer must not edit the tests written in the first step.
+- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`. The `AI label` check (`.github/workflows/ai-label.yml`) fails a pull request with none, more than one, or an unknown `ai:*` label. It is a required check in the branch protection of `dev` and `main`. Dependabot pull requests get `ai:none` automatically.
+- Agent-generated stories follow test author → implementer → reviewer, with a human checkpoint after each step; the implementer must not edit the tests written in the first step. The three agents are defined in `.claude/agents/` (`test-author`, `implementer`, `reviewer`). Commit each agent step with the trailer `Agent: test-author` or `Agent: implementer`; the `Agent boundaries` check fails an `ai:generated` pull request whose implementer commits touch `backend/src/test/` or whose test-author commits touch `backend/src/main/`.
+- Jira (Atlassian MCP): read the story, acceptance criteria and Xray Tests before writing code or tests; you may comment with the PR link and move a story to *In progress* or *In review*. Never move a story to *Done*, create, split or estimate stories, or edit Gherkin in Jira (QA Manual 6.4).
+- SonarQube (MCP and `sonar-*` skills): read the quality gate, new issues, coverage gaps and duplications, and fix issues in code. Never mark a hotspot as reviewed, accept or close an issue, or change the quality gate, quality profile or coverage exclusions (QA Manual 6.4).
 - These instructions must stay consistent with the QA Manual (style, definition of done, test rules, build commands).
 
 ### Reports

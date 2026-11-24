@@ -10,12 +10,12 @@ Our concretization is tourist mobility in **Vila Ria**, a fictional coastal city
 
 ## 1.2 Known limitations
 
-This is the iteration I1 draft. The following questions are still open with the Product Owner and are tracked in section 13 of the [architecture proposal](../../architecture/README.md#13-risks-and-open-questions):
+This is the iteration I2 version. The following questions are still open with the Product Owner and are tracked in section 13 of the [architecture proposal](../../architecture/README.md#13-risks-and-open-questions):
 
 - Booking a vehicle for a period: a reservation currently holds a vehicle for 15 min only.
 - Restricting who may use which vehicles, as a rule of use.
 - Problem reports by guests.
-- The duration of the 3-day pass, whether 1-day and 3-day passes also end at check-out, the overtime grace period, the overtime price and the deposit amount.
+- The duration of the 3-day pass, whether 1-day and 3-day passes also end at check-out, the overtime grace period (configured as 0 until it is confirmed), the overtime price and the deposit amount.
 
 This section will be reviewed at the end of the project to list features that were planned but not delivered.
 
