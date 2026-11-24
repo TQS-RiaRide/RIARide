@@ -3,6 +3,8 @@ package com.riaride.payments.internal.stripe;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
@@ -285,12 +287,14 @@ class StripePaymentGatewayIT {
 	}
 
 	// processing may still succeed: a caller that gave up and retried with a new key could charge
-	// twice. It is transient, so the caller retries with the same key, and it carries the intent.
+	// twice. While the current intent is still processing it is transient, so the caller retries
+	// with the same key, and it carries the intent.
 	@Requirement("RIA-62")
 	@Test
 	void shouldReportProcessingPaymentAsTransientWithItsReference() {
 		givenCustomerIsCreated();
 		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(PROCESSING)));
+		stripe.stubFor(get(PAYMENT_INTENTS + "/pi_processing").willReturn(okJson(PROCESSING)));
 
 		assertThatThrownBy(() -> gateway.purchase(purchase()))
 			.isInstanceOfSatisfying(TransientPaymentException.class, failure -> {
@@ -298,6 +302,56 @@ class StripePaymentGatewayIT {
 				assertThat(failure.paymentRef()).contains("pi_processing");
 			});
 		stripe.verify(0, postRequestedFor(urlPathMatching(PAYMENT_INTENTS + "/.*/cancel")));
+	}
+
+	// A retry with the same idempotency key makes Stripe replay the saved create response, which
+	// still says processing even after the payment succeeded. The adapter must read the intent's
+	// current status, or every retry fails again.
+	@Requirement("RIA-52")
+	@Test
+	void shouldReportPurchaseAsSucceededWhenReplayedProcessingIntentHasSinceSucceeded() {
+		givenCustomerIsCreated();
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(PROCESSING)
+			.withHeader("Idempotent-Replayed", "true")));
+		stripe.stubFor(get(PAYMENT_INTENTS + "/pi_processing")
+			.willReturn(okJson(SUCCEEDED.replace("pi_purchase", "pi_processing"))));
+
+		var result = gateway.purchase(purchase());
+
+		assertThat(result.paymentRef()).isEqualTo("pi_processing");
+		assertThat(result.customerRef()).isEqualTo("cus_rita");
+		assertThat(result.paymentMethodRef()).isEqualTo("pm_saved_card");
+		stripe.verify(getRequestedFor(urlPathEqualTo(PAYMENT_INTENTS + "/pi_processing")));
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldReportOffSessionChargeAsSucceededWhenReplayedProcessingIntentHasSinceSucceeded() {
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(PROCESSING)
+			.withHeader("Idempotent-Replayed", "true")));
+		stripe.stubFor(get(PAYMENT_INTENTS + "/pi_processing")
+			.willReturn(okJson(SUCCEEDED.replace("pi_purchase", "pi_processing"))));
+
+		var paymentRef = gateway.chargeOffSession(
+			new OffSessionCharge("cus_rita", "pm_saved_card", Money.cents(250), "overtime-1"));
+
+		assertThat(paymentRef).isEqualTo("pi_processing");
+	}
+
+	// The payment can also fail while processing: the current intent then decides, and it is cancelled.
+	@Requirement("RIA-52")
+	@Test
+	void shouldReportPermanentFailureWhenProcessingIntentHasSinceFailed() {
+		givenCustomerIsCreated();
+		stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(PROCESSING)));
+		stripe.stubFor(get(PAYMENT_INTENTS + "/pi_processing")
+			.willReturn(okJson(REQUIRES_PAYMENT_METHOD.replace("pi_refused", "pi_processing"))));
+		stripe.stubFor(post(PAYMENT_INTENTS + "/pi_processing/cancel").willReturn(okJson(CANCELED)));
+
+		assertThatThrownBy(() -> gateway.purchase(purchase()))
+			.isInstanceOfSatisfying(PermanentPaymentException.class,
+				failure -> assertThat(failure.reason()).isEqualTo("requires_payment_method"));
+		stripe.verify(postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS + "/pi_processing/cancel")));
 	}
 
 	@Requirement("RIA-62")
