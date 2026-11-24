@@ -45,8 +45,11 @@ public class UnlockTimeoutJob {
     this.transactions = transactions;
   }
 
-  // Returns how many trips it failed.
-  @Scheduled(fixedDelayString = "${riaride.trips.unlock-timeout-check-interval}")
+  // Returns how many trips it failed. The first run also waits one interval: without an initial
+  // delay, Spring runs the job as soon as the context starts.
+  @Scheduled(
+      initialDelayString = "${riaride.trips.unlock-timeout-check-interval}",
+      fixedDelayString = "${riaride.trips.unlock-timeout-check-interval}")
   public int failOverdueStarts() {
     var now = clock.instant();
     var timeout = properties.unlockTimeout();

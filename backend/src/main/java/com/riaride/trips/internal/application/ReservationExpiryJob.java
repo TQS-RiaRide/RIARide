@@ -43,8 +43,11 @@ public class ReservationExpiryJob {
     this.transactions = transactions;
   }
 
-  // Returns how many reservations it expired.
-  @Scheduled(fixedDelayString = "${riaride.trips.reservation-expiry-check-interval}")
+  // Returns how many reservations it expired. The first run also waits one interval: without an
+  // initial delay, Spring runs the job as soon as the context starts.
+  @Scheduled(
+      initialDelayString = "${riaride.trips.reservation-expiry-check-interval}",
+      fixedDelayString = "${riaride.trips.reservation-expiry-check-interval}")
   public int expireOverdue() {
     var now = clock.instant();
     var expired = 0;
