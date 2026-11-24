@@ -5,7 +5,8 @@ export type AuthState =
   | { status: 'loading' }
   | { status: 'anonymous' }
   | { status: 'authenticated'; user: CurrentUser }
-  | { status: 'error' };
+  // authenticated: the Keycloak session exists but the account could not be loaded.
+  | { status: 'error'; authenticated: boolean };
 
 export interface AuthContextValue {
   state: AuthState;

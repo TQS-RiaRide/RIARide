@@ -30,7 +30,7 @@ export default function Workspaces({ workspaces }: WorkspacesProps) {
             <li key={workspace}>
               <button
                 type="button"
-                aria-current={workspace === current ? 'page' : undefined}
+                aria-current={workspace === current ? 'true' : undefined}
                 onClick={() => setSelected(workspace)}
               >
                 {t(`${workspace}.title`)}

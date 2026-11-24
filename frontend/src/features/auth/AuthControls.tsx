@@ -7,14 +7,20 @@ export default function AuthControls() {
   const { state, login, logout } = useAuth();
 
   if (state.status === 'loading') {
-    return <span className="auth-status">{t('loading')}</span>;
+    return (
+      <span role="status" className="auth-status">
+        {t('loading')}
+      </span>
+    );
   }
 
   if (state.status === 'authenticated') {
     const { name, email } = state.user;
     return (
       <div className="auth-controls">
-        <span className="auth-user">{t('signedInAs', { name: name ?? email ?? '' })}</span>
+        <span className="auth-user">
+          {t('signedInAs', { name: name ?? email ?? t('yourAccount') })}
+        </span>
         <button type="button" onClick={logout}>
           {t('logOut')}
         </button>
@@ -29,9 +35,15 @@ export default function AuthControls() {
           {t('error')}
         </p>
       )}
-      <button type="button" className="primary" onClick={login}>
-        {t('logIn')}
-      </button>
+      {state.status === 'error' && state.authenticated ? (
+        <button type="button" onClick={logout}>
+          {t('logOut')}
+        </button>
+      ) : (
+        <button type="button" className="primary" onClick={login}>
+          {t('logIn')}
+        </button>
+      )}
     </div>
   );
 }

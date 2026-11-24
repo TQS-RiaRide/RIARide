@@ -25,14 +25,16 @@ export default function AuthProvider({
       if (!ignore) setState(next);
     };
     const start = async () => {
+      let authenticated = false;
       try {
-        if (!(await client.init())) {
+        authenticated = await client.init();
+        if (!authenticated) {
           update({ status: 'anonymous' });
           return;
         }
         update({ status: 'authenticated', user: await loadUser(await client.getToken()) });
       } catch {
-        update({ status: 'error' });
+        update({ status: 'error', authenticated });
       }
     };
     void start();

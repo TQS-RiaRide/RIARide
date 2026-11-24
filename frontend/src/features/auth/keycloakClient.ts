@@ -19,7 +19,9 @@ export function createKeycloakClient(config: KeycloakConfig): AuthClient {
 
   return {
     init() {
+      // check-sso: a page reload keeps the Keycloak session instead of asking to log in again.
       initialized ??= keycloak.init({
+        onLoad: 'check-sso',
         pkceMethod: 'S256',
         checkLoginIframe: false,
         enableLogging: false,

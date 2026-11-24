@@ -92,7 +92,7 @@ button.primary:hover {
   list-style: none;
 }
 
-.workspace-menu button[aria-current='page'] {
+.workspace-menu button[aria-current='true'] {
   background: #0b6e8a;
   color: #fff;
 }
