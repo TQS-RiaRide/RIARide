@@ -1,6 +1,7 @@
 package com.riaride;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.UUID;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -14,6 +15,10 @@ import org.testcontainers.containers.wait.strategy.Wait;
 public final class TestMosquitto {
 
 	private static final int MQTT_PORT = 1883;
+
+	// Just after the tests' fixed clock: the platform ignores readings more than a minute ahead of
+	// its clock, so the timestamp follows FixedClockConfiguration.NOW instead of a literal.
+	private static final Instant EMITTED_AT = FixedClockConfiguration.NOW.plusSeconds(5);
 
 	@SuppressWarnings("resource")
 	private static final GenericContainer<?> CONTAINER = new GenericContainer<>("eclipse-mosquitto:2.0")
@@ -41,9 +46,9 @@ public final class TestMosquitto {
 	// Publishes a telemetry reading as the simulator does (contracts/mqtt/telemetry.schema.json).
 	public static void publishTelemetry(String vehicleCode, int batteryPct, String hubId) {
 		var payload = """
-			{"messageId": "%s", "emittedAt": "2026-11-30T10:00:05.000Z", "batteryPct": %d, "lockState": "LOCKED",
+			{"messageId": "%s", "emittedAt": "%s", "batteryPct": %d, "lockState": "LOCKED",
 			 "hubId": %s, "position": {"lat": 40.6405, "lon": -8.6538}}
-			""".formatted(UUID.randomUUID(), batteryPct, hubId == null ? "null" : "\"" + hubId + "\"");
+			""".formatted(UUID.randomUUID(), EMITTED_AT, batteryPct, hubId == null ? "null" : "\"" + hubId + "\"");
 		try (var client = new MqttClient(url(), "riaride-simulator-test-" + UUID.randomUUID(), new MemoryPersistence())) {
 			client.connect();
 			client.publish("riaride/vehicles/" + vehicleCode + "/telemetry", payload.getBytes(StandardCharsets.UTF_8), 1,
