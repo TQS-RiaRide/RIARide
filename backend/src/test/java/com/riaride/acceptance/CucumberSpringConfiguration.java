@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestKeycloak;
+import com.riaride.TestMosquitto;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import io.cucumber.java.Before;
 import io.cucumber.spring.CucumberContextConfiguration;
@@ -19,7 +20,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 // The single Spring context shared by all Cucumber scenarios: the full
 // application on a random port, backed by PostgreSQL in Testcontainers
 // (never an in-memory database) and by Keycloak with the realm from
-// infra/keycloak, so tokens are real and validated against its JWKS.
+// infra/keycloak, so tokens are real and validated against its JWKS, and by Mosquitto for telemetry.
 // The containers start once per JVM. Today is fixed (FixedClockConfiguration),
 // so date rules do not depend on when the build runs.
 @CucumberContextConfiguration
@@ -50,6 +51,8 @@ public class CucumberSpringConfiguration {
 		// Token validation and the Admin API client used by guest sign-up (RIA-51).
 		TestKeycloak.registerProperties(registry);
 		registry.add("riaride.payments.stripe.api-base", STRIPE::baseUrl);
+		// Mosquitto, for the scenarios where the simulator sends telemetry (RIA-59).
+		TestMosquitto.registerProperties(registry);
 	}
 
 	@LocalServerPort

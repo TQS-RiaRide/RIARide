@@ -129,6 +129,8 @@ Only the module's top-level package (its API, events and DTOs) is public. Event 
 
 **Communication rule.** A module calls another module's public API for queries and for commands whose result it needs now. A module publishes an event for side effects elsewhere, handled by an `@ApplicationModuleListener` after commit. Spring Modulith stores each publication in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge.
 
+*Exception:* `fleet` handles `VehicleTelemetryReceived` with a synchronous `@EventListener` in the MQTT adapter's transaction. The broker's QoS 1 delivery is the durable queue here: the message is acknowledged only after the reading is stored, so an after-commit listener would add nothing but a window in which an acknowledged reading is lost.
+
 | Event | Published by | Handled by | Effect |
 |---|---|---|---|
 | `VehicleTelemetryReceived` | `telemetry` | `fleet` | Updates latest vehicle state |
@@ -233,6 +235,8 @@ The message formats are the JSON Schemas in [`contracts/mqtt/`](../../contracts/
 - `hubId` is the platform's hub id, so the simulator's demo fleet uses the same hub ids as the platform's seed data.
 - `hubId` is optional on `LOCK`. Without it, or with a hub the simulator does not know, the vehicle locks where it is and its telemetry reports `hubId: null`.
 - Every command carries `emittedAt`. The simulator ignores a command older than 30 s, the unlock timeout (BR13), so an `UNLOCK` the platform already gave up on is not applied when the simulator reconnects and the broker delivers the commands it kept.
+
+*Implemented so far (RIA-59):* the MQTT adapter (`telemetry.internal.mqtt`) subscribes to `riaride/vehicles/+/telemetry` with QoS 1 and a kept session, maps each message to `VehicleTelemetryReceived` and publishes it in one transaction; `fleet` stores the battery reading, and `GET /api/v1/hubs/{hubId}/vehicles` marks each vehicle `bookable` by BR12 without changing its status. A reading older than the vehicle's last one, or more than a minute ahead of the server clock, is ignored. The subscription runs off Paho's callback thread, so the backlog the broker sends on reconnection cannot block it. A message that is not a valid reading, or whose handling fails, is logged without its payload and dropped, so it is never redelivered in a loop. The simulator's tests already validate its messages against the schemas; deduplication by `messageId`, the backend adapter's JSON Schema contract tests and the hub, position and lock-state updates come with [RIA-58](https://riaride.atlassian.net/browse/RIA-58). The backend connects with `MQTT_URL`, `MQTT_USERNAME` and `MQTT_PASSWORD`; in production the broker must require credentials, use TLS on any network other than the internal one, and give the backend subscribe-only ACLs.
 
 **Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
 
