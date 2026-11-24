@@ -24,6 +24,11 @@ class MqttTelemetrySubscriberIT {
 	// More than Paho's inbound queue of 10 messages, and the simulator's 12 bikes.
 	private static final int BACKLOG = 15;
 	private static final Duration TIMEOUT = Duration.ofSeconds(20);
+	// Outside the backlog's codes: a probe can still be queued when the subscriber stops, and is then
+	// delivered with the backlog, so probes are counted apart.
+	private static final String PROBE_VEHICLE = "EB-699";
+
+	private final AtomicInteger probesHandled = new AtomicInteger();
 
 	private final AtomicInteger handled = new AtomicInteger();
 	private final TelemetryMessageHandler handler = countingHandler();
@@ -43,7 +48,6 @@ class MqttTelemetrySubscriberIT {
 	void shouldHandleTheQueuedBacklogAndNewMessagesAfterARestart() {
 		subscriber = startAndAwaitSubscription();
 		subscriber.stop();
-		handled.set(0);
 		for (int i = 0; i < BACKLOG; i++) {
 			TestMosquitto.publishTelemetry("EB-" + (700 + i), 50, null);
 		}
@@ -57,20 +61,24 @@ class MqttTelemetrySubscriberIT {
 	}
 
 	// The broker keeps a session only after the first subscription, so the test waits until a probe
-	// message gets through before stopping the subscriber.
+	// message gets through before stopping the subscriber. Probes do not count as handled backlog.
 	private MqttTelemetrySubscriber startAndAwaitSubscription() {
 		var started = new MqttTelemetrySubscriber(properties, handler);
 		started.start();
 		await().atMost(TIMEOUT).pollInterval(Duration.ofMillis(500)).until(() -> {
-			TestMosquitto.publishTelemetry("EB-700", 50, null);
-			return handled.get() > 0;
+			TestMosquitto.publishTelemetry(PROBE_VEHICLE, 50, null);
+			return probesHandled.get() > 0;
 		});
 		return started;
 	}
 
 	private TelemetryMessageHandler countingHandler() {
 		var counting = mock(TelemetryMessageHandler.class);
-		doAnswer(invocation -> handled.incrementAndGet()).when(counting).handle(anyString(), any());
+		doAnswer(invocation -> {
+			String topic = invocation.getArgument(0);
+			var counter = topic.contains("/" + PROBE_VEHICLE + "/") ? probesHandled : handled;
+			return counter.incrementAndGet();
+		}).when(counting).handle(anyString(), any());
 		return counting;
 	}
 
