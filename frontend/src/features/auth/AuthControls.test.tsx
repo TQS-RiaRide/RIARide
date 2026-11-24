@@ -83,4 +83,37 @@ describe('AuthControls', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
+
+  it('names the user "your account" when it has neither a name nor an email', async () => {
+    await renderControls(
+      fakeClient(true),
+      vi.fn().mockResolvedValue({ ...operator, name: null, email: null }),
+    );
+
+    expect(screen.getByText('Signed in as your account')).toBeInTheDocument();
+  });
+
+  it('announces the session check to screen readers', () => {
+    const client = fakeClient(false);
+    vi.mocked(client.init).mockReturnValue(new Promise(() => undefined));
+    render(
+      <AuthProvider client={client} loadUser={vi.fn()}>
+        <AuthControls />
+      </AuthProvider>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Checking your session…');
+  });
+
+  // Logged in at Keycloak but the account could not be loaded: logging in again would reuse the
+  // same session, so the user must be able to log out and try another account.
+  it('lets a logged-in user whose account failed to load log out', async () => {
+    const client = fakeClient(true);
+    await renderControls(client, vi.fn().mockRejectedValue(new Error('500')));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
+
+    expect(client.logout).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Log in' })).not.toBeInTheDocument();
+  });
 });

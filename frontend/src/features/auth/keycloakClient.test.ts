@@ -37,13 +37,14 @@ describe('createKeycloakClient', () => {
     expect(keycloak.constructor).toHaveBeenCalledWith(config);
   });
 
-  it('uses Authorization Code with PKCE (S256) and keeps tokens in memory', async () => {
+  it('checks for an SSO session with Authorization Code and PKCE (S256)', async () => {
     keycloak.init.mockResolvedValue(true);
 
     const authenticated = await createKeycloakClient(config).init();
 
     expect(authenticated).toBe(true);
     expect(keycloak.init).toHaveBeenCalledWith({
+      onLoad: 'check-sso',
       pkceMethod: 'S256',
       checkLoginIframe: false,
       enableLogging: false,

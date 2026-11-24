@@ -27,7 +27,7 @@ describe('Workspaces', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Operator dashboard');
     expect(screen.getByRole('button', { name: 'Operator dashboard' })).toHaveAttribute(
       'aria-current',
-      'page',
+      'true',
     );
     expect(screen.getByRole('button', { name: 'Maintenance tickets' })).not.toHaveAttribute(
       'aria-current',
@@ -42,7 +42,7 @@ describe('Workspaces', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Maintenance tickets');
     expect(screen.getByRole('button', { name: 'Maintenance tickets' })).toHaveAttribute(
       'aria-current',
-      'page',
+      'true',
     );
   });
 
