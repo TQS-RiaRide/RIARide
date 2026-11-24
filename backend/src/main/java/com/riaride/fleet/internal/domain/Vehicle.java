@@ -13,6 +13,8 @@ import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.springframework.data.domain.Persistable;
@@ -33,6 +35,10 @@ public class Vehicle implements Persistable<UUID> {
   // The same rule as the MQTT topics (riaride/vehicles/{code}/telemetry): letters, digits and
   // hyphens only, so every registered code can appear in a topic. No spaces, slashes or wildcards.
   private static final Pattern CODE = Pattern.compile("[A-Za-z0-9-]{1," + MAX_CODE_LENGTH + "}");
+
+  // The statuses an operator may ask for (RIA-91): activate, deactivate and retire.
+  private static final Set<VehicleStatus> OPERATOR_STATUSES =
+      EnumSet.of(VehicleStatus.AVAILABLE, VehicleStatus.MAINTENANCE, VehicleStatus.RETIRED);
 
   @Id private UUID id;
 
@@ -93,8 +99,7 @@ public class Vehicle implements Persistable<UUID> {
     return new Vehicle(code, type, hubId);
   }
 
-  // A vehicle already in a given lifecycle state. The transitions (booking, trips, maintenance)
-  // belong to later stories; until then this is how the domain tests reach those states.
+  // A vehicle already in a given lifecycle state, so the domain tests reach every state directly.
   static Vehicle withStatus(String code, VehicleType type, UUID hubId, VehicleStatus status) {
     var vehicle = new Vehicle(code, type, hubId);
     vehicle.status = status;
@@ -119,6 +124,31 @@ public class Vehicle implements Persistable<UUID> {
   public void release() {
     if (status == VehicleStatus.RESERVED) {
       this.status = VehicleStatus.AVAILABLE;
+    }
+  }
+
+  // An operator activates (maintenance -> available), deactivates (available -> maintenance) or
+  // retires (available or maintenance -> retired) the vehicle (RIA-91). Reserved and in use are
+  // reached by booking and riding, so the operator never sets them, and the other transitions of
+  // the lifecycle belong to bookings, trips and faults. Asking for the current status changes
+  // nothing. A retired vehicle leaves the network, so it no longer takes a slot at its hub and
+  // guests no longer see it there.
+  public void changeStatusAsOperator(VehicleStatus target) {
+    if (!OPERATOR_STATUSES.contains(target)) {
+      throw new InvalidVehicleException(
+          "status", "An operator can only make a vehicle available, maintenance or retired.");
+    }
+    if (target == status) {
+      return;
+    }
+    if (status == VehicleStatus.RESERVED
+        || status == VehicleStatus.IN_USE
+        || !status.canChangeTo(target)) {
+      throw new VehicleStatusChangeRefusedException(status, target);
+    }
+    this.status = target;
+    if (target == VehicleStatus.RETIRED) {
+      this.hubId = null;
     }
   }
 
