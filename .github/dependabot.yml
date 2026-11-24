@@ -13,6 +13,18 @@ updates:
     schedule: { interval: weekly }
     target-branch: dev
     labels: ["dependencies", "javascript", "ai:none"]
+    # Packages that only install together go in one pull request; on their own
+    # they fail npm ci with ERESOLVE.
+    groups:
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      i18next:
+        patterns: ["i18next", "react-i18next"]
+    ignore:
+      # typescript-eslint pins its TypeScript peer range below the next major;
+      # bump TypeScript by hand once typescript-eslint supports it.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   # Keeps pinned action SHAs (checkout, claude-code-action) up to date.
   - package-ecosystem: github-actions
     directory: /
