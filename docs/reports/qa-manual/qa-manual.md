@@ -1,7 +1,7 @@
 # RiaRide: quality manual
 
 Maria Mané (125102), Inês Lourenço (125895), Martim Gil (124833), Tomás Xavier (125438)  
-v2026-11-17
+v2026-11-24
 
 > Version 1 (iteration I2, RIA-70). This manual tells a new team member which QA practices the team follows and why, and links each one to its evidence. The practices are decided from the start; the evidence links are added as each practice starts working.
 
@@ -23,24 +23,24 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | PM3 | Jira linked to Git | E | Partial | Keys in branches, commits and PRs: [PR #1](https://github.com/TQS-RiaRide/RIARide/pull/1), [PR #2](https://github.com/TQS-RiaRide/RIARide/pull/2). The development panel needs the GitHub for Jira app. Early commits pushed straight to `main` before protection carry no key |
 | PM4 | Burndown and velocity | E | Decided (I2) | Section 2.2; charts available once sprint I1 closes |
 | PM5 | Requirements coverage in Xray | E | Partial | Section 2.3. [Xray import workflow](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/workflows/xray-import.yml) runs after CI on `main`; its [first run](https://github.com/TQS-RiaRide/RIARide/actions/runs/44077318930) imported the JUnit reports as Test Execution [RIA-169](https://riaride.atlassian.net/browse/RIA-169). Test Plan [RIA-146](https://riaride.atlassian.net/browse/RIA-146) holds one Test per I2 story (RIA-147 to RIA-156, linked to RIA-50 to RIA-59), for each story's main scenario (section 2.3); the Cucumber scenarios run in CI since RIA-68, and Xray imports their results once `dev` is merged into `main` |
-| T1 | BDD: Gherkin scenarios automated with Cucumber | E | Decided (I2) | Section 5.3 |
-| T2 | Unit tests for business logic | E | Decided (I2) | Section 5.2 |
-| T3 | Integration tests, run separately | E | Decided (I2) | Section 5.2 |
+| T1 | BDD: Gherkin scenarios automated with Cucumber | E | Done | Section 5.3. [Feature files](https://github.com/TQS-RiaRide/RIARide/tree/dev/backend/src/test/resources/features) for the I2 stories, run by `CucumberIT` in the integration tests of every CI run since [PR #22](https://github.com/TQS-RiaRide/RIARide/pull/22); stories still in progress keep their scenarios tagged `@wip` |
+| T2 | Unit tests for business logic | E | Done | Section 5.2. The backend unit tests (Surefire), Vitest and pytest run in the [CI pipeline](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml) on every push; JaCoCo, Vitest and pytest-cov coverage is imported into SonarQube |
+| T3 | Integration tests, run separately | E | Done | Section 5.2. `*IT` classes run by Failsafe in their own CI step, with PostgreSQL, Keycloak and Mosquitto in Testcontainers and Stripe stubbed by WireMock; the simulator runs its broker tests separately with `pytest -m integration` ([PR #37](https://github.com/TQS-RiaRide/RIARide/pull/37)) |
 | T4 | End-to-end tests of the web UI | E | Decided (I4) | Section 5.3 |
 | T5 | SLOs checked by a k6 load test | E | Decided (I4) | Section 5.4; SLOs in Product Specification section 4.2 |
-| T6 | Test-driven development | V | Decided (I2) | Section 5.1 |
+| T6 | Test-driven development | V | Done | Section 5.1. Failing tests committed before the implementation and kept visible by merge commits, for example [PR #36](https://github.com/TQS-RiaRide/RIARide/pull/36) (RIA-52), [PR #48](https://github.com/TQS-RiaRide/RIARide/pull/48) (RIA-57) and [PR #37](https://github.com/TQS-RiaRide/RIARide/pull/37) (RIA-60) |
 | T7 | Pairwise testing | V | Decided (I4) | Section 5.5 |
 | T8 | Automated accessibility checks | V | Decided (I4) | Sections 3.4 and 5.4 |
 | T9 | GBFS feed contract test | V | Decided (I4) | Section 5.5; depends on the Product Owner adopting the GBFS extension |
 | T10 | Further non-functional tests | V | Decided (I5) | Section 5.4 |
-| Q1 | Static analysis and coverage dashboard | E | Decided (I2) | Section 3.3; the SonarQube step is not in [`ci.yml`](../../../.github/workflows/ci.yml) yet. Agents read its results (section 6.4) |
-| Q2 | Blocking quality gate on new code | E | Decided (I2) | Section 3.3 |
+| Q1 | Static analysis and coverage dashboard | E | Done | Section 3.3. [SonarQube Cloud dashboard](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide), analysed by the SonarQube job of [`ci.yml`](../../../.github/workflows/ci.yml) on every push and pull request. Agents read its results (section 6.4) |
+| Q2 | Blocking quality gate on new code | E | Done | Section 3.3. The gate result is part of the required `CI result` check (RIA-160, [PR #51](https://github.com/TQS-RiaRide/RIARide/pull/51)); [PR #37](https://github.com/TQS-RiaRide/RIARide/pull/37) was blocked by a security rating of C until its dependencies were installed as hashed wheels |
 | Q3 | Dependency vulnerability scanning | E | Partial | [`dependabot.yml`](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/dependabot.yml) on `main` for Maven, npm, pip and GitHub Actions. Updates for a component fail until its manifest exists. Per-build scan: section 3.4 |
 | Q4 | Peer code review | E | Done | [PR template](../../../.github/pull_request_template.md), section 3.2; branch protection on `dev` and `main` requires one approval (section 4.1) |
 | Q5 | Contributor guidelines | E | Done | Section 3.1 |
 | Q6 | Container image scanning or added security testing | V | Decided (I4) | Section 3.4 |
 | D1 | Feature branches, protected main, merge by pull request | E | Partial | Branch per story in use, merged into `dev` by pull request; `main` and `dev` protected; branch name and Jira key enforced by [`pr-rules.yml`](../../../.github/workflows/pr-rules.yml) (section 4.1). *Link to a blocked pull request to be added.* |
-| D2 | CI with quality gate, badge and failure notification | E | Partial | [`ci.yml`](../../../.github/workflows/ci.yml) runs the backend and frontend jobs and a summary job on every push and pull request. SonarQube, the simulator job and the badge are pending. Section 4.2 |
+| D2 | CI with quality gate, badge and failure notification | E | Done | [`ci.yml`](../../../.github/workflows/ci.yml) runs the backend, frontend, simulator and SonarQube jobs and a summary job on every push and pull request; the CI badge is in the [README](../../../README.md); GitHub emails the author when a run fails. Section 4.2 |
 | D3 | Infrastructure as code | E | Decided (I3) | Section 4.2 |
 | D4 | Continuous delivery with representative data | E | Decided (I3) | Section 4.2 |
 | D5 | Separate staging and production | V | Decided (I4) | Section 4.2 |
@@ -48,9 +48,9 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | AI1 | Team AI policy and declaration of AI use | E | Done | Sections 6.1 and 6.2 |
 | AI2 | Versioned agent instructions | E | Done | [`AGENTS.md`](../../../AGENTS.md) → [`CLAUDE.md`](../../../CLAUDE.md), covering style, definition of done, test rules, backend and frontend build commands and the limits on agents' Jira and SonarQube access. Sections 6.3 and 6.4 |
 | AI3 | AI-assisted code review | E | Done | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Evidence: [#25](https://github.com/TQS-RiaRide/RIARide/pull/25), where the Claude review's finding is recorded as partly accepted in the AI review findings table, and [#40](https://github.com/TQS-RiaRide/RIARide/pull/40). Section 6.6 |
-| AI4 | Specification-driven generation (≥ 2 stories) | E | Decided (I2) | Section 6.5 |
+| AI4 | Specification-driven generation (≥ 2 stories) | E | Partial | Section 6.5. Story 1, RIA-56 Register a hub ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), generated from its approved Gherkin scenarios through the agent flow of section 6.3; story 2 is planned for I3 from an OpenSpec proposal |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.7; data collected from every PR from now on |
-| AI6 | Coordination of several agents | V | Decided (I2) | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), and the `Agent boundaries` CI check enforces their roles |
+| AI6 | Coordination of several agents | V | Done | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), first used for RIA-56 ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), and the `Agent boundaries` CI check enforces their roles |
 | AI7 | Agents in the CI pipeline | V | Decided (I3) | Section 6.6: PR summary and failure triage. The AI review job counts as AI3, not here |
 
 ## 2. Project management
@@ -138,7 +138,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 - [ ] No secrets, credentials or personal data; test data is synthetic.
 - [ ] Security hotspots raised by SonarQube on this change are reviewed.
 - [ ] The AI review findings table is filled in, and the reasons for rejections are sound.
-- [ ] The pull request has its AI label (section 6.7); the `AI label` check fails without it.
+- [ ] The pull request has its AI label (section 6.2); the `AI label` check fails without it.
 - [ ] Documentation that the change affects is updated (API documentation, `CLAUDE.md`, this manual).
 - [ ] The reviewer can explain the change; anyone may be asked to explain any merged code.
 
@@ -163,7 +163,7 @@ The gate applies to new code only, so old code improves as it is changed and the
 
 Coverage says which lines ran, not whether a test would catch a bug, and AI-generated tests can reach 80 % with weak assertions. Reviewers therefore check that tests assert behaviour (review checklist, section 3.2).
 
-**Blocking:** the SonarQube check is a required status check in the branch protection of `main` and `dev`, so a failing gate blocks the merge. Evidence: a pull request that fails the gate and cannot be merged. *Link to be added in I2, with the dashboard link.*
+**Blocking:** the SonarQube job is part of the `CI result` check, which is required in the branch protection of `main` and `dev`, so a failing gate blocks the merge. Evidence: [PR #37](https://github.com/TQS-RiaRide/RIARide/pull/37) failed the gate (security rating C, from installing the simulator dependencies without hashes) and could not be merged until the fix; the results are on the [SonarQube Cloud dashboard](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide).
 
 ### 3.4 Other rules in code inspection
 
@@ -217,7 +217,7 @@ The team works with two long-lived branches. `dev` is the integration branch: ea
 
 - pull request required, with at least one approval;
 - stale approvals dismissed when new commits are pushed;
-- required status checks: `CI result` (the CI summary job, section 4.2) and `Exactly one AI label` (section 6.7). `PR rules` is added once its workflow is on `dev`, and the SonarQube quality gate once its analysis runs on `dev`;
+- required status checks: `CI result` (the CI summary job, section 4.2), which also fails when the SonarQube quality gate fails (Q2), and `Exactly one AI label` (sections 3.2 and 6.2). The `PR rules` check runs on every pull request but is not required yet;
 - branch up to date before merging;
 - all review conversations resolved before merging;
 - no force pushes, no deletions, no bypass for administrators.
@@ -385,7 +385,7 @@ The team uses AI assistants and agents on purpose, for production code, tests, d
 
 - Use AI to draft code, tests and documentation, then read and understand all of it before committing. You must be able to explain any line you merge.
 - Give agents the repository instructions ([`CLAUDE.md`](../../../CLAUDE.md)), so their output follows this manual.
-- Declare AI use in every pull request: the AI label (section 6.7) and the template checkbox.
+- Declare AI use in every pull request: the AI label (section 6.2) and the template checkbox.
 - Treat AI review findings as suggestions: decide on each one and record the decision with a reason.
 - Report AI mistakes you catch (wrong code, invented APIs, weak tests) in the pull request, so they feed the critical analysis (section 6.7).
 
@@ -401,20 +401,23 @@ The team uses AI assistants and agents on purpose, for production code, tests, d
 
 ### 6.2 Declaration of AI use
 
-One declaration for the whole project, updated as tools are added.
+Each pull request declares its own AI use with exactly one label: `ai:none`, `ai:assisted` (AI helped, a person wrote and checked the change) or `ai:generated` (an agent produced the change from a specification, section 6.5). The `Exactly one AI label` check ([`ai-label.yml`](../../../.github/workflows/ai-label.yml)) is required on `dev` and `main`, so a pull request without a valid label cannot be merged. The labels are counted for the critical analysis (section 6.7).
+
+The tools themselves are declared once for the whole project, updated as tools are added.
 
 | Tool or agent (and model) | Member | Used for | How the output was verified |
 |---|---|---|---|
 | Claude Code (Claude Opus) | All | Drafting the architecture proposal, ADRs, report sections (including Product Specification sections 1 and 2, RIA-16) and this manual; setting up the CI and AI review workflows; the frontend walking skeleton (RIA-13); production code and tests (RIA-50, RIA-51, RIA-68) | Reviewed and edited by the author, then reviewed in a pull request by another member; code is also checked by its tests, CI and the quality gate |
 | Claude Code GitHub Action (`anthropics/claude-code-action`) | All | Advisory review of non-draft pull requests (practice AI3) | Each finding accepted or rejected by the author, and checked by the human reviewer |
 | Atlassian Rovo MCP server, used from Claude Code | All | Reading stories, acceptance criteria and Xray Tests from Jira; commenting on stories (section 6.4) | Comments are read by the story's owner; status changes to *Done* stay with the Product Owner |
+| Claude (claude.ai, Claude Opus) | Maria Mané | Fleet simulator and MQTT contracts (RIA-60), frontend translation structure (RIA-74), register a bike (RIA-57), find available bikes (RIA-53), the I2 report updates and PDFs (RIA-17, RIA-75) and summaries of pull request reviews | Builds, unit and integration tests run locally before each commit; review in each pull request, with the AI review findings recorded |
 | SonarQube MCP server and `sonar-*` skills, used from Claude Code | All | Reading the quality gate, issues, coverage gaps and duplications of a pull request; proposing fixes (section 6.4) | Each fix goes through the normal pull request review; the gate is re-run by CI |
 
 *Each member adds the tools they use. All four members use the tools above; a tool used by only some members names them in the* Member *column.*
 
 ### 6.3 Agent instructions and coordination
 
-**Instructions.** The agent instructions are versioned in the repository: [`AGENTS.md`](../../../AGENTS.md) points to [`CLAUDE.md`](../../../CLAUDE.md), which covers the domain, the architecture constraints, the Git and Jira rules, the code style, the definition of done, the expected tests, the quality and CI rules and the AI rules. It also lists the backend and frontend build and test commands (the simulator commands are added when it lands) and the limits of section 6.4 on what agents may do in Jira and SonarQube.
+**Instructions.** The agent instructions are versioned in the repository: [`AGENTS.md`](../../../AGENTS.md) points to [`CLAUDE.md`](../../../CLAUDE.md), which covers the domain, the architecture constraints, the Git and Jira rules, the code style, the definition of done, the expected tests, the quality and CI rules and the AI rules. It also lists the backend and frontend build and test commands (the simulator commands were added with RIA-60) and the limits of section 6.4 on what agents may do in Jira and SonarQube.
 
 The QA Engineer maintains them. A pull request that changes a practice in this manual must update `CLAUDE.md` in the same pull request; the review checklist (section 3.2) checks it.
 
@@ -452,7 +455,7 @@ How they fit the workflow:
 
 Two stories, chosen by the Product Owner from the core stories, are generated by agents from their specification and delivered as pull requests:
 
-- **Story 1 (I2):** from its approved Gherkin scenarios, through the agent flow of section 6.3.
+- **Story 1 (I2):** RIA-56 Register a hub, from its approved Gherkin scenarios ([`RIA-56-register-hub.feature`](../../../backend/src/test/resources/features/RIA-56-register-hub.feature)), through the agent flow of section 6.3: [PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35), with its human review and follow-up fixes in [PR #43](https://github.com/TQS-RiaRide/RIARide/pull/43).
 - **Story 2 (I3):** from an [OpenSpec](https://github.com/Fission-AI/OpenSpec) change proposal, reviewed by the team before generation.
 
 For each, this section will link the specification, the agent's pull request and its human review, and record what had to be corrected and why.
