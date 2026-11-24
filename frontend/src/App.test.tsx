@@ -35,7 +35,10 @@ async function renderApp(health: { ok: boolean; status?: string }, user?: Curren
   // inside act
   await act(async () => {
     render(
-      <AuthProvider client={authClient(user !== undefined)} loadUser={async () => user!}>
+      <AuthProvider
+        client={authClient(user !== undefined)}
+        loadUser={() => (user ? Promise.resolve(user) : Promise.reject(new Error('No session')))}
+      >
         <App />
       </AuthProvider>,
     );
