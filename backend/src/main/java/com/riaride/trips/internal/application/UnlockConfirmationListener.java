@@ -61,8 +61,9 @@ class UnlockConfirmationListener {
             case STARTED -> start(trip, now);
             case TOO_LATE ->
                 events.publishEvent(new TripFailed(trip.getVehicleCode(), trip.getHubId()));
-            case ALREADY_STARTED, STALE -> {
-              // Nothing to do: the simulator repeats UNLOCKED while the bike is ridden, and a
+            case ALREADY_STARTED, ALREADY_ENDED, STALE -> {
+              // Nothing to do: the simulator repeats UNLOCKED while the bike is ridden, a reading
+              // sent during the ride may arrive after it ended (the end already sent LOCK), and a
               // redelivered reading from before the request is not this trip's answer.
             }
           }
