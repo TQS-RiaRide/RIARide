@@ -11,8 +11,8 @@ import tools.jackson.databind.json.JsonMapper;
 // Turns a simulator telemetry message into a VehicleTelemetryReceived event. The vehicle code is
 // only in the topic (riaride/vehicles/{code}/telemetry); the payload follows
 // contracts/mqtt/telemetry.schema.json. This is the only class that knows the simulator's format.
-// The full JSON Schema contract test belongs to RIA-58; here only the fields the event needs are
-// checked.
+// Here only the fields the event needs are checked; validating the adapter against the full JSON
+// Schema (the backend half of the contract test, CLAUDE.md) is RIA-58.
 class TelemetryMessageMapper {
 
 	private static final Pattern TOPIC = Pattern.compile("riaride/vehicles/([A-Za-z0-9-]{1,32})/telemetry");
