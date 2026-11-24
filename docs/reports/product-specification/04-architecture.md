@@ -73,6 +73,8 @@ A module calls another module's public API for queries and for commands whose re
 
 ![Registration](../../architecture/diagrams/05-seq-registration.drawio.svg)
 
+The sign-up request is `POST /api/v1/guests`.
+
 **Booking and starting a trip.** Starting immediately creates a reservation first, so there is one code path. The trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip fails, the platform sends `LOCK` in case the vehicle did unlock, and the pass stays inactive. A late unlock confirmation for a failed trip gets another `LOCK`. A pass holds at most one active reservation.
 
 ![Book and start](../../architecture/diagrams/06-seq-book-start-trip.drawio.svg)
@@ -87,7 +89,7 @@ A module calls another module's public API for queries and for commands whose re
 
 ![Deployment](../../architecture/diagrams/09-deployment.drawio.svg)
 
-A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and deploys them to a staging Compose stack on the university VM, through a self-hosted runner. An iteration tag promotes the same images to production after a manual approval ([ADR 0011](../../architecture/adr/0011-deployment.md)). The only public port is 443. Secrets come from GitHub Secrets and a host-only `.env` file.
+A merge to `main` builds and tests in GitHub Actions, pushes versioned images to GHCR and deploys them to a staging Compose stack on the university VM, through a self-hosted runner. An iteration tag promotes the same images to production after a manual approval ([ADR 0011](../../architecture/adr/0011-deployment.md)). The only public port is 443. Secrets come from GitHub Secrets and a host-only `.env` file. The local development stack ([`infra/compose.yaml`](../../../infra/compose.yaml)) already runs PostgreSQL, Keycloak, Mosquitto and the simulator.
 
 ## 4.6 Integration contracts
 
@@ -99,6 +101,8 @@ A merge to `main` builds and tests in GitHub Actions, pushes versioned images to
 | `riaride/vehicles/{id}/events` | Simulator to platform | Fault events |
 | `riaride/vehicles/{id}/commands` | Platform to simulator | `UNLOCK`, `LOCK` |
 | `riaride/simulator/status` | Simulator to platform | Retained status and last will |
+
+The message formats are JSON Schemas in [`contracts/mqtt/`](../../../contracts/mqtt/), shared by the simulator and the backend adapter. `{id}` in the topics is the vehicle code (for example, `EB-101`), not the platform's vehicle id. `hubId` is the platform's hub id, so the simulator's demo fleet uses the same hub ids as the seed data. `hubId` is optional on `LOCK`: without it, the vehicle locks where it is. Every command carries `emittedAt`, and the simulator ignores a command older than 30 s (BR13), so an `UNLOCK` the platform already gave up on is not applied when the simulator reconnects.
 
 **Payments** ([ADR 0008](../../architecture/adr/0008-stripe-test-mode.md)). `PaymentGateway` offers charges and refunds, each with an idempotency key. The purchase saves the payment method in Stripe, and overtime is charged to it off-session.
 
