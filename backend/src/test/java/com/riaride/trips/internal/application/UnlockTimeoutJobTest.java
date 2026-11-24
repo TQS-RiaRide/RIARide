@@ -33,8 +33,7 @@ import org.springframework.transaction.support.TransactionOperations;
 // Unit test (Surefire): the job that fails trips whose unlock was not confirmed in time (RIA-54,
 // BR13). Exactly 30 s after the request is already too late. Each overdue trip is checked again
 // under its row lock, so a trip that telemetry confirmed in the meantime is left alone. A failed
-// trip
-// locks the bike again; the reservation, the bike and the pass are not changed (the bike stays
+// trip locks the bike again; the reservation, the bike and the pass are not changed (the bike stays
 // reserved until the booking expires).
 @ExtendWith(MockitoExtension.class)
 class UnlockTimeoutJobTest {

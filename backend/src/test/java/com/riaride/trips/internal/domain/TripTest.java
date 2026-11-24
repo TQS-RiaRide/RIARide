@@ -92,9 +92,8 @@ class TripTest {
   }
 
   // The timeout counts when the platform handles the reading, not when the bike emitted it: a
-  // reading
-  // emitted at 29 s that arrives at 30 s or later (queued while the platform was away) is too late,
-  // since the guest may already have been told the start failed.
+  // reading emitted at 29 s that arrives at 30 s or later (queued while the platform was away) is
+  // too late, since the guest may already have been told the start failed.
   @Requirement("RIA-54")
   @ParameterizedTest(name = "emitted at 29 s, handled at {0} s")
   @ValueSource(longs = {30, 31})

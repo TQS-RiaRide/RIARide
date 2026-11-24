@@ -36,10 +36,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 // Unit test (Surefire): an UNLOCKED reading confirms the bike's starting trip (RIA-54). In time,
-// the
-// trip is in use, the bike leaves its hub and the first trip activates the pass (BR4). At or after
-// 30 seconds, or for a trip that already failed, the bike is locked again instead (BR13). Repeated
-// and stale readings change nothing.
+// the trip is in use, the bike leaves its hub and the first trip activates the pass (BR4). At or
+// after 30 seconds, or for a trip that already failed, the bike is locked again instead (BR13).
+// Repeated and stale readings change nothing.
 @ExtendWith(MockitoExtension.class)
 class UnlockConfirmationListenerTest {
 

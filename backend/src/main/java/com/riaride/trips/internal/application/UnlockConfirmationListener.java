@@ -14,14 +14,13 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-// Confirms a starting trip when telemetry reports its bike unlocked (RIA-54). Runs in the
-// telemetry message's transaction, with the bike's latest trip locked, so it never races the
-// timeout job. In time (before 30 s), the trip is in use, the bike leaves its hub, the first trip
-// activates the pass (BR4) and the reservation is used. Too late, or for a trip that already
-// failed, the bike is locked again. If the bike is no longer reserved, or the pass can no longer
-// take
-// a trip, the trip fails and the bike is locked: these are outcomes, not exceptions, so the battery
-// reading in the same transaction is still stored. Repeated and stale readings change nothing.
+// Confirms a starting trip when telemetry reports its bike unlocked (RIA-54). Runs in the telemetry
+// message's transaction, with the bike's latest trip locked, so it never races the timeout job. In
+// time (before 30 s), the trip is in use, the bike leaves its hub, the first trip activates the
+// pass (BR4) and the reservation is used. Too late, or for a trip that already failed, the bike is
+// locked again. If the bike is no longer reserved, or the pass can no longer take a trip, the trip
+// fails and the bike is locked: these are outcomes, not exceptions, so the battery reading in the
+// same transaction is still stored. Repeated and stale readings change nothing.
 @Component
 class UnlockConfirmationListener {
 

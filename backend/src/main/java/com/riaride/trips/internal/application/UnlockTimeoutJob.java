@@ -15,12 +15,11 @@ import org.springframework.transaction.support.TransactionOperations;
 
 // Fails the trips whose unlock telemetry did not confirm within the timeout (RIA-54, BR13); a trip
 // still starting exactly at the timeout has failed. Each trip is failed in a transaction of its
-// own,
-// under its row lock, and checked again there, so a trip confirmed in the meantime is left alone
-// and
-// one trip that cannot be failed does not stop the others. A failed trip locks the bike again; the
-// reservation, the bike and the pass are not changed: the bike stays reserved until the booking
-// expires, and the pass stays inactive. Public, so the acceptance tests can run it on their clock.
+// own, under its row lock, and checked again there, so a trip confirmed in the meantime is left
+// alone and one trip that cannot be failed does not stop the others. A failed trip locks the bike
+// again; the reservation, the bike and the pass are not changed: the bike stays reserved until the
+// booking expires, and the pass stays inactive. Public, so the acceptance tests can run it on their
+// clock.
 @Component
 public class UnlockTimeoutJob {
 

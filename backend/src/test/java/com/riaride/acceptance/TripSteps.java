@@ -55,9 +55,8 @@ public class TripSteps {
   }
 
   // Before the vehicles (7000) and passes (8000) are removed, since trips and reservations
-  // reference
-  // them. After each scenario too, ahead of FleetSteps' vehicle cleanup: After hooks with a higher
-  // order run first.
+  // reference them. After each scenario too, ahead of FleetSteps' vehicle cleanup: After hooks with
+  // a higher order run first.
   @Before(order = 6500)
   @After(order = 11000)
   public void deleteTripsAndReservations() {

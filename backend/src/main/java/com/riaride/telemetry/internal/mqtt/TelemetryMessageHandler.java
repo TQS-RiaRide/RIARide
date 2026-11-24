@@ -7,11 +7,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 // Publishes each telemetry message as a VehicleTelemetryReceived event, and an UNLOCKED reading
-// also
-// as a VehicleUnlocked event (RIA-54), in one transaction, so the listeners store the reading
-// before
-// the message is acknowledged (QoS 1). A message that is not a
-// valid reading is logged and dropped: redelivering it would fail again.
+// also as a VehicleUnlocked event (RIA-54), in one transaction, so the listeners store the reading
+// before the message is acknowledged (QoS 1). A message that is not a valid reading is logged and
+// dropped: redelivering it would fail again.
 class TelemetryMessageHandler {
 
   private static final Logger log = LoggerFactory.getLogger(TelemetryMessageHandler.class);
