@@ -7,8 +7,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientRepresentation;
+import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.test.context.DynamicPropertyRegistry;
 
@@ -21,6 +24,7 @@ public final class TestKeycloak {
   // Allows the password grant, so tests can check a password; created here, never in the realm
   // file.
   private static final String LOGIN_CHECK_CLIENT = "riaride-login-check-tests";
+  private static final String SPA_CLIENT = "riaride-spa";
 
   private static final KeycloakContainer CONTAINER =
       new KeycloakContainer("quay.io/keycloak/keycloak:26.8.0")
@@ -127,7 +131,60 @@ public final class TestKeycloak {
     client.setPublicClient(true);
     client.setDirectAccessGrantsEnabled(true);
     client.setStandardFlowEnabled(false);
+    var mappers = realm().clients().findByClientId(SPA_CLIENT).getFirst().getProtocolMappers();
+    if (mappers != null) {
+      mappers.forEach(mapper -> mapper.setId(null));
+      client.setProtocolMappers(mappers);
+    }
     realm().clients().create(client).close();
+  }
+
+  // Creates a synthetic user with one realm role and returns an access token for them, issued by
+  // the login-check client with the SPA's token mappers, so it carries the same claims as a token
+  // of the web app.
+  public static String accessTokenFor(String role) {
+    createLoginCheckClientIfMissing();
+    var username = "user-" + UUID.randomUUID();
+    var password = UUID.randomUUID().toString();
+    createUserWithRole(username, password, role);
+    return given()
+        .baseUri(container().getAuthServerUrl())
+        .port(container().getHttpPort())
+        .basePath("")
+        .formParams(
+            Map.of(
+                "grant_type", "password",
+                "client_id", LOGIN_CHECK_CLIENT,
+                "scope", "openid",
+                "username", username,
+                "password", password))
+        .when()
+        .post("/realms/" + REALM + "/protocol/openid-connect/token")
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("access_token");
+  }
+
+  private static void createUserWithRole(String username, String password, String role) {
+    var user = new UserRepresentation();
+    user.setUsername(username);
+    user.setEmail(username + "@example.test");
+    user.setEmailVerified(true);
+    user.setFirstName("Test");
+    user.setLastName(role);
+    user.setEnabled(true);
+    var credential = new CredentialRepresentation();
+    credential.setType(CredentialRepresentation.PASSWORD);
+    credential.setValue(password);
+    credential.setTemporary(false);
+    user.setCredentials(List.of(credential));
+    String userId;
+    try (var response = realm().users().create(user)) {
+      userId = CreatedResponseUtil.getCreatedId(response);
+    }
+    var realmRole = realm().roles().get(role).toRepresentation();
+    realm().users().get(userId).roles().realmLevel().add(List.of(realmRole));
   }
 
   // Points the application's token validation and its Admin API client at the container.
