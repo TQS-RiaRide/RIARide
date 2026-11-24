@@ -19,12 +19,15 @@ import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// Steps for RIA-54 (start a trip now), against the API, the MQTT broker and the database. The
+// Steps for RIA-54 (start a trip now) and RIA-55 (end a trip at a hub), against the API, the MQTT
+// broker and the database. The
 // simulator is played by the steps: they listen on the command topics and publish its telemetry.
 // Time moves only when a step moves the TestClock, so the 30-second timeout needs no sleep.
 public class TripSteps {
@@ -33,7 +36,7 @@ public class TripSteps {
   private static final Duration TELEMETRY_LAG = Duration.ofSeconds(5);
   private static final Duration BOOKING_HOLD = Duration.ofMinutes(15);
   private static final Map<String, String> TRIP_STATUSES =
-      Map.of("starting", "STARTING", "in progress", "IN_USE", "failed", "FAILED");
+      Map.of("starting", "STARTING", "in progress", "IN_USE", "failed", "FAILED", "ended", "ENDED");
 
   private final ScenarioContext context;
   private final JdbcTemplate jdbc;
@@ -127,6 +130,19 @@ public class TripSteps {
     unlockTimeoutJob.failOverdueStarts();
   }
 
+  @When("the guest ends the trip at hub {string}")
+  public void theGuestEndsTheTripAtHub(String hubName) {
+    assertThat(tripLocation).as("no trip was started in this scenario").isNotNull();
+    context.setLastResponse(
+        given()
+            .auth()
+            .oauth2(context.accessToken())
+            .contentType(ContentType.JSON)
+            .body(Map.of("hubId", hubId(hubName)))
+            .when()
+            .post(tripLocation + "/end"));
+  }
+
   // Read through the API, as the guest's app follows the trip.
   @Then("the trip is {string}")
   public void theTripIs(String status) {
@@ -180,6 +196,43 @@ public class TripSteps {
     var requestedAt = ((Timestamp) reservation.get("requested_at")).toInstant();
     assertThat(((Timestamp) reservation.get("expires_at")).toInstant())
         .isEqualTo(requestedAt.plus(BOOKING_HOLD));
+  }
+
+  // BR10: the returned bike takes a slot at the hub and can be booked again.
+  @Then("bike {string} is docked at hub {string}")
+  public void bikeIsDockedAtHub(String code, String hubName) {
+    var bike = jdbc.queryForMap("select status, hub_id from vehicle where code = ?", code);
+    assertThat(bike.get("status")).isEqualTo("AVAILABLE");
+    assertThat(bike.get("hub_id")).isEqualTo(hubId(hubName));
+  }
+
+  // The hubs of the nearbyHubs member of the last problem detail, by name, for example
+  // "Marés Salinas, Marés Centro".
+  @Then("the problem detail suggests the hubs {string} in that order")
+  public void theProblemDetailSuggestsTheHubsInThatOrder(String names) {
+    var expected = Arrays.stream(names.split(",")).map(String::trim).toList();
+    assertThat(context.lastResponse().jsonPath().getList("nearbyHubs.name", String.class))
+        .containsExactlyElementsOf(expected);
+  }
+
+  // Received on the command topic, as the simulator receives it, and checked against the contract.
+  @Then("a lock command for bike {string} at hub {string} is sent to the simulator")
+  public void aLockCommandForBikeAtHubIsSentToTheSimulator(String code, String hubName) {
+    var hubId = hubId(hubName).toString();
+    await().atMost(TELEMETRY_LAG).until(() -> lockFor(code, hubId).isPresent());
+    assertThat(MqttContracts.commandViolations(lockFor(code, hubId).orElseThrow().payload()))
+        .isEmpty();
+  }
+
+  private UUID hubId(String hubName) {
+    return jdbc.queryForObject("select id from hub where name = ?", UUID.class, hubName);
+  }
+
+  private Optional<RecordedCommand> lockFor(String code, String hubId) {
+    return commands.commands().stream()
+        .filter(command -> command.vehicleCode().equals(code) && "LOCK".equals(command.command()))
+        .filter(command -> command.payload().contains("\"" + hubId + "\""))
+        .findFirst();
   }
 
   // Listening starts before the request: the broker does not keep commands for late subscribers.
