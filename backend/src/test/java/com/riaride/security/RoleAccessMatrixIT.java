@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -47,8 +48,9 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 // is called by every role with a real access token from Keycloak in Testcontainers, validated by
 // the application against Keycloak's JWKS, over HTTP with REST Assured.
 //
-// A role that may call an endpoint never gets 401 or 403: the body sent is empty, so the answer
-// may be 400 or 404, but the request got past authorization. Every other role gets 403, and a
+// A role that may call an endpoint never gets 401 or 403, nor a server error: the body sent is
+// empty, so the answer may be 400 or 404, but the request got past authorization. A user with no
+// platform role may only read their own account. Every other role gets 403, and a
 // request with no token, or a token Keycloak did not issue, gets 401; both as problem details.
 // A forbidden role must get 403 whatever the body, before it is read or validated, so it learns
 // nothing about the input rules.
@@ -63,12 +65,19 @@ class RoleAccessMatrixIT {
   private static final String PROBLEM_JSON = "application/problem+json";
   private static final String ANY_ID = "00000000-0000-0000-0000-0000000000ff";
 
+  // The platform roles, plus a Keycloak user with no platform role (only Keycloak's defaults):
+  // such a user may read their own account but nothing else.
   enum Role {
     GUEST,
     OPERATOR,
     TECHNICIAN,
     HOTEL_MANAGER,
-    ADMIN
+    ADMIN,
+    NO_ROLE;
+
+    String realmRole() {
+      return this == NO_ROLE ? null : name();
+    }
   }
 
   record Endpoint(String method, String pattern, String path, Set<Role> allowed) {
@@ -102,6 +111,22 @@ class RoleAccessMatrixIT {
           new Endpoint("POST", "/api/v1/trips", "/api/v1/trips", Set.of(Role.GUEST)),
           new Endpoint("GET", "/api/v1/trips/{id}", "/api/v1/trips/" + ANY_ID, Set.of(Role.GUEST)));
 
+  // Forbidden roles get 403 even when the path or query is malformed, before it is converted.
+  private static final List<Endpoint> MALFORMED_REQUESTS =
+      List.of(
+          new Endpoint(
+              "POST",
+              "/api/v1/hubs/{hubId}/vehicles",
+              "/api/v1/hubs/not-a-uuid/vehicles",
+              Set.of(Role.OPERATOR, Role.ADMIN)),
+          new Endpoint(
+              "GET",
+              "/api/v1/hubs/{hubId}/vehicles",
+              "/api/v1/hubs/not-a-uuid/vehicles?type=NOT_A_TYPE",
+              Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
+          new Endpoint(
+              "GET", "/api/v1/trips/{id}", "/api/v1/trips/not-a-uuid", Set.of(Role.GUEST)));
+
   // Open to everyone, with or without a token.
   private static final List<Endpoint> PUBLIC_ENDPOINTS =
       List.of(new Endpoint("POST", "/api/v1/guests", "/api/v1/guests", EVERY_ROLE));
@@ -117,13 +142,22 @@ class RoleAccessMatrixIT {
   @Qualifier("requestMappingHandlerMapping")
   private RequestMappingHandlerMapping handlerMapping;
 
-  private final Map<Role, String> tokens = new EnumMap<>(Role.class);
+  private final Map<Role, TestKeycloak.TestUser> users = new EnumMap<>(Role.class);
 
   @BeforeAll
   void logInOneUserPerRole() {
     for (var role : Role.values()) {
-      tokens.put(role, TestKeycloak.accessTokenFor(role.name()));
+      users.put(role, TestKeycloak.logInWithRole(role.realmRole()));
     }
+  }
+
+  @AfterAll
+  void deleteTheUsers() {
+    users.values().forEach(user -> TestKeycloak.deleteUser(user.id()));
+  }
+
+  private String token(Role role) {
+    return users.get(role).accessToken();
   }
 
   private RequestSpecification request() {
@@ -139,6 +173,14 @@ class RoleAccessMatrixIT {
         .flatMap(endpoint -> Stream.of(Role.values()).map(role -> Arguments.of(endpoint, role)));
   }
 
+  static Stream<Arguments> forbiddenRolesOnMalformedRequests() {
+    return MALFORMED_REQUESTS.stream()
+        .flatMap(endpoint ->
+            Stream.of(Role.values())
+                .filter(role -> !endpoint.allowed().contains(role))
+                .map(role -> Arguments.of(endpoint, role)));
+  }
+
   static Stream<Endpoint> protectedEndpoints() {
     return ENDPOINTS.stream();
   }
@@ -151,7 +193,7 @@ class RoleAccessMatrixIT {
   @ParameterizedTest(name = "{1} on {0}")
   @MethodSource("everyRoleOnEveryEndpoint")
   void shouldLetOnlyTheEndpointRolesThroughAndRefuseTheOthersWith403(Endpoint endpoint, Role role) {
-    var response = send(request().auth().oauth2(tokens.get(role)), endpoint);
+    var response = send(request().auth().oauth2(token(role)), endpoint);
 
     if (endpoint.allowed().contains(role)) {
       assertThat(response.statusCode()).as("%s may call %s", role, endpoint).isNotIn(401, 403);
@@ -160,6 +202,15 @@ class RoleAccessMatrixIT {
       assertThat(response.contentType()).startsWith(PROBLEM_JSON);
       assertThat(response.jsonPath().getInt("status")).isEqualTo(403);
     }
+  }
+
+  @Requirement("RIA-86")
+  @ParameterizedTest(name = "{1} on {0}")
+  @MethodSource("forbiddenRolesOnMalformedRequests")
+  void shouldRefuseAForbiddenRoleWith403EvenWhenThePathIsMalformed(Endpoint endpoint, Role role) {
+    var response = send(request().auth().oauth2(token(role)), endpoint);
+
+    assertThat(response.statusCode()).as("%s on %s", role, endpoint.path()).isEqualTo(403);
   }
 
   @Requirement("RIA-86")
@@ -177,7 +228,7 @@ class RoleAccessMatrixIT {
   @ParameterizedTest(name = "{0}")
   @MethodSource("protectedEndpoints")
   void shouldRefuseATokenWhoseRolesWereEditedWith401(Endpoint endpoint) {
-    var guestTokenMadeAdmin = withPayloadEdited(tokens.get(Role.GUEST), "\"GUEST\"", "\"ADMIN\"");
+    var guestTokenMadeAdmin = withPayloadEdited(token(Role.GUEST), "\"GUEST\"", "\"ADMIN\"");
 
     var response = send(request().auth().oauth2(guestTokenMadeAdmin), endpoint);
 
@@ -208,7 +259,7 @@ class RoleAccessMatrixIT {
   @ParameterizedTest(name = "{0}")
   @MethodSource("publicEndpoints")
   void shouldLetAnyoneCallAPublicEndpointWithoutAToken(Endpoint endpoint) {
-    assertThat(send(request(), endpoint).statusCode()).isNotIn(401, 403);
+    assertThat(send(request(), endpoint).statusCode()).isNotIn(401, 403).isLessThan(500);
   }
 
   @Requirement("RIA-86")
