@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -20,7 +19,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 // repeats it on a retry, so a retried request returns the same pass instead of charging twice.
 @RestController
 @RequestMapping("/api/v1/passes")
-@Validated
 class PassController {
 
 	private final PurchasePassService purchasePass;
@@ -32,7 +30,9 @@ class PassController {
 	@PostMapping
 	@PreAuthorize("hasRole('GUEST')")
 	ResponseEntity<PassResponse> purchase(
-		@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 255) String idempotencyKey,
+		// At most 200 characters: the key is stored scoped by guest (37 more) and sent to Stripe,
+		// whose limit is 255.
+		@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 200) String idempotencyKey,
 		@Valid @RequestBody PurchasePassRequest request, JwtAuthenticationToken authentication) {
 		var pass = purchasePass.purchase(new PurchasePassCommand(authentication.getName(), request.passType(),
 			request.paymentMethod(), idempotencyKey));

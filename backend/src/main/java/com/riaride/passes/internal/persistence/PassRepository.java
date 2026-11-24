@@ -10,4 +10,6 @@ public interface PassRepository extends JpaRepository<Pass, UUID> {
 
 	boolean existsByGuestIdAndStatusIn(UUID guestId, Collection<PassStatus> statuses);
 
+	long deleteByIdAndStatus(UUID id, PassStatus status);
+
 }

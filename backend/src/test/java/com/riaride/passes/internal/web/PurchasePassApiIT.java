@@ -2,7 +2,7 @@ package com.riaride.passes.internal.web;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -10,6 +10,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -21,10 +23,15 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.jayway.jsonpath.JsonPath;
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestcontainersConfiguration;
+import com.riaride.payments.PaymentLedger;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +48,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -82,6 +91,9 @@ class PurchasePassApiIT {
 
 	@MockitoBean
 	private JwtDecoder jwtDecoder;
+
+	@MockitoSpyBean
+	private PaymentLedger ledger;
 
 	@BeforeEach
 	void setUp() {
@@ -158,6 +170,12 @@ class PurchasePassApiIT {
 		return mvc.perform(request);
 	}
 
+	private List<String> referencesSentToStripe() {
+		return stripe.findAll(postRequestedFor(urlPathEqualTo("/v1/payment_intents"))).stream()
+			.map(request -> request.getBodyAsString().replaceAll(".*metadata(?:\\[|%5B)reference(?:\\]|%5D)=([^&]+).*", "$1"))
+			.toList();
+	}
+
 	private int rows(String table) {
 		return jdbc.queryForObject("select count(*) from " + table, Integer.class);
 	}
@@ -180,7 +198,7 @@ class PurchasePassApiIT {
 
 		var id = JsonPath.<String>read(result.getResponse().getContentAsString(), "$.id");
 		stripe.verify(1, postRequestedFor(urlPathEqualTo("/v1/payment_intents"))
-			.withHeader("Idempotency-Key", equalTo("purchase-1"))
+			.withHeader("Idempotency-Key", matching("[0-9a-f-]{36}:purchase-1"))
 			.withRequestBody(containing("amount=7500"))
 			.withRequestBody(containing("currency=eur"))
 			.withRequestBody(containing("pass-" + id)));
@@ -191,8 +209,10 @@ class PurchasePassApiIT {
 		var payment = jdbc.queryForMap("select kind, amount_cents, status, provider_ref, idempotency_key, customer_ref, payment_method_ref from payment where pass_id = ?::uuid", id);
 		assertThat(payment).containsEntry("kind", "PURCHASE").containsEntry("amount_cents", 7500L)
 			.containsEntry("status", "SUCCEEDED").containsEntry("provider_ref", "pi_purchase")
-			.containsEntry("idempotency_key", "purchase-1").containsEntry("customer_ref", "cus_rita")
+			.containsEntry("customer_ref", "cus_rita")
 			.containsEntry("payment_method_ref", "pm_saved_card");
+		// The key is stored scoped by guest, so another guest's key can never match it.
+		assertThat((String) payment.get("idempotency_key")).matches("[0-9a-f-]{36}:purchase-1");
 	}
 
 	// Seeded provisional base prices (Product Owner decision, until RIA-121): 1-day 10 EUR, 3-day 25 EUR, deposit 50 EUR.
@@ -323,6 +343,196 @@ class PurchasePassApiIT {
 			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
 
 		assertThat(rows("pass")).isZero();
+	}
+
+	// Two purchases at once with different keys (a double click): one pass, one charge.
+	@Requirement("RIA-52")
+	@Test
+	void shouldChargeOnceWhenTwoPurchasesWithDifferentKeysArriveAtOnce() throws Exception {
+		givenStripeAcceptsTheCard();
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		var statuses = new ArrayList<Integer>();
+		try {
+			var results = new ArrayList<Future<Integer>>();
+			for (var key : List.of("purchase-a", "purchase-b")) {
+				results.add(executor.submit(() -> {
+					start.await();
+					return buy(GUEST_TOKEN, body("STAY"), key).andReturn().getResponse().getStatus();
+				}));
+			}
+			start.countDown();
+			for (var result : results) {
+				statuses.add(result.get());
+			}
+		} finally {
+			executor.shutdownNow();
+		}
+
+		assertThat(statuses).containsExactlyInAnyOrder(201, 409);
+		stripe.verify(1, postRequestedFor(urlPathEqualTo("/v1/payment_intents")));
+		assertThat(rows("pass")).isEqualTo(1);
+		assertThat(rows("payment")).isEqualTo(1);
+	}
+
+	// The card was charged but the pass could not be stored: the charge is refunded.
+	@Requirement("RIA-52")
+	@Test
+	void shouldRefundTheChargeWhenThePassCannotBeStored() throws Exception {
+		givenStripeAcceptsTheCard();
+		stripe.stubFor(post("/v1/refunds").willReturn(okJson("""
+			{"id": "re_purchase", "object": "refund", "status": "succeeded", "amount": 7500, "payment_intent": "pi_purchase"}
+			""")));
+		doThrow(new IllegalStateException("simulated failure")).when(ledger).recordPurchase(any(), any(), any(), any());
+
+		buy(GUEST_TOKEN, body("STAY"), "purchase-1")
+			.andExpect(status().isInternalServerError())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+			.andExpect(jsonPath("$.title").value("Pass not created"));
+
+		stripe.verify(1, postRequestedFor(urlPathEqualTo("/v1/refunds"))
+			.withRequestBody(containing("payment_intent=pi_purchase"))
+			.withRequestBody(containing("amount=7500")));
+		assertThat(rows("pass")).isZero();
+		assertThat(rows("payment")).isZero();
+	}
+
+	// After a timeout, the client retries with the same key as the 503 says: Stripe receives the same
+	// parameters (the pass id comes from the key), so its cached result applies, and one pass is created.
+	@Requirement("RIA-52")
+	@Test
+	void shouldCreateThePassWhenTheClientRetriesWithTheSameKeyAfterATimeout() throws Exception {
+		stripe.stubFor(post("/v1/customers").willReturn(okJson("{\"id\": \"cus_rita\", \"object\": \"customer\"}")));
+		stripe.stubFor(post("/v1/payment_intents").willReturn(okJson("{}").withFixedDelay(2_000)));
+		buy(GUEST_TOKEN, body("STAY"), "purchase-1").andExpect(status().isServiceUnavailable());
+		var firstReference = referencesSentToStripe().getFirst();
+		stripe.resetAll();
+		givenStripeAcceptsTheCard();
+
+		buy(GUEST_TOKEN, body("STAY"), "purchase-1").andExpect(status().isCreated());
+
+		assertThat(rows("pass")).isEqualTo(1);
+		var id = jdbc.queryForObject("select id::text from pass", String.class);
+		assertThat(referencesSentToStripe()).containsExactly("pass-" + id);
+		assertThat(firstReference).isEqualTo("pass-" + id);
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldRefuseTheSameKeyForADifferentPassType() throws Exception {
+		givenStripeAcceptsTheCard();
+		buy(GUEST_TOKEN, body("STAY"), "purchase-1").andExpect(status().isCreated());
+
+		buy(GUEST_TOKEN, body("ONE_DAY"), "purchase-1")
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.title").value("Idempotency key already used"));
+
+		stripe.verify(1, postRequestedFor(urlPathEqualTo("/v1/payment_intents")));
+	}
+
+	// A guest whose stay ended after a successful purchase still gets that purchase back on replay.
+	@Requirement("RIA-52")
+	@Test
+	void shouldReplayAPurchaseEvenAfterTheStayHasEnded() throws Exception {
+		givenStripeAcceptsTheCard();
+		var first = buy(GUEST_TOKEN, body("STAY"), "purchase-1").andExpect(status().isCreated())
+			.andReturn().getResponse().getContentAsString();
+		jdbc.update("update stay set check_out = date '2026-11-29', check_in = date '2026-11-25' where id = (select stay_id from guest where keycloak_id = ?)", GUEST_SUBJECT);
+
+		var replay = buy(GUEST_TOKEN, body("STAY"), "purchase-1").andExpect(status().isCreated())
+			.andReturn().getResponse().getContentAsString();
+
+		assertThat(JsonPath.<String>read(replay, "$.id")).isEqualTo(JsonPath.<String>read(first, "$.id"));
+	}
+
+	// BR1 boundaries, with today fixed at 30 November 2026.
+	@Requirement("RIA-52")
+	@Test
+	void shouldSellAPassOnTheCheckInDay() throws Exception {
+		givenStripeAcceptsTheCard();
+		jdbc.update("update stay set check_in = date '2026-11-30', check_out = date '2026-12-03' where id = (select stay_id from guest where keycloak_id = ?)", GUEST_SUBJECT);
+
+		buy(GUEST_TOKEN, body("STAY"), "purchase-1").andExpect(status().isCreated());
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldSellAPassOnTheCheckOutDay() throws Exception {
+		givenStripeAcceptsTheCard();
+		jdbc.update("update stay set check_in = date '2026-11-27', check_out = date '2026-11-30' where id = (select stay_id from guest where keycloak_id = ?)", GUEST_SUBJECT);
+
+		buy(GUEST_TOKEN, body("ONE_DAY"), "purchase-1").andExpect(status().isCreated());
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldTellTheGuestToUseANewKeyAfterADeclinedCard() throws Exception {
+		givenStripeDeclinesTheCard();
+
+		buy(GUEST_TOKEN, body("STAY"), "purchase-1")
+			.andExpect(status().isPaymentRequired())
+			.andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("new Idempotency-Key")));
+	}
+
+	// A retry with the same key while the first request is still running: one pass, and a purchase
+	// that succeeded is never refunded (review of #36). WireMock answers both charges, as Stripe's
+	// idempotency would replay the cached success.
+	@Requirement("RIA-52")
+	@Test
+	void shouldNeverRefundWhenTwoRequestsWithTheSameKeyArriveAtOnce() throws Exception {
+		givenStripeAcceptsTheCard();
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		var bodies = new ArrayList<String>();
+		var statuses = new ArrayList<Integer>();
+		try {
+			var results = new ArrayList<Future<MockHttpServletResponse>>();
+			for (int i = 0; i < 2; i++) {
+				results.add(executor.submit(() -> {
+					start.await();
+					return buy(GUEST_TOKEN, body("STAY"), "purchase-1").andReturn().getResponse();
+				}));
+			}
+			start.countDown();
+			for (var result : results) {
+				var response = result.get();
+				statuses.add(response.getStatus());
+				bodies.add(response.getContentAsString());
+			}
+		} finally {
+			executor.shutdownNow();
+		}
+
+		stripe.verify(0, postRequestedFor(urlPathEqualTo("/v1/refunds")));
+		assertThat(rows("pass")).isEqualTo(1);
+		assertThat(rows("payment")).isEqualTo(1);
+		assertThat(jdbc.queryForObject("select status from pass", String.class)).isEqualTo("INACTIVE");
+		assertThat(statuses).contains(201).allMatch(code -> code == 201 || code == 409 || code == 503);
+		var id = jdbc.queryForObject("select id::text from pass", String.class);
+		for (int i = 0; i < statuses.size(); i++) {
+			if (statuses.get(i) == 201) {
+				assertThat(JsonPath.<String>read(bodies.get(i), "$.id")).isEqualTo(id);
+			}
+		}
+	}
+
+	// The key is stored scoped by guest (37 more characters) and must fit Stripe's 255-character limit.
+	@Requirement("RIA-52")
+	@Test
+	void shouldRefuseAnIdempotencyKeyLongerThan200Characters() throws Exception {
+		buy(GUEST_TOKEN, body("STAY"), "k".repeat(201))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+
+		stripe.verify(0, postRequestedFor(urlPathEqualTo("/v1/payment_intents")));
+	}
+
+	@Requirement("RIA-52")
+	@Test
+	void shouldAcceptAnIdempotencyKeyOf200Characters() throws Exception {
+		givenStripeAcceptsTheCard();
+
+		buy(GUEST_TOKEN, body("STAY"), "k".repeat(200)).andExpect(status().isCreated());
 	}
 
 	@Requirement("RIA-52")

@@ -146,6 +146,52 @@ class HubTest {
 		assertThat(hub.getName()).isEqualTo(name);
 	}
 
+	// Every Unicode separator (category Z) counts as a space at the ends of a name, not only the
+	// ASCII whitespace that String.strip removes: the no-break space U+00A0, the figure space
+	// U+2007, the narrow no-break space U+202F, the ideographic space U+3000 and the line and
+	// paragraph separators U+2028 and U+2029.
+
+	@Requirement("RIA-56")
+	@ParameterizedTest(name = "U+{0}")
+	@ValueSource(strings = { "00A0", "2007", "202F", "3000", "2028", "2029" })
+	void shouldRejectHubNameMadeOnlyOfSeparators(String codePoint) {
+		var separator = Character.toString(Integer.parseInt(codePoint, 16));
+
+		assertRejectsField(
+			() -> Hub.register(separator + " " + separator, HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10),
+			"name");
+	}
+
+	@Requirement("RIA-56")
+	@ParameterizedTest(name = "U+{0}")
+	@ValueSource(strings = { "00A0", "2007", "202F", "3000", "2028", "2029" })
+	void shouldStoreHubNameWithoutSurroundingSeparators(String codePoint) {
+		var separator = Character.toString(Integer.parseInt(codePoint, 16));
+
+		var hub = Hub.register(separator + NAME + " " + separator, HubKind.HOTEL, MARES_PRAIA, LATITUDE,
+			LONGITUDE, 10);
+
+		assertThat(hub.getName()).isEqualTo(NAME);
+	}
+
+	@Requirement("RIA-56")
+	@Test
+	void shouldAcceptHubNameOf120CharactersSurroundedByNoBreakSpaces() {
+		var name = "A".repeat(120);
+
+		var hub = Hub.register("\u00A0" + name + "\u00A0", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10);
+
+		assertThat(hub.getName()).isEqualTo(name);
+	}
+
+	@Requirement("RIA-56")
+	@Test
+	void shouldKeepNoBreakSpaceInsideHubName() {
+		var hub = Hub.register("Marés\u00A0Praia", HubKind.HOTEL, MARES_PRAIA, LATITUDE, LONGITUDE, 10);
+
+		assertThat(hub.getName()).isEqualTo("Marés\u00A0Praia");
+	}
+
 	// Name: no invisible characters, that is, no C0 or C1 control character (Unicode category Cc)
 	// and no format character (category Cf), such as the right-to-left override U+202E.
 

@@ -3,6 +3,7 @@ package com.riaride.fleet.internal.web;
 import com.riaride.fleet.internal.application.RegisterHubCommand;
 import com.riaride.fleet.internal.domain.Hub;
 import com.riaride.fleet.internal.domain.HubKind;
+import com.riaride.fleet.internal.domain.Names;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -25,8 +26,12 @@ record RegisterHubRequest(
 
 	static final String NO_INVISIBLE_CHARACTERS = "^[^\\p{Cc}\\p{Cf}]*$";
 
+	// A blank hotel name counts as no hotel, so a hotel hub is asked to name its hotel and a
+	// tourist spot hub is registered without one.
 	RegisterHubCommand toCommand() {
-		return new RegisterHubCommand(name, kind, hotel == null ? null : hotel.strip(), latitude, longitude, capacity);
+		var strippedHotel = hotel == null ? "" : Names.stripSpaces(hotel);
+		return new RegisterHubCommand(name, kind, strippedHotel.isEmpty() ? null : strippedHotel, latitude, longitude,
+			capacity);
 	}
 
 }

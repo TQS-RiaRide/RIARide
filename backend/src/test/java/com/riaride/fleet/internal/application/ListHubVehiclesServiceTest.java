@@ -57,4 +57,39 @@ class ListHubVehiclesServiceTest {
 		assertThatThrownBy(() -> service.list(HUB)).isInstanceOf(HubNotFoundException.class);
 	}
 
+	// RIA-53: the guest finds the vehicles at a hub, optionally of one type.
+
+	// VehicleType has only E_BIKE, so this cannot yet show that other types are dropped; when a
+	// second type exists, add a vehicle of that type here and expect it to be left out.
+	@Requirement("RIA-53")
+	@Test
+	void shouldListTheVehiclesOfTheRequestedType() {
+		when(hubs.existsById(HUB)).thenReturn(true);
+		when(vehicles.findByHubIdOrderByCode(HUB)).thenReturn(List.of(
+			withBattery("EB-101", 90), withBattery("EB-104", 15)));
+
+		var listed = service.list(HUB, VehicleType.E_BIKE);
+
+		assertThat(listed)
+			.extracting(HubVehicle::code, HubVehicle::type, HubVehicle::bookable)
+			.containsExactly(tuple("EB-101", VehicleType.E_BIKE, true), tuple("EB-104", VehicleType.E_BIKE, false));
+	}
+
+	@Requirement("RIA-53")
+	@Test
+	void shouldListEveryTypeWhenNoTypeIsRequested() {
+		when(hubs.existsById(HUB)).thenReturn(true);
+		when(vehicles.findByHubIdOrderByCode(HUB)).thenReturn(List.of(withBattery("EB-101", 90)));
+
+		assertThat(service.list(HUB, null)).extracting(HubVehicle::code).containsExactly("EB-101");
+	}
+
+	@Requirement("RIA-53")
+	@Test
+	void shouldRejectAnUnknownHubAlsoWhenFilteringByType() {
+		when(hubs.existsById(HUB)).thenReturn(false);
+
+		assertThatThrownBy(() -> service.list(HUB, VehicleType.E_BIKE)).isInstanceOf(HubNotFoundException.class);
+	}
+
 }

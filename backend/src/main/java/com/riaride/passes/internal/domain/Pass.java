@@ -10,12 +10,14 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
 // A guest's pass. It copies the price and deposit at purchase, so later price changes do not alter
-// it (architecture, section 7), and it stays inactive until the first trip (BR4).
+// it (architecture, section 7). It is reserved as PENDING before the card is charged, becomes
+// INACTIVE once paid, and stays inactive until the first trip (BR4).
 @Entity
 @Table(name = "pass")
 public class Pass implements Persistable<UUID> {
@@ -58,22 +60,32 @@ public class Pass implements Persistable<UUID> {
 		// for JPA
 	}
 
-	private Pass(UUID guestId, PassPrice price) {
-		this.id = UUID.randomUUID();
+	private Pass(UUID guestId, PassPrice price, String purchaseKey) {
+		// Derived from the guest-scoped idempotency key: a retry builds the same pass, so the
+		// payment provider receives the same reference and returns its cached result.
+		this.id = UUID.nameUUIDFromBytes(purchaseKey.getBytes(StandardCharsets.UTF_8));
 		this.guestId = guestId;
 		this.passType = price.getPassType();
-		this.status = PassStatus.INACTIVE;
+		this.status = PassStatus.PENDING;
 		this.priceCents = price.getPriceCents();
 		this.depositCents = price.getDepositCents();
 		this.depositStatus = DepositStatus.HELD;
 		this.isNew = true;
 	}
 
-	public static Pass purchase(UUID guestId, PassPrice price) {
-		if (guestId == null || price == null) {
-			throw new IllegalArgumentException("A pass needs a guest and a base price");
+	public static Pass purchase(UUID guestId, PassPrice price, String purchaseKey) {
+		if (guestId == null || price == null || purchaseKey == null || purchaseKey.isBlank()) {
+			throw new IllegalArgumentException("A pass needs a guest, a base price and a purchase key");
 		}
-		return new Pass(guestId, price);
+		return new Pass(guestId, price, purchaseKey);
+	}
+
+	// The payment went through: the pass exists, not active until the first trip (BR4).
+	public void confirmPayment() {
+		if (status != PassStatus.PENDING) {
+			throw new IllegalStateException("Only a pending pass can be confirmed");
+		}
+		this.status = PassStatus.INACTIVE;
 	}
 
 	// BR3 and BR5: the price and the deposit are charged together at purchase.
