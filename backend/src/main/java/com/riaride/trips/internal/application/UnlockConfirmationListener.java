@@ -3,9 +3,12 @@ package com.riaride.trips.internal.application;
 import com.riaride.fleet.VehicleReservations;
 import com.riaride.passes.PassUsage;
 import com.riaride.telemetry.VehicleUnlocked;
+import com.riaride.trips.internal.domain.ReservationStatus;
+import com.riaride.trips.internal.domain.Trip;
 import com.riaride.trips.internal.persistence.ReservationRepository;
 import com.riaride.trips.internal.persistence.TripRepository;
 import java.time.Clock;
+import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -15,8 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 // telemetry message's transaction, with the bike's latest trip locked, so it never races the
 // timeout job. In time (before 30 s), the trip is in use, the bike leaves its hub, the first trip
 // activates the pass (BR4) and the reservation is used. Too late, or for a trip that already
-// failed,
-// the bike is locked again. Repeated and stale readings change nothing.
+// failed, the bike is locked again. If the bike is no longer reserved, or the pass can no longer
+// take
+// a trip, the trip fails and the bike is locked: these are outcomes, not exceptions, so the battery
+// reading in the same transaction is still stored. Repeated and stale readings change nothing.
 @Component
 class UnlockConfirmationListener {
 
@@ -53,15 +58,7 @@ class UnlockConfirmationListener {
         .ifPresent(trip -> {
           var now = clock.instant();
           switch (trip.confirmUnlock(unlocked.emittedAt(), now, properties.unlockTimeout())) {
-            case STARTED -> {
-              vehicles.startRide(trip.getVehicleId());
-              passes.activateOnFirstTrip(trip.getPassId(), now);
-              reservations
-                  .findById(trip.getReservationId())
-                  .orElseThrow(
-                      () -> new IllegalStateException("A trip's reservation no longer exists"))
-                  .markUsed();
-            }
+            case STARTED -> start(trip, now);
             case TOO_LATE ->
                 events.publishEvent(new TripFailed(trip.getVehicleCode(), trip.getHubId()));
             case ALREADY_STARTED, STALE -> {
@@ -70,5 +67,22 @@ class UnlockConfirmationListener {
             }
           }
         });
+  }
+
+  // The pass is checked (and locked) before the bike changes, so a refusal changes nothing else.
+  private void start(Trip trip, Instant now) {
+    var reservation =
+        reservations
+            .findById(trip.getReservationId())
+            .filter(held -> held.getStatus() == ReservationStatus.ACTIVE);
+    if (reservation.isEmpty()
+        || !passes.canStartTrip(trip.getPassId(), now)
+        || !vehicles.startRide(trip.getVehicleId())) {
+      trip.failStart(now);
+      events.publishEvent(new TripFailed(trip.getVehicleCode(), trip.getHubId()));
+      return;
+    }
+    passes.activateOnFirstTrip(trip.getPassId(), now);
+    reservation.get().markUsed();
   }
 }

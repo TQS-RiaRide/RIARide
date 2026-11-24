@@ -23,7 +23,9 @@ import org.springframework.data.domain.Persistable;
 @Table(name = "trip")
 public class Trip implements Persistable<UUID> {
 
-  // How far the simulator's clock may be behind the server's, as for battery readings.
+  // How far the simulator's clock may be behind the server's, as for battery readings. It is longer
+  // than the unlock timeout, so an UNLOCKED reading left from a failed attempt can confirm a retry
+  // made within the minute; that is accepted, since the bike is physically unlocked.
   static final Duration MAX_CLOCK_SKEW = Duration.ofMinutes(1);
 
   @Id private UUID id;
@@ -116,6 +118,17 @@ public class Trip implements Persistable<UUID> {
     this.status = TripStatus.IN_USE;
     this.startedAt = now;
     return UnlockOutcome.STARTED;
+  }
+
+  // The unlock came in time, but the bike or the pass could no longer take the trip: it fails, so
+  // the bike is locked again. Called in the transaction that confirmed the unlock.
+  public void failStart(Instant now) {
+    if (status == TripStatus.FAILED) {
+      throw new IllegalStateException("The trip already failed");
+    }
+    this.status = TripStatus.FAILED;
+    this.startedAt = null;
+    this.failedAt = now;
   }
 
   // Returns true only when this call fails the trip.

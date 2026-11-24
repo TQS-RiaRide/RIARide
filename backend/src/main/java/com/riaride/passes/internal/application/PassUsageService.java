@@ -35,6 +35,12 @@ class PassUsageService implements PassUsage {
         .map(pass -> new UsablePass(pass.getId()));
   }
 
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public boolean canStartTrip(UUID passId, Instant at) {
+    return passes.findByIdForUpdate(passId).filter(pass -> pass.isUsableAt(at)).isPresent();
+  }
+
   // MANDATORY: the pass is activated in the same transaction that starts the trip, or not at all.
   @Override
   @Transactional(propagation = Propagation.MANDATORY)

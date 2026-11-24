@@ -10,8 +10,9 @@ public interface VehicleReservations {
   // Throws VehicleNotFoundException for an unknown code and VehicleNotBookableException otherwise.
   ReservedVehicle reserve(String vehicleCode);
 
-  // Telemetry confirmed the unlock: the reserved bike is in use and leaves its hub.
-  void startRide(UUID vehicleId);
+  // Telemetry confirmed the unlock: the reserved bike is in use and leaves its hub. Returns false,
+  // changing nothing, when the bike is no longer reserved (for example, taken out of service).
+  boolean startRide(UUID vehicleId);
 
   // The reservation ended without a ride (BR11): a bike still reserved is available again.
   void release(UUID vehicleId);

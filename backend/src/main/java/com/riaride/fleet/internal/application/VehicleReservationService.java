@@ -5,6 +5,7 @@ import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.fleet.VehicleReservations;
 import com.riaride.fleet.internal.domain.BookingBatteryPolicy;
 import com.riaride.fleet.internal.domain.Vehicle;
+import com.riaride.fleet.internal.domain.VehicleStatus;
 import com.riaride.fleet.internal.persistence.VehicleRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -35,12 +36,13 @@ class VehicleReservationService implements VehicleReservations {
 
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
-  public void startRide(UUID vehicleId) {
-    var vehicle =
-        vehicles
-            .findByIdForUpdate(vehicleId)
-            .orElseThrow(() -> new IllegalStateException("A reserved vehicle no longer exists"));
-    vehicle.startRide();
+  public boolean startRide(UUID vehicleId) {
+    var vehicle = vehicles.findByIdForUpdate(vehicleId);
+    if (vehicle.isEmpty() || vehicle.get().getStatus() != VehicleStatus.RESERVED) {
+      return false;
+    }
+    vehicle.get().startRide();
+    return true;
   }
 
   @Override
