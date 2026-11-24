@@ -1,6 +1,6 @@
 package com.riaride.accounts.internal.domain;
 
 public enum StayStatus {
-	ACTIVE,
-	CHECKED_OUT
+  ACTIVE,
+  CHECKED_OUT
 }

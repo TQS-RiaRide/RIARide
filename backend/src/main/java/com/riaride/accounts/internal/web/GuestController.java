@@ -14,20 +14,20 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequestMapping("/api/v1/guests")
 class GuestController {
 
-	private final SignUpGuestService signUpGuest;
+  private final SignUpGuestService signUpGuest;
 
-	GuestController(SignUpGuestService signUpGuest) {
-		this.signUpGuest = signUpGuest;
-	}
+  GuestController(SignUpGuestService signUpGuest) {
+    this.signUpGuest = signUpGuest;
+  }
 
-	@PostMapping
-	ResponseEntity<GuestResponse> signUp(@Valid @RequestBody SignUpGuestRequest request) {
-		var guest = signUpGuest.signUp(request.toCommand());
-		var location = ServletUriComponentsBuilder.fromCurrentRequest()
-			.path("/{id}")
-			.buildAndExpand(guest.getId())
-			.toUri();
-		return ResponseEntity.created(location).body(GuestResponse.from(guest));
-	}
-
+  @PostMapping
+  ResponseEntity<GuestResponse> signUp(@Valid @RequestBody SignUpGuestRequest request) {
+    var guest = signUpGuest.signUp(request.toCommand());
+    var location =
+        ServletUriComponentsBuilder.fromCurrentRequest()
+            .path("/{id}")
+            .buildAndExpand(guest.getId())
+            .toUri();
+    return ResponseEntity.created(location).body(GuestResponse.from(guest));
+  }
 }

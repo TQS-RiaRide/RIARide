@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface HotelRepository extends JpaRepository<Hotel, UUID> {
 
-	Optional<Hotel> findByName(String name);
-
+  Optional<Hotel> findByName(String name);
 }

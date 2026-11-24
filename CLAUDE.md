@@ -17,6 +17,7 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | Unit tests (Surefire, `*Test.java` / `*Tests.java`) | `./mvnw test` |
 | Integration tests only (Failsafe, `*IT.java`; need Docker for PostgreSQL and Keycloak containers) | `./mvnw verify -DskipUnitTests=true` |
 | All tests and JaCoCo report | `./mvnw verify` |
+| Format / check formatting (Spotless, Google Java Style; the check also runs in `verify` and CI) | `./mvnw spotless:apply` / `./mvnw spotless:check` |
 | Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
 | Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
 | Acceptance tests (Cucumber, Failsafe; needs Docker) | `./mvnw verify -DskipUnitTests=true -Dit.test=CucumberIT` (reports in `target/cucumber-reports/`; `@wip` scenarios are excluded) |
@@ -152,7 +153,7 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 
 - One feature branch per story, created from `dev` and merged into `dev`; merges only through a pull request approved by another member. `main` is the release branch: `dev` is merged into it by a pull request at the end of each iteration, before the tag. Nobody pushes directly to `dev` or `main`.
 - The Jira key (for example, `RIA-12`) must appear in the branch name, the commits and the pull request.
-- Branch names: `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`.
+- Branch names: `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`. The `PR rules` check (`.github/workflows/pr-rules.yml`) enforces the branch name and the Jira key in the pull request title; Dependabot and the `dev` → `main` release pull request are exempt.
 - Commits: Conventional Commits with the key, for example `feat: RIA-31 add booking endpoint`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
 - Merge with a merge commit, never squash, so test-first (TDD) commits stay in the history of `dev` and `main`. For TDD components, commit the failing test before the implementation.
 - Tags at the end of each iteration: `iter1`, `iter2`, ..., `final_v1`. At each tag, a PDF of each report goes in `docs/`.
@@ -197,7 +198,7 @@ A story is done when: acceptance criteria met (Gherkin + Cucumber for core stori
 - Do not give AI services secrets, credentials or personal data. Use synthetic data only.
 - AI review on pull requests, recording accepted and rejected findings (see `.github/pull_request_template.md`).
 - At least two stories must be agent-generated from Gherkin or an OpenSpec proposal and delivered as pull requests.
-- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`. The `AI label` check (`.github/workflows/ai-label.yml`) fails a pull request with none, more than one, or an unknown `ai:*` label. It blocks the merge once it is a required check in branch protection (pending, DevOps Master). Dependabot pull requests get `ai:none` automatically.
+- Every pull request has exactly one label: `ai:none`, `ai:assisted` or `ai:generated`. The `AI label` check (`.github/workflows/ai-label.yml`) fails a pull request with none, more than one, or an unknown `ai:*` label. It is a required check in the branch protection of `dev` and `main`. Dependabot pull requests get `ai:none` automatically.
 - Agent-generated stories follow test author → implementer → reviewer, with a human checkpoint after each step; the implementer must not edit the tests written in the first step. The three agents are defined in `.claude/agents/` (`test-author`, `implementer`, `reviewer`). Commit each agent step with the trailer `Agent: test-author` or `Agent: implementer`; the `Agent boundaries` check fails an `ai:generated` pull request whose implementer commits touch `backend/src/test/` or whose test-author commits touch `backend/src/main/`.
 - Jira (Atlassian MCP): read the story, acceptance criteria and Xray Tests before writing code or tests; you may comment with the PR link and move a story to *In progress* or *In review*. Never move a story to *Done*, create, split or estimate stories, or edit Gherkin in Jira (QA Manual 6.4).
 - SonarQube (MCP and `sonar-*` skills): read the quality gate, new issues, coverage gaps and duplications, and fix issues in code. Never mark a hotspot as reviewed, accept or close an issue, or change the quality gate, quality profile or coverage exclusions (QA Manual 6.4).

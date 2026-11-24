@@ -7,23 +7,22 @@ import java.util.Optional;
 // provider's payment or refund, when one was created, so the caller can follow it up.
 // The provider's own exception is not kept as the cause: its message can repeat the API key.
 public abstract sealed class PaymentException extends RuntimeException
-	permits TransientPaymentException, PermanentPaymentException {
+    permits TransientPaymentException, PermanentPaymentException {
 
-	private final String reason;
-	private final String paymentRef;
+  private final String reason;
+  private final String paymentRef;
 
-	protected PaymentException(String reason, String message, String paymentRef) {
-		super(message);
-		this.reason = reason;
-		this.paymentRef = paymentRef;
-	}
+  protected PaymentException(String reason, String message, String paymentRef) {
+    super(message);
+    this.reason = reason;
+    this.paymentRef = paymentRef;
+  }
 
-	public String reason() {
-		return reason;
-	}
+  public String reason() {
+    return reason;
+  }
 
-	public Optional<String> paymentRef() {
-		return Optional.ofNullable(paymentRef);
-	}
-
+  public Optional<String> paymentRef() {
+    return Optional.ofNullable(paymentRef);
+  }
 }

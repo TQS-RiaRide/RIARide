@@ -36,10 +36,10 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | Q1 | Static analysis and coverage dashboard | E | Decided (I2) | Section 3.3; the SonarQube step is not in [`ci.yml`](../../../.github/workflows/ci.yml) yet. Agents read its results (section 6.4) |
 | Q2 | Blocking quality gate on new code | E | Decided (I2) | Section 3.3 |
 | Q3 | Dependency vulnerability scanning | E | Partial | [`dependabot.yml`](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/dependabot.yml) on `main` for Maven, npm, pip and GitHub Actions. Updates for a component fail until its manifest exists. Per-build scan: section 3.4 |
-| Q4 | Peer code review | E | Done | [PR template](../../../.github/pull_request_template.md) and section 3.2; branch protection on `main` and `dev` requires one approval. [PR #20](https://github.com/TQS-RiaRide/RIARide/pull/20): changes requested, fixed, then approved before the merge |
+| Q4 | Peer code review | E | Done | [PR template](../../../.github/pull_request_template.md), section 3.2; branch protection on `dev` and `main` requires one approval (section 4.1) |
 | Q5 | Contributor guidelines | E | Done | Section 3.1 |
 | Q6 | Container image scanning or added security testing | V | Decided (I4) | Section 3.4 |
-| D1 | Feature branches, protected main, merge by pull request | E | Done | Branch per story, merged into `dev` by pull request; `main` and `dev` protected with a pull request, one approval and the `CI result` check required, also for administrators ([PR #20](https://github.com/TQS-RiaRide/RIARide/pull/20)). Section 4.1 |
+| D1 | Feature branches, protected main, merge by pull request | E | Partial | Branch per story in use, merged into `dev` by pull request; `main` and `dev` protected; branch name and Jira key enforced by [`pr-rules.yml`](../../../.github/workflows/pr-rules.yml) (section 4.1). *Link to a blocked pull request to be added.* |
 | D2 | CI with quality gate, badge and failure notification | E | Partial | [`ci.yml`](../../../.github/workflows/ci.yml) runs the backend and frontend jobs and a summary job on every push and pull request. SonarQube, the simulator job and the badge are pending. Section 4.2 |
 | D3 | Infrastructure as code | E | Decided (I3) | Section 4.2 |
 | D4 | Continuous delivery with representative data | E | Decided (I3) | Section 4.2 |
@@ -206,21 +206,23 @@ The platform stores guests' email, password, stay and trip history, which is per
 The team works with two long-lived branches. `dev` is the integration branch: each story is developed in its own short-lived branch and merged into `dev`. `main` is the release branch: it is always deployable, and it receives `dev` through a pull request at the end of each iteration, before the iteration tag. From I3, every merge to `main` deploys to staging (section 4.2).
 
 1. Take a story from the sprint in Jira and move it to *In progress*.
-2. Create a branch from `dev` named `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
+2. Create a branch from `dev` named `<type>/RIA-<n>-<short-description>`, for example `feat/RIA-31-book-vehicle`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`. The `PR rules` check ([`pr-rules.yml`](../../../.github/workflows/pr-rules.yml)) fails a pull request to `dev` or `main` whose branch does not follow this pattern or whose title has no Jira key. Dependabot pull requests and the release pull request from `dev` to `main` are exempt.
 3. Commit with [Conventional Commits](https://www.conventionalcommits.org/) and the story key: `feat: RIA-31 add booking endpoint`. For TDD components, commit the failing test before the implementation.
 4. Open a pull request to `dev` with the template and the AI label. Use a draft while the work is incomplete; the AI review runs when it is marked ready.
 5. Address the CI results, the AI review and the human review.
 6. Merge with a **merge commit**, not squash, so that test-first commits stay visible in the history of `dev` and `main`. Delete the branch.
 7. At the end of the iteration, the DevOps Master opens a pull request from `dev` to `main`. It follows the same review and checks, and is also merged with a merge commit; the iteration tag is then set on `main`.
 
-**Branch protection on `main` and `dev`** (set by the DevOps Master; both branches have the same rules):
+**Branch protection on `main` and `dev`** (set by the DevOps Master, same rules on both):
 
 - pull request required, with at least one approval;
 - stale approvals dismissed when new commits are pushed;
-- required status checks: the CI summary job, `CI result` (section 4.2), and the SonarQube quality gate, added once the gate runs in CI (Q2);
+- required status checks: `CI result` (the CI summary job, section 4.2) and `Exactly one AI label` (section 6.7). `PR rules` is added once its workflow is on `dev`, and the SonarQube quality gate once its analysis runs on `dev`;
 - branch up to date before merging;
-- conversations resolved before merging;
+- all review conversations resolved before merging;
 - no force pushes, no deletions, no bypass for administrators.
+
+The repository allows only merge commits; squash and rebase merging are disabled.
 
 Nobody pushes directly to `dev` or `main`.
 
@@ -467,7 +469,7 @@ All agent jobs have permission only to read the code and comment on pull request
 
 *Written in I5*, from data collected on every pull request from now on:
 
-- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. The `AI label` check ([`ai-label.yml`](../../../.github/workflows/ai-label.yml)) fails a pull request with none of the three, more than one, or an unknown `ai:*` label; it blocks the merge once it is a required check in the branch protection of `dev` and `main` (DevOps Master). Dependabot pull requests get `ai:none` automatically. The earlier pull requests that have no label (#3 to #14, #17 and #20) will be labelled by the QA Engineer from their template declarations before the I5 analysis.
+- **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. The `AI label` check ([`ai-label.yml`](../../../.github/workflows/ai-label.yml)) fails a pull request with none of the three, more than one, or an unknown `ai:*` label; it is a required check in the branch protection of `dev` and `main`, so it blocks the merge. Dependabot pull requests get `ai:none` automatically. The earlier pull requests that have no label (#3 to #14, #17 and #20) will be labelled by the QA Engineer from their template declarations before the I5 analysis.
 - **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so a script can count them.
 - **Agent actions in Jira and SonarQube:** agent comments on stories and fixes of SonarQube issues proposed by agents (section 6.4), and how many of those fixes needed human rework.
 - **Defects and rework traced to AI:** Jira bugs and follow-up pull requests that name the original pull request, and quality gate failures on AI-labelled pull requests.

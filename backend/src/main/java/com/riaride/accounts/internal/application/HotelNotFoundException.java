@@ -4,8 +4,7 @@ import java.util.UUID;
 
 public class HotelNotFoundException extends RuntimeException {
 
-	public HotelNotFoundException(UUID hotelId) {
-		super("Hotel " + hotelId + " does not exist");
-	}
-
+  public HotelNotFoundException(UUID hotelId) {
+    super("Hotel " + hotelId + " does not exist");
+  }
 }

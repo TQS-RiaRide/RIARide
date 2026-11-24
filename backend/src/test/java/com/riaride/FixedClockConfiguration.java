@@ -12,14 +12,13 @@ import org.springframework.context.annotation.Primary;
 @TestConfiguration(proxyBeanMethods = false)
 public class FixedClockConfiguration {
 
-	// 30 November 2026, 10:00 in Vila Ria.
-	public static final Instant NOW = Instant.parse("2026-11-30T10:00:00Z");
-	public static final ZoneId VILA_RIA = ZoneId.of("Europe/Lisbon");
+  // 30 November 2026, 10:00 in Vila Ria.
+  public static final Instant NOW = Instant.parse("2026-11-30T10:00:00Z");
+  public static final ZoneId VILA_RIA = ZoneId.of("Europe/Lisbon");
 
-	@Bean
-	@Primary
-	Clock fixedClock() {
-		return Clock.fixed(NOW, VILA_RIA);
-	}
-
+  @Bean
+  @Primary
+  Clock fixedClock() {
+    return Clock.fixed(NOW, VILA_RIA);
+  }
 }

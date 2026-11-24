@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
-	Optional<Payment> findByIdempotencyKey(String idempotencyKey);
-
+  Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 }
