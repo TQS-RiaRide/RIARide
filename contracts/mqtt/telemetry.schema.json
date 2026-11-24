@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://riaride.example/contracts/mqtt/telemetry.schema.json",
+  "title": "Vehicle telemetry",
+  "description": "Published by the simulator on riaride/vehicles/{vehicleId}/telemetry, QoS 1. A vehicle is either docked at a hub (hubId set) or riding (hubId null); position is always present.",
+  "type": "object",
+  "required": ["messageId", "emittedAt", "batteryPct", "lockState", "hubId", "position"],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": { "type": "string", "format": "uuid" },
+    "emittedAt": { "type": "string", "format": "date-time" },
+    "batteryPct": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "lockState": { "enum": ["LOCKED", "UNLOCKED"] },
+    "hubId": { "type": ["string", "null"], "minLength": 1 },
+    "position": {
+      "type": "object",
+      "required": ["lat", "lon"],
+      "additionalProperties": false,
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    }
+  }
+}
