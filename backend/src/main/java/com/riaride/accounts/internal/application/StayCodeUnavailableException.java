@@ -4,8 +4,7 @@ package com.riaride.accounts.internal.application;
 // such as a broken random generator, not a full code space.
 public class StayCodeUnavailableException extends RuntimeException {
 
-	public StayCodeUnavailableException(int attempts) {
-		super("No free stay code after " + attempts + " attempts");
-	}
-
+  public StayCodeUnavailableException(int attempts) {
+    super("No free stay code after " + attempts + " attempts");
+  }
 }

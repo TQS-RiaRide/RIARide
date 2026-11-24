@@ -16,27 +16,29 @@ import tools.jackson.databind.json.JsonMapper;
 // not a valid reading is dropped, so it never stops the subscription.
 class TelemetryMessageHandlerTest {
 
-	private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
-	private final TelemetryMessageHandler handler = new TelemetryMessageHandler(
-		new TelemetryMessageMapper(JsonMapper.builder().build()), events);
+  private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+  private final TelemetryMessageHandler handler =
+      new TelemetryMessageHandler(new TelemetryMessageMapper(JsonMapper.builder().build()), events);
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldPublishAValidReadingAsAVehicleTelemetryEvent() {
-		handler.handle("riaride/vehicles/EB-601/telemetry",
-			TelemetryMessageMapperTest.payload(TelemetryMessageMapperTest.DOCKED_READING));
+  @Requirement("RIA-59")
+  @Test
+  void shouldPublishAValidReadingAsAVehicleTelemetryEvent() {
+    handler.handle(
+        "riaride/vehicles/EB-601/telemetry",
+        TelemetryMessageMapperTest.payload(TelemetryMessageMapperTest.DOCKED_READING));
 
-		verify(events).publishEvent(any(VehicleTelemetryReceived.class));
-	}
+    verify(events).publishEvent(any(VehicleTelemetryReceived.class));
+  }
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldDropAMessageThatIsNotAValidReading() {
-		assertThatCode(() -> handler.handle("riaride/vehicles/EB-601/telemetry",
-			TelemetryMessageMapperTest.payload("not json")))
-			.doesNotThrowAnyException();
+  @Requirement("RIA-59")
+  @Test
+  void shouldDropAMessageThatIsNotAValidReading() {
+    assertThatCode(() ->
+            handler.handle(
+                "riaride/vehicles/EB-601/telemetry",
+                TelemetryMessageMapperTest.payload("not json")))
+        .doesNotThrowAnyException();
 
-		verify(events, never()).publishEvent(any(Object.class));
-	}
-
+    verify(events, never()).publishEvent(any(Object.class));
+  }
 }

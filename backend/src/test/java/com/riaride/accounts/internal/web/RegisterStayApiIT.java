@@ -43,299 +43,318 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 @Import({TestcontainersConfiguration.class, FixedClockConfiguration.class})
 class RegisterStayApiIT {
 
-	private static final String STAYS = "/api/v1/stays";
-	private static final String PROBLEM_JSON = "application/problem+json";
-	private static final String MARES_CENTRO = "00000000-0000-0000-0000-000000000001";
-	private static final String MARES_PRAIA = "00000000-0000-0000-0000-000000000002";
+  private static final String STAYS = "/api/v1/stays";
+  private static final String PROBLEM_JSON = "application/problem+json";
+  private static final String MARES_CENTRO = "00000000-0000-0000-0000-000000000001";
+  private static final String MARES_PRAIA = "00000000-0000-0000-0000-000000000002";
 
-	private static final String MANAGER_PRAIA = "manager-praia-token";
-	private static final String MANAGER_NO_HOTEL = "manager-no-hotel-token";
-	private static final String MANAGER_BAD_HOTEL = "manager-bad-hotel-token";
-	private static final String ADMIN = "admin-token";
-	private static final String GUEST = "guest-token";
-	private static final String INVALID = "invalid-token";
+  private static final String MANAGER_PRAIA = "manager-praia-token";
+  private static final String MANAGER_NO_HOTEL = "manager-no-hotel-token";
+  private static final String MANAGER_BAD_HOTEL = "manager-bad-hotel-token";
+  private static final String ADMIN = "admin-token";
+  private static final String GUEST = "guest-token";
+  private static final String INVALID = "invalid-token";
 
-	@Autowired
-	private MockMvc mvc;
+  @Autowired private MockMvc mvc;
 
-	@Autowired
-	private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbc;
 
-	@MockitoBean
-	private JwtDecoder jwtDecoder;
+  @MockitoBean private JwtDecoder jwtDecoder;
 
-	@BeforeEach
-	void setUpTokens() {
-		when(jwtDecoder.decode(MANAGER_PRAIA)).thenReturn(jwt(MANAGER_PRAIA, "HOTEL_MANAGER", MARES_PRAIA));
-		when(jwtDecoder.decode(MANAGER_NO_HOTEL)).thenReturn(jwt(MANAGER_NO_HOTEL, "HOTEL_MANAGER", null));
-		when(jwtDecoder.decode(MANAGER_BAD_HOTEL)).thenReturn(jwt(MANAGER_BAD_HOTEL, "HOTEL_MANAGER", "praia"));
-		when(jwtDecoder.decode(ADMIN)).thenReturn(jwt(ADMIN, "ADMIN", null));
-		when(jwtDecoder.decode(GUEST)).thenReturn(jwt(GUEST, "GUEST", null));
-		when(jwtDecoder.decode(INVALID)).thenThrow(new BadJwtException("signature does not match"));
-	}
+  @BeforeEach
+  void setUpTokens() {
+    when(jwtDecoder.decode(MANAGER_PRAIA))
+        .thenReturn(jwt(MANAGER_PRAIA, "HOTEL_MANAGER", MARES_PRAIA));
+    when(jwtDecoder.decode(MANAGER_NO_HOTEL))
+        .thenReturn(jwt(MANAGER_NO_HOTEL, "HOTEL_MANAGER", null));
+    when(jwtDecoder.decode(MANAGER_BAD_HOTEL))
+        .thenReturn(jwt(MANAGER_BAD_HOTEL, "HOTEL_MANAGER", "praia"));
+    when(jwtDecoder.decode(ADMIN)).thenReturn(jwt(ADMIN, "ADMIN", null));
+    when(jwtDecoder.decode(GUEST)).thenReturn(jwt(GUEST, "GUEST", null));
+    when(jwtDecoder.decode(INVALID)).thenThrow(new BadJwtException("signature does not match"));
+  }
 
-	private static Jwt jwt(String token, String role, String hotelId) {
-		var builder = Jwt.withTokenValue(token)
-			.header("alg", "RS256")
-			.subject(UUID.randomUUID().toString())
-			.issuedAt(Instant.now())
-			.expiresAt(Instant.now().plusSeconds(300))
-			.claim("realm_access", Map.of("roles", List.of(role)));
-		if (hotelId != null) {
-			builder.claim("hotel_id", hotelId);
-		}
-		return builder.build();
-	}
+  private static Jwt jwt(String token, String role, String hotelId) {
+    var builder =
+        Jwt.withTokenValue(token)
+            .header("alg", "RS256")
+            .subject(UUID.randomUUID().toString())
+            .issuedAt(Instant.now())
+            .expiresAt(Instant.now().plusSeconds(300))
+            .claim("realm_access", Map.of("roles", List.of(role)));
+    if (hotelId != null) {
+      builder.claim("hotel_id", hotelId);
+    }
+    return builder.build();
+  }
 
-	private static String body(String hotelId, String guestName, String checkIn, String checkOut) {
-		return """
-			{"hotelId": "%s", "guestName": "%s", "checkIn": "%s", "checkOut": "%s"}
-			""".formatted(hotelId, guestName, checkIn, checkOut);
-	}
+  private static String body(String hotelId, String guestName, String checkIn, String checkOut) {
+    return """
+    {"hotelId": "%s", "guestName": "%s", "checkIn": "%s", "checkOut": "%s"}
+    """
+        .formatted(hotelId, guestName, checkIn, checkOut);
+  }
 
-	private ResultActions postStay(String token, String json) throws Exception {
-		var request = post(STAYS).contentType(MediaType.APPLICATION_JSON).content(json);
-		if (token != null) {
-			request.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
-		}
-		return mvc.perform(request);
-	}
+  private ResultActions postStay(String token, String json) throws Exception {
+    var request = post(STAYS).contentType(MediaType.APPLICATION_JSON).content(json);
+    if (token != null) {
+      request.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+    }
+    return mvc.perform(request);
+  }
 
-	private int staysFor(String guestName) {
-		return jdbc.queryForObject("select count(*) from stay where guest_name = ?", Integer.class, guestName);
-	}
+  private int staysFor(String guestName) {
+    return jdbc.queryForObject(
+        "select count(*) from stay where guest_name = ?", Integer.class, guestName);
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldRegisterStayAndReturnStayCodeWhenManagerRegistersAtOwnHotel() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Rita Almeida", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isCreated())
-			.andExpect(header().string(HttpHeaders.LOCATION, matchesPattern(".*/api/v1/stays/[0-9a-f-]{36}$")))
-			.andExpect(jsonPath("$.id").isNotEmpty())
-			.andExpect(jsonPath("$.hotelId").value(MARES_PRAIA))
-			.andExpect(jsonPath("$.guestName").value("Rita Almeida"))
-			.andExpect(jsonPath("$.checkIn").value("2026-12-01"))
-			.andExpect(jsonPath("$.checkOut").value("2026-12-05"))
-			.andExpect(jsonPath("$.status").value("ACTIVE"))
-			.andExpect(jsonPath("$.stayCode").value(matchesPattern("^[A-HJ-NP-Z2-9]{8}$")));
+  @Requirement("RIA-50")
+  @Test
+  void shouldRegisterStayAndReturnStayCodeWhenManagerRegistersAtOwnHotel() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Rita Almeida", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isCreated())
+        .andExpect(
+            header().string(HttpHeaders.LOCATION, matchesPattern(".*/api/v1/stays/[0-9a-f-]{36}$")))
+        .andExpect(jsonPath("$.id").isNotEmpty())
+        .andExpect(jsonPath("$.hotelId").value(MARES_PRAIA))
+        .andExpect(jsonPath("$.guestName").value("Rita Almeida"))
+        .andExpect(jsonPath("$.checkIn").value("2026-12-01"))
+        .andExpect(jsonPath("$.checkOut").value("2026-12-05"))
+        .andExpect(jsonPath("$.status").value("ACTIVE"))
+        .andExpect(jsonPath("$.stayCode").value(matchesPattern("^[A-HJ-NP-Z2-9]{8}$")));
 
-		assertThat(staysFor("Rita Almeida")).isEqualTo(1);
-	}
+    assertThat(staysFor("Rita Almeida")).isEqualTo(1);
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldRegisterStayAtAnyHotelWhenAdmin() throws Exception {
-		postStay(ADMIN, body(MARES_CENTRO, "Inês Duarte", "2026-12-01", "2026-12-03"))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.hotelId").value(MARES_CENTRO));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldRegisterStayAtAnyHotelWhenAdmin() throws Exception {
+    postStay(ADMIN, body(MARES_CENTRO, "Inês Duarte", "2026-12-01", "2026-12-03"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.hotelId").value(MARES_CENTRO));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn401ProblemWithoutToken() throws Exception {
-		postStay(null, body(MARES_PRAIA, "Sem Token", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isUnauthorized())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
-			.andExpect(jsonPath("$.status").value(401));
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn401ProblemWithoutToken() throws Exception {
+    postStay(null, body(MARES_PRAIA, "Sem Token", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+        .andExpect(jsonPath("$.status").value(401));
 
-		assertThat(staysFor("Sem Token")).isZero();
-	}
+    assertThat(staysFor("Sem Token")).isZero();
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn401ProblemWithInvalidToken() throws Exception {
-		postStay(INVALID, body(MARES_PRAIA, "Token Inválido", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isUnauthorized())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn401ProblemWithInvalidToken() throws Exception {
+    postStay(INVALID, body(MARES_PRAIA, "Token Inválido", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn403ProblemWhenGuestRegistersStay() throws Exception {
-		postStay(GUEST, body(MARES_PRAIA, "Tomás Ferreira", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isForbidden())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
-			.andExpect(jsonPath("$.status").value(403));
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn403ProblemWhenGuestRegistersStay() throws Exception {
+    postStay(GUEST, body(MARES_PRAIA, "Tomás Ferreira", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+        .andExpect(jsonPath("$.status").value(403));
 
-		assertThat(staysFor("Tomás Ferreira")).isZero();
-	}
+    assertThat(staysFor("Tomás Ferreira")).isZero();
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn403ProblemWhenManagerRegistersAtAnotherHotel() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_CENTRO, "Outro Hotel", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isForbidden())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn403ProblemWhenManagerRegistersAtAnotherHotel() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_CENTRO, "Outro Hotel", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
 
-		assertThat(staysFor("Outro Hotel")).isZero();
-	}
+    assertThat(staysFor("Outro Hotel")).isZero();
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn403ProblemWhenManagerTokenHasNoHotel() throws Exception {
-		postStay(MANAGER_NO_HOTEL, body(MARES_PRAIA, "Sem Hotel", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isForbidden())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn403ProblemWhenManagerTokenHasNoHotel() throws Exception {
+    postStay(MANAGER_NO_HOTEL, body(MARES_PRAIA, "Sem Hotel", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn404ProblemWhenHotelDoesNotExist() throws Exception {
-		postStay(ADMIN, body("00000000-0000-0000-0000-0000000000ff", "Hotel Inexistente", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isNotFound())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
-			.andExpect(jsonPath("$.status").value(404));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn404ProblemWhenHotelDoesNotExist() throws Exception {
+    postStay(
+            ADMIN,
+            body(
+                "00000000-0000-0000-0000-0000000000ff",
+                "Hotel Inexistente",
+                "2026-12-01",
+                "2026-12-05"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+        .andExpect(jsonPath("$.status").value(404));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn422ProblemWhenCheckOutIsNotAfterCheckIn() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Datas Trocadas", "2026-12-05", "2026-12-01"))
-			.andExpect(status().isUnprocessableContent())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
-			.andExpect(jsonPath("$.status").value(422));
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn422ProblemWhenCheckOutIsNotAfterCheckIn() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Datas Trocadas", "2026-12-05", "2026-12-01"))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+        .andExpect(jsonPath("$.status").value(422));
 
-		assertThat(staysFor("Datas Trocadas")).isZero();
-	}
+    assertThat(staysFor("Datas Trocadas")).isZero();
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn400ProblemWhenGuestNameIsBlank() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, " ", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn400ProblemWhenGuestNameIsBlank() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, " ", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn400ProblemWhenCheckInIsMissing() throws Exception {
-		postStay(MANAGER_PRAIA, """
-			{"hotelId": "%s", "guestName": "Sem Data", "checkOut": "2026-12-05"}
-			""".formatted(MARES_PRAIA))
-			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn400ProblemWhenCheckInIsMissing() throws Exception {
+    postStay(
+            MANAGER_PRAIA,
+            """
+            {"hotelId": "%s", "guestName": "Sem Data", "checkOut": "2026-12-05"}
+            """
+                .formatted(MARES_PRAIA))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn400ProblemWhenDateIsMalformed() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Data Errada", "01/12/2026", "2026-12-05"))
-			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn400ProblemWhenDateIsMalformed() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Data Errada", "01/12/2026", "2026-12-05"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldOmitProblemTypeLikeEveryOtherProblemDetail() throws Exception {
-		postStay(null, body(MARES_PRAIA, "Sem Tipo", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.type").doesNotExist())
-			.andExpect(jsonPath("$.title").value("Unauthorized"));
-		postStay(GUEST, body(MARES_PRAIA, "Sem Tipo", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isForbidden())
-			.andExpect(jsonPath("$.type").doesNotExist())
-			.andExpect(jsonPath("$.title").value("Forbidden"));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldOmitProblemTypeLikeEveryOtherProblemDetail() throws Exception {
+    postStay(null, body(MARES_PRAIA, "Sem Tipo", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.type").doesNotExist())
+        .andExpect(jsonPath("$.title").value("Unauthorized"));
+    postStay(GUEST, body(MARES_PRAIA, "Sem Tipo", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").doesNotExist())
+        .andExpect(jsonPath("$.title").value("Forbidden"));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldAskForBearerTokenWithoutErrorWhenTokenIsMissing() throws Exception {
-		postStay(null, body(MARES_PRAIA, "Sem Token", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isUnauthorized())
-			.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldAskForBearerTokenWithoutErrorWhenTokenIsMissing() throws Exception {
+    postStay(null, body(MARES_PRAIA, "Sem Token", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReportInvalidTokenInChallengeWhenTokenIsRejected() throws Exception {
-		postStay(INVALID, body(MARES_PRAIA, "Token Inválido", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isUnauthorized())
-			.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, matchesPattern("^Bearer error=\"invalid_token\".*")));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReportInvalidTokenInChallengeWhenTokenIsRejected() throws Exception {
+    postStay(INVALID, body(MARES_PRAIA, "Token Inválido", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(
+            header()
+                .string(
+                    HttpHeaders.WWW_AUTHENTICATE,
+                    matchesPattern("^Bearer error=\"invalid_token\".*")));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn403ProblemWhenManagerTokenHasMalformedHotel() throws Exception {
-		postStay(MANAGER_BAD_HOTEL, body(MARES_PRAIA, "Hotel Mal Formado", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isForbidden())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn403ProblemWhenManagerTokenHasMalformedHotel() throws Exception {
+    postStay(MANAGER_BAD_HOTEL, body(MARES_PRAIA, "Hotel Mal Formado", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
 
-		assertThat(staysFor("Hotel Mal Formado")).isZero();
-	}
+    assertThat(staysFor("Hotel Mal Formado")).isZero();
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn400ProblemWithoutEchoingNameWhenItHasControlCharacters() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Rita\\u0000Almeida", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
-			.andExpect(content().string(not(containsString("Rita"))));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn400ProblemWithoutEchoingNameWhenItHasControlCharacters() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Rita\\u0000Almeida", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+        .andExpect(content().string(not(containsString("Rita"))));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldAcceptGuestNameOf120Characters() throws Exception {
-		var name = "A".repeat(120);
+  @Requirement("RIA-50")
+  @Test
+  void shouldAcceptGuestNameOf120Characters() throws Exception {
+    var name = "A".repeat(120);
 
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, name, "2026-12-01", "2026-12-05"))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.guestName").value(name));
-	}
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, name, "2026-12-01", "2026-12-05"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.guestName").value(name));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn400ProblemWhenGuestNameHas121Characters() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "B".repeat(121), "2026-12-01", "2026-12-05"))
-			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn400ProblemWhenGuestNameHas121Characters() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, "B".repeat(121), "2026-12-01", "2026-12-05"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
 
-		assertThat(staysFor("B".repeat(121))).isZero();
-	}
+    assertThat(staysFor("B".repeat(121))).isZero();
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn400ProblemWhenHotelIdIsNotUuid() throws Exception {
-		postStay(MANAGER_PRAIA, body("praia", "Hotel Inválido", "2026-12-01", "2026-12-05"))
-			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn400ProblemWhenHotelIdIsNotUuid() throws Exception {
+    postStay(MANAGER_PRAIA, body("praia", "Hotel Inválido", "2026-12-01", "2026-12-05"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn400ProblemWhenBodyIsNotJson() throws Exception {
-		postStay(MANAGER_PRAIA, "{\"hotelId\": ")
-			.andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn400ProblemWhenBodyIsNotJson() throws Exception {
+    postStay(MANAGER_PRAIA, "{\"hotelId\": ")
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn415ProblemWhenContentTypeIsNotJson() throws Exception {
-		mvc.perform(post(STAYS)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + MANAGER_PRAIA)
-				.contentType(MediaType.TEXT_PLAIN)
-				.content("Rita Almeida"))
-			.andExpect(status().isUnsupportedMediaType())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn415ProblemWhenContentTypeIsNotJson() throws Exception {
+    mvc.perform(
+            post(STAYS)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + MANAGER_PRAIA)
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("Rita Almeida"))
+        .andExpect(status().isUnsupportedMediaType())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn405ProblemForUnsupportedMethod() throws Exception {
-		mvc.perform(MockMvcRequestBuilders.delete(STAYS).header(HttpHeaders.AUTHORIZATION, "Bearer " + MANAGER_PRAIA))
-			.andExpect(status().isMethodNotAllowed())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
-	}
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn405ProblemForUnsupportedMethod() throws Exception {
+    mvc.perform(
+            MockMvcRequestBuilders.delete(STAYS)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + MANAGER_PRAIA))
+        .andExpect(status().isMethodNotAllowed())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+  }
 
-	@Requirement("RIA-50")
-	@Test
-	void shouldReturn422ProblemWhenStayHasAlreadyEnded() throws Exception {
-		postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Estadia Terminada", "2026-11-25", "2026-11-29"))
-			.andExpect(status().isUnprocessableContent())
-			.andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
-			.andExpect(jsonPath("$.status").value(422));
+  @Requirement("RIA-50")
+  @Test
+  void shouldReturn422ProblemWhenStayHasAlreadyEnded() throws Exception {
+    postStay(MANAGER_PRAIA, body(MARES_PRAIA, "Estadia Terminada", "2026-11-25", "2026-11-29"))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+        .andExpect(jsonPath("$.status").value(422));
 
-		assertThat(staysFor("Estadia Terminada")).isZero();
-	}
-
+    assertThat(staysFor("Estadia Terminada")).isZero();
+  }
 }

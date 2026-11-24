@@ -12,25 +12,32 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class JpaPaymentLedger implements PaymentLedger {
 
-	private final PaymentRepository payments;
+  private final PaymentRepository payments;
 
-	JpaPaymentLedger(PaymentRepository payments) {
-		this.payments = payments;
-	}
+  JpaPaymentLedger(PaymentRepository payments) {
+    this.payments = payments;
+  }
 
-	@Override
-	@Transactional(readOnly = true)
-	public Optional<RecordedPurchase> findPurchase(String idempotencyKey) {
-		return payments.findByIdempotencyKey(idempotencyKey)
-			.filter(payment -> payment.getKind() == Payment.Kind.PURCHASE)
-			.map(payment -> new RecordedPurchase(payment.getPassId(), payment.getProviderRef()));
-	}
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<RecordedPurchase> findPurchase(String idempotencyKey) {
+    return payments
+        .findByIdempotencyKey(idempotencyKey)
+        .filter(payment -> payment.getKind() == Payment.Kind.PURCHASE)
+        .map(payment -> new RecordedPurchase(payment.getPassId(), payment.getProviderRef()));
+  }
 
-	@Override
-	@Transactional
-	public void recordPurchase(UUID passId, String idempotencyKey, Money amount, PurchaseResult result) {
-		payments.save(Payment.purchase(passId, amount.cents(), result.paymentRef(), idempotencyKey,
-			result.customerRef(), result.paymentMethodRef()));
-	}
-
+  @Override
+  @Transactional
+  public void recordPurchase(
+      UUID passId, String idempotencyKey, Money amount, PurchaseResult result) {
+    payments.save(
+        Payment.purchase(
+            passId,
+            amount.cents(),
+            result.paymentRef(),
+            idempotencyKey,
+            result.customerRef(),
+            result.paymentMethodRef()));
+  }
 }

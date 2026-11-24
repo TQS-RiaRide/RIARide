@@ -5,11 +5,10 @@ package com.riaride.payments;
 // PermanentPaymentException, which is final. The gateway itself never retries.
 public interface PaymentGateway {
 
-	PurchaseResult purchase(PurchaseRequest request);
+  PurchaseResult purchase(PurchaseRequest request);
 
-	// Returns the payment reference.
-	String chargeOffSession(OffSessionCharge charge);
+  // Returns the payment reference.
+  String chargeOffSession(OffSessionCharge charge);
 
-	RefundResult refund(RefundRequest request);
-
+  RefundResult refund(RefundRequest request);
 }

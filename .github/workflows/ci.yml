@@ -37,6 +37,10 @@ jobs:
           java-version: "21"
           cache: maven
 
+      # Google Java Style (QA Manual 3.1); fails fast before any test runs.
+      - name: Format check (Spotless)
+        run: ./mvnw -B spotless:check
+
       - name: Unit tests
         run: ./mvnw -B test
 
