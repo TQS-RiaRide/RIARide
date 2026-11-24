@@ -128,7 +128,9 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 		try {
 			handler.handle(topic, message.getPayload());
 		} catch (RuntimeException failed) {
-			log.error("Telemetry message dropped: {}", failed.getClass().getSimpleName());
+			// The exception is logged with its cause, so a database failure can be diagnosed; the
+			// invalid-payload exceptions, whose messages could quote the payload, never get here.
+			log.error("Telemetry message on {} dropped", LogSafeTopic.of(topic), failed);
 		}
 	}
 
