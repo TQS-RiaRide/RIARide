@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import tools.jackson.databind.json.JsonMapper;
 
 // Wires the MQTT adapter. With riaride.telemetry.mqtt.enabled=false (most tests) nothing connects.
@@ -26,7 +27,10 @@ class TelemetryMqttConfiguration {
     return new MqttTelemetrySubscriber(properties, handler);
   }
 
+  // Only one VehicleCommands bean exists at a time (DisabledMqttConfiguration has the opposite
+  // condition); @Primary states which one wins, for readers and tools that do not evaluate it.
   @Bean
+  @Primary
   MqttVehicleCommandPublisher mqttVehicleCommandPublisher(
       TelemetryMqttProperties properties, JsonMapper json, Clock clock) {
     return new MqttVehicleCommandPublisher(properties, json, clock);
