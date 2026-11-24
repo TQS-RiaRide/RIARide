@@ -29,10 +29,15 @@ public class PassPrice {
 
   public PassPrice(PassType passType, int priceCents, int depositCents) {
     this.passType = passType;
-    change(priceCents, depositCents);
+    apply(priceCents, depositCents);
   }
 
-  public final void change(int priceCents, int depositCents) {
+  public void change(int priceCents, int depositCents) {
+    apply(priceCents, depositCents);
+  }
+
+  // Private so the constructor never calls a method a JPA proxy could override.
+  private void apply(int priceCents, int depositCents) {
     if (priceCents <= 0 || depositCents <= 0) {
       throw new IllegalArgumentException("A pass price and deposit must be positive");
     }
