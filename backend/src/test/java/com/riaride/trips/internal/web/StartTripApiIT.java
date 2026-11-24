@@ -293,6 +293,42 @@ class StartTripApiIT {
     assertThat(bikeStatus("EB-202")).isEqualTo("AVAILABLE");
   }
 
+  // Codes are unique regardless of case (V6): the code as the guest types it finds the bike, and a
+  // retry in other casing reuses the held reservation instead of a 409.
+  @Requirement("RIA-54")
+  @Test
+  void shouldFindTheBikeWhateverTheCaseOfItsCode() throws Exception {
+    start(RITA, "eb-201")
+        .andExpect(status().isAccepted())
+        .andExpect(jsonPath("$.vehicleCode").value("EB-201"));
+    jdbc.update(
+        "update trip set status = 'FAILED', failed_at = requested_at + interval '30 seconds'");
+
+    start(RITA, "Eb-201").andExpect(status().isAccepted());
+
+    assertThat(jdbc.queryForObject("select count(*) from reservation", Integer.class)).isEqualTo(1);
+    assertThat(bikeStatus("EB-201")).isEqualTo("RESERVED");
+  }
+
+  // Once the hold of a failed start ended (BR11), the pass can take another bike, and the first
+  // one is available again.
+  @Requirement("RIA-54")
+  @Test
+  void shouldReleaseTheHeldBikeOnceItsHoldEndedAndStartAnother() throws Exception {
+    start(RITA, "EB-201").andExpect(status().isAccepted());
+    jdbc.update(
+        "update trip set status = 'FAILED', failed_at = requested_at + interval '30 seconds'");
+    jdbc.update("update reservation set expires_at = ?::timestamptz", "2026-11-30T10:00:00Z");
+
+    start(RITA, "EB-202").andExpect(status().isAccepted());
+
+    assertThat(bikeStatus("EB-201")).isEqualTo("AVAILABLE");
+    assertThat(bikeStatus("EB-202")).isEqualTo("RESERVED");
+    assertThat(
+            jdbc.queryForList("select status from reservation order by created_at", String.class))
+        .containsExactlyInAnyOrder("EXPIRED", "ACTIVE");
+  }
+
   @Requirement("RIA-54")
   @Test
   void shouldRefuseOperatorWith403() throws Exception {

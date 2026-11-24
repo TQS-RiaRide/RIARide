@@ -45,6 +45,16 @@ class ReservationTest {
     assertThat(reservation.isFor("EB-202")).isFalse();
   }
 
+  // Codes are unique regardless of case (V6), so eb-201 is the same bike as EB-201.
+  @Requirement("RIA-54")
+  @Test
+  void shouldMatchItsBikeWhateverTheCaseOfTheCode() {
+    var reservation = Reservation.hold(PASS, EB_201, NOW, HOLD);
+
+    assertThat(reservation.isFor("eb-201")).isTrue();
+    assertThat(reservation.isFor("Eb-201")).isTrue();
+  }
+
   @Requirement("RIA-54")
   @Test
   void shouldBeUsedOnceTripStarts() {

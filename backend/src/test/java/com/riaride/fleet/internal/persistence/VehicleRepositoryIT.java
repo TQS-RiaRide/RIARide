@@ -117,4 +117,17 @@ class VehicleRepositoryIT {
     assertThatThrownBy(() -> vehicles.saveAndFlush(loaded))
         .isInstanceOf(ObjectOptimisticLockingFailureException.class);
   }
+
+  // Codes are unique regardless of case (V6), so the trip start finds the bike as the guest typed
+  // it.
+  @Requirement("RIA-54")
+  @Test
+  void shouldFindVehicleForUpdateWhateverTheCaseOfItsCode() {
+    var vehicle = vehicles.saveAndFlush(Vehicle.register("EB-601", VehicleType.E_BIKE, hubId));
+
+    assertThat(vehicles.findByCodeForUpdate("eb-601"))
+        .get()
+        .extracting(Vehicle::getId)
+        .isEqualTo(vehicle.getId());
+  }
 }
