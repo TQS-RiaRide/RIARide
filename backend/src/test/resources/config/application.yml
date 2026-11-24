@@ -1,0 +1,16 @@
+# Test-only settings, loaded on top of src/main/resources/application.yml.
+riaride:
+  payments:
+    stripe:
+      # Never used to call Stripe: the adapter's tests use WireMock. It only lets the
+      # application start, since a missing key fails startup.
+      secret-key: sk_test_unused_in_tests
+  trips:
+    # The scheduled jobs would act on other tests' trips and reservations in a shared context; the
+    # tests that need them call UnlockTimeoutJob and ReservationExpiryJob on their own clock.
+    unlock-timeout-check-interval: 1d
+    reservation-expiry-check-interval: 1d
+  telemetry:
+    mqtt:
+      # No broker by default; the tests that need one start Mosquitto and turn this on.
+      enabled: false

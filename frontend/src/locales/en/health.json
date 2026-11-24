@@ -1,0 +1,6 @@
+{
+  "label": "Backend status",
+  "checking": "Checking…",
+  "up": "Online",
+  "down": "Unreachable"
+}

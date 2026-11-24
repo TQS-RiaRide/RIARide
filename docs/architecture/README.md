@@ -69,16 +69,27 @@ Guests, RodaLeve operators and technicians, Marés hotel managers and admins use
 
 ![Containers](diagrams/02-containers.drawio.svg)
 
+Every box with the Docker icon is one service in `infra/compose.yaml` and runs as its own container. The web browser and Stripe are not containers.
+
+**RiaRide system**
+
 | Container | Technology | Responsibility |
 |---|---|---|
 | Reverse proxy and SPA | nginx, static React build | Single public origin, TLS, routes `/api/v1`, `/auth` and `/grafana` |
-| Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server |
+| Backend | Spring Boot, Java 21 | All business logic, REST API, OAuth2 resource server (components in section 5) |
 | PostgreSQL | One server, databases `riaride` and `keycloak` | Durable state |
 | Keycloak | OIDC provider | Credentials, login pages, roles; realm exported to the repository |
 | Mosquitto | MQTT broker | Telemetry and commands, internal network only |
-| Simulator | Python, paho-mqtt | Emits telemetry per vehicle, reacts to commands |
+| Simulator | Python, paho-mqtt | Stands in for the e-bikes: emits telemetry per vehicle, reacts to commands |
+
+**Monitoring (supporting)**
+
+| Container | Technology | Responsibility |
+|---|---|---|
 | Prometheus | Metrics store | Scrapes the backend's Actuator endpoint; queried by the backoffice for technical metrics |
 | Grafana | Dashboards and alerts | Versioned dashboards, SLO alert rules sent by email |
+
+Prometheus and Grafana run in the same Compose project but sit outside the system boundary: they observe and operate RiaRide, and no guest, operator or hotel flow depends on them. If Prometheus is down, the backoffice shows the technical metrics as unavailable and every other feature keeps working. Dashed arrows in the diagram are monitoring traffic.
 
 Dashboards poll the REST API. A push channel is not justified by the MVP.
 
@@ -91,15 +102,34 @@ Dashboards poll the REST API. A push channel is not justified by the MVP.
 | `accounts` | Stays, stay codes, guests, link to Keycloak | none |
 | `payments` | `PaymentGateway` port, Stripe adapter, charges and refunds | none |
 | `telemetry` | `TelemetrySource` and `VehicleCommandGateway` ports, MQTT adapter, event history | none |
-| `fleet` | Vehicles, hubs, lifecycle, hub capacity, latest vehicle state | `telemetry` |
+| `fleet` | Vehicles, hubs, lifecycle, hub capacity, latest vehicle state | `accounts` (`HotelDirectory`, to link a hub to its hotel), `telemetry` |
 | `maintenance` | Tickets, SLA deadlines, technician assignment | `fleet`, `telemetry` |
 | `passes` | Pass types, base price, usage rules, activation, deposit | `accounts`, `payments`, `maintenance` |
 | `trips` | Reservations, trips, overtime | `passes`, `fleet`, `maintenance`, `telemetry`, `payments` |
 | `backoffice` | Suggested routes, KPIs, technical metrics | read access to all of the above |
 
+The Java code of a module reaches another module only through its public API, but some tables keep a database foreign key across modules for integrity: `hub.hotel_id` (fleet) references `hotel.id` (accounts). Changing or dropping a referenced table therefore needs a migration in the referencing module too.
+
 Only a module's top-level package is public. `ApplicationModules.of(...).verify()` runs as a test and fails the build on a cycle or a reach into another module's internals.
 
+### Components inside the backend
+
+![Backend components](diagrams/11-backend-components.drawio.svg)
+
+Requests enter through the REST controllers, protected by Spring Security, and reach the business modules. Modules reach the outside only through the JPA repositories and the three adapters (Keycloak, MQTT, Stripe). Inside, every module has the same four layers:
+
+| Layer | Package | Responsibility |
+|---|---|---|
+| Controller | `<module>.internal.web` | Receives the request, validates input, maps DTOs |
+| Service | `<module>.internal.application` | Runs the use case in a transaction, publishes events |
+| Domain | `<module>.internal.domain` | Business rules, with time from an injected `Clock` |
+| Repository | `<module>.internal.persistence` | Spring Data JPA over the module's own tables |
+
+Only the module's top-level package (its API, events and DTOs) is public. Event listeners and scheduled jobs sit in `internal` too.
+
 **Communication rule.** A module calls another module's public API for queries and for commands whose result it needs now. A module publishes an event for side effects elsewhere, handled by an `@ApplicationModuleListener` after commit. Spring Modulith stores each publication in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge.
+
+*Exception:* `fleet` handles `VehicleTelemetryReceived` with a synchronous `@EventListener` in the MQTT adapter's transaction. The broker's QoS 1 delivery is the durable queue here: the message is acknowledged only after the reading is stored, so an after-commit listener would add nothing but a window in which an acknowledged reading is lost.
 
 | Event | Published by | Handled by | Effect |
 |---|---|---|---|
@@ -159,6 +189,14 @@ The stay-code rule stays in `accounts`, covered by our tests. If the local inser
 
 Starting immediately creates a reservation first, so there is one code path. A scheduled job expires reservations; the database condition makes it safe to rerun. A trip stays `STARTING` until telemetry confirms the unlock. Without confirmation before the timeout, the trip is `FAILED`, `trips` sends `LOCK` in case the vehicle did unlock, the pass stays inactive, and the reservation remains until it expires. If a `VehicleUnlocked` arrives later for that `FAILED` trip, `trips` sends `LOCK` again, so a vehicle is never left unlocked with no trip recorded. Because a pass holds at most one active reservation, the guest can retry on the same reservation or cancel it.
 
+*Implemented so far (RIA-54):* `POST /api/v1/trips` starts a trip now and answers `202` with the trip's `Location`; `GET /api/v1/trips/{id}` lets the guest follow it from `STARTING` to `IN_USE` or `FAILED`. The rules it settles:
+
+- **The 30-second boundary.** A trip still `STARTING` exactly 30 s after the request has failed: at 29 s it is starting, at 30 s and 31 s it is `FAILED` (BR13, `riaride.trips.unlock-timeout`). The timeout counts when the platform handles the `UNLOCKED` reading, not when the vehicle emitted it, so a reading delayed past 30 s fails the trip and sends `LOCK` instead of starting it. `UnlockTimeoutJob` fails overdue starts every 5 s, each in its own transaction, under the trip's row lock, so it never races the unlock confirmation.
+- **Retry after a failed start.** The failed trip leaves the reservation `ACTIVE` and the bike `RESERVED` (15 minutes, BR11). A retry on the same bike reuses that reservation without asking `fleet` again; another bike is refused (`409 Reservation held for another bike`) while the reservation is held. At `expires_at` the reservation becomes `EXPIRED` and the bike `AVAILABLE` again: `ReservationExpiryJob` does it every 30 s (skipping a reservation whose trip is still `STARTING`), and the guest's next start does it at once. A confirmed unlock whose bike is no longer `RESERVED`, or whose pass can no longer take a trip, fails the trip and sends `LOCK` instead of starting it. Bike codes are matched regardless of case.
+- **`UNLOCK` after commit.** `UNLOCK` and `LOCK` are sent only after the transaction that decided them commits, so the simulator's answer can never arrive before the trip is stored, and a rolled-back start never unlocks a bike. Sending waits at most 2 s for the broker's acknowledgement and never fails the request: a lost `UNLOCK` makes the trip time out.
+- **Telemetry from before the request is ignored.** An `UNLOCKED` reading emitted more than one minute (the allowed clock skew) before the trip was requested, such as a redelivered QoS 1 message, does not confirm it. A repeated `UNLOCKED` for a trip in use changes nothing, so the pass is activated once (BR4).
+- **Concurrent starts.** The database allows one active reservation per bike and per pass and one trip in progress per pass (partial unique indexes), and the vehicle row is locked while it is reserved, so of two parallel starts exactly one succeeds and the other gets a `409` problem detail. Telemetry locks the vehicle row too, so a battery reading cannot write back a status that a start has just changed.
+
 ### Ending a trip
 
 ![End trip](diagrams/07-seq-end-trip-overtime.drawio.svg)
@@ -199,9 +237,18 @@ Battery below 20 % blocks booking without changing the status. A fault during a 
 
 The consumer ignores a repeated `messageId` on both topics. Only telemetry is also checked for staleness: a telemetry message older than the vehicle's last state is ignored. Fault events are never dropped as stale, because MQTT does not order messages across topics, so a fault can arrive after a later telemetry message. Replacing the simulator means replacing the adapter in `telemetry`, with no change to the ports or to other modules.
 
+The message formats are the JSON Schemas in [`contracts/mqtt/`](../../contracts/mqtt/), shared by the simulator and the backend adapter (RIA-58). Agreed for both sides:
+
+- `{id}` in the topics is the vehicle code (`vehicle.code`, for example `EB-101`), not the platform's vehicle id: the code is what an operator registers and what the simulator knows.
+- `hubId` is the platform's hub id, so the simulator's demo fleet uses the same hub ids as the platform's seed data.
+- `hubId` is optional on `LOCK`. Without it, or with a hub the simulator does not know, the vehicle locks where it is and its telemetry reports `hubId: null`.
+- Every command carries `emittedAt`. The simulator ignores a command older than 30 s, the unlock timeout (BR13), so an `UNLOCK` the platform already gave up on is not applied when the simulator reconnects and the broker delivers the commands it kept.
+
+*Implemented so far (RIA-59):* the MQTT adapter (`telemetry.internal.mqtt`) subscribes to `riaride/vehicles/+/telemetry` with QoS 1 and a kept session, maps each message to `VehicleTelemetryReceived` and publishes it in one transaction; `fleet` stores the battery reading, and `GET /api/v1/hubs/{hubId}/vehicles` marks each vehicle `bookable` by BR12 without changing its status. A reading older than the vehicle's last one, or more than a minute ahead of the server clock, is ignored. The subscription runs off Paho's callback thread, so the backlog the broker sends on reconnection cannot block it. A message that is not a valid reading, or whose handling fails, is logged without its payload and dropped, so it is never redelivered in a loop. The simulator's tests already validate its messages against the schemas; deduplication by `messageId`, the backend adapter's JSON Schema contract tests and the hub, position and lock-state updates come with [RIA-58](https://riaride.atlassian.net/browse/RIA-58). The backend connects with `MQTT_URL`, `MQTT_USERNAME` and `MQTT_PASSWORD`; in production the broker must require credentials, use TLS on any network other than the internal one, and limit the backend's ACLs to subscribing to `riaride/vehicles/+/telemetry` and publishing to `riaride/vehicles/+/commands` (RIA-54).
+
 **Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
 
-**REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details.
+**REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details. Request bodies are strict for the whole API: a JSON number with a fraction in a whole-number field is rejected with a 400 (`spring.jackson.deserialization.accept-float-as-int: false`), so `1.5` and `1.0` are both refused instead of being truncated. A number for an enum field is also a 400 (`spring.jackson.datatype.enum.fail-on-numbers-for-enums: true`), instead of being read as the enum's ordinal.
 
 ## 10. Security
 
