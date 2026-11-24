@@ -28,6 +28,7 @@
 		<testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
 		<spotless.version>3.12.0</spotless.version>
 		<google-java-format.version>2.0.0</google-java-format.version>
+		<paho-mqttv3.version>1.2.5</paho-mqttv3.version>
 		<!-- Set to true to run only integration tests: ./mvnw verify -DskipUnitTests=true -->
 		<skipUnitTests>false</skipUnitTests>
 	</properties>
@@ -70,6 +71,13 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
+		</dependency>
+
+		<!-- MQTT client for the telemetry adapter (ADR 0006): the simulator's only integration interface. -->
+		<dependency>
+			<groupId>org.eclipse.paho</groupId>
+			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+			<version>${paho-mqttv3.version}</version>
 		</dependency>
 
 		<!-- Stripe test mode behind the PaymentGateway port (ADR 0008). -->
@@ -152,6 +160,12 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Waits on asynchronous outcomes, such as a telemetry message being stored, without sleeps. -->
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<!-- Keycloak in Testcontainers for the acceptance tests: real tokens from the realm in infra/keycloak. -->

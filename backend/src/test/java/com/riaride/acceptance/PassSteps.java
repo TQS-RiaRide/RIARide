@@ -105,6 +105,21 @@ public class PassSteps {
     return payload.substring(start, payload.indexOf('"', start));
   }
 
+  // A paid pass that is open and not yet active, as RIA-52 leaves it after a purchase. Used by the
+  // stories that need a guest with a pass (RIA-59), without going through the payment sandbox.
+  @Given("the guest has a valid {string} pass")
+  public void theGuestHasAValidPass(String passType) {
+    jdbc.update(
+        """
+        insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status)
+        select ?::uuid, ?::uuid, pass_type, 'INACTIVE', price_cents, deposit_cents, 'HELD'
+        from pass_price where pass_type = ?
+        """,
+        UUID.randomUUID().toString(),
+        guestId,
+        passType.toUpperCase(Locale.ROOT));
+  }
+
   @Given("the payment sandbox accepts the card")
   public void thePaymentSandboxAcceptsTheCard() {
     var stripe = CucumberSpringConfiguration.STRIPE;

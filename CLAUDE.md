@@ -21,14 +21,14 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
 | Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
 | Acceptance tests (Cucumber, Failsafe; needs Docker) | `./mvnw verify -DskipUnitTests=true -Dit.test=CucumberIT` (reports in `target/cucumber-reports/`; `@wip` scenarios are excluded) |
-| Run the app | Start `infra/compose.yaml` first (below), then `DB_PASSWORD=<POSTGRES_PASSWORD from infra/.env> ./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`) |
+| Run the app | Start `infra/compose.yaml` first (below), then `DB_PASSWORD=<POSTGRES_PASSWORD from infra/.env> ./mvnw spring-boot:run` (health at `http://localhost:8080/actuator/health`). Without an MQTT broker the backend still starts and retries every 5 s; `MQTT_ENABLED=false` turns the telemetry adapter off |
 | Docker image | `docker build -t riaride-backend .` |
 
 Payments use Stripe test mode behind the `PaymentGateway` port (ADR 0008). The backend reads the secret key from `STRIPE_SECRET_KEY` and fails at startup if the key is missing or is not a test mode key (`sk_test_...`). To run the app without making payments, any `sk_test_` value works. The tests stub Stripe with WireMock and use a dummy key from `src/test/resources/config/application.yml`, so they need no real key or network access.
 
 To skip unit tests use `-DskipUnitTests=true`, not `-DskipTests`: the pom binds Surefire's `skipTests` to `skipUnitTests`, so `-DskipTests` does not skip them.
 
-The backend reads `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `KEYCLOAK_ISSUER_URI`; the defaults point at the local stack. Integration tests never use these: they start their own containers.
+The backend reads `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `KEYCLOAK_ISSUER_URI`, and for vehicle telemetry `MQTT_ENABLED`, `MQTT_URL` (default `tcp://localhost:1883`), `MQTT_CLIENT_ID`, `MQTT_USERNAME` and `MQTT_PASSWORD`; the defaults point at the local stack. The MQTT session is kept per client id, so run one backend instance per `MQTT_CLIENT_ID`. Integration tests never use these: they start their own containers, and turn MQTT off unless they start Mosquitto.
 
 ### Local stack (PostgreSQL, Keycloak and Mosquitto)
 
