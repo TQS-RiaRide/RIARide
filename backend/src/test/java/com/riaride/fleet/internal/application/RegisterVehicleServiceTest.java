@@ -57,7 +57,7 @@ class RegisterVehicleServiceTest {
 
   private void givenSalinasWithDockedBikes(long docked) {
     when(hubs.findByIdForUpdate(salinas.getId())).thenReturn(Optional.of(salinas));
-    when(vehicles.existsByCode("EB-401")).thenReturn(false);
+    when(vehicles.existsByCodeIgnoreCase("EB-401")).thenReturn(false);
     when(vehicles.countByHubId(salinas.getId())).thenReturn(docked);
   }
 
@@ -94,9 +94,22 @@ class RegisterVehicleServiceTest {
   @Test
   void shouldRefuseCodeAlreadyUsedByAnotherVehicle() {
     when(hubs.findByIdForUpdate(salinas.getId())).thenReturn(Optional.of(salinas));
-    when(vehicles.existsByCode("EB-401")).thenReturn(true);
+    when(vehicles.existsByCodeIgnoreCase("EB-401")).thenReturn(true);
 
     assertThatThrownBy(() -> service.register(bikeAtSalinas("EB-401")))
+        .isInstanceOf(VehicleCodeAlreadyInUseException.class);
+
+    verify(vehicles, never()).saveAndFlush(any());
+  }
+
+  // A code is in use whatever its case: eb-401 is refused when EB-401 exists.
+  @Requirement("RIA-57")
+  @Test
+  void shouldRefuseCodeThatDiffersOnlyInCase() {
+    when(hubs.findByIdForUpdate(salinas.getId())).thenReturn(Optional.of(salinas));
+    when(vehicles.existsByCodeIgnoreCase("eb-401")).thenReturn(true);
+
+    assertThatThrownBy(() -> service.register(bikeAtSalinas("eb-401")))
         .isInstanceOf(VehicleCodeAlreadyInUseException.class);
 
     verify(vehicles, never()).saveAndFlush(any());

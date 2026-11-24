@@ -166,15 +166,4 @@ public class Hub implements Persistable<UUID> {
   public int getCapacity() {
     return capacity;
   }
-
-  // A hub has no bikes when it is registered, which is the only time this is read. The bikes
-  // docked at an existing hub are the vehicles whose hub it is (VehicleRepository.countByHubId),
-  // which is what RegisterVehicleService checks against the capacity (BR10).
-  public int getDockedBikes() {
-    return 0;
-  }
-
-  public int getFreeSlots() {
-    return capacity - getDockedBikes();
-  }
 }
