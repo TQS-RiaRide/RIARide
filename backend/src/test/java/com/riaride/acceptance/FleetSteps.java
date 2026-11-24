@@ -19,7 +19,7 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 // Steps for the fleet's vehicles and their telemetry (RIA-59, RIA-53), reusable by RIA-58, and for
-// hubs with a given capacity and occupancy (RIA-55).
+// hubs with a given position, capacity and occupancy (RIA-55).
 public class FleetSteps {
 
   // The telemetry lag bound of RIA-58.
@@ -57,12 +57,6 @@ public class FleetSteps {
       var status = bike.get("status").trim().toUpperCase(Locale.ROOT).replace(' ', '_');
       insertBike(bike.get("code"), status, Integer.valueOf(bike.get("battery")), hubId);
     }
-  }
-
-  // A hub at the hotel of the same name with that capacity and that many available bikes docked.
-  @Given("a hub {string} with capacity {int} and {int} bikes docked")
-  public void aHubWithCapacityAndBikesDocked(String hubName, int capacity, int docked) {
-    dockBikes(aHotelHubAt(hubName, 40.6405, -8.6538, capacity), docked);
   }
 
   // Hubs at the hotels of the same name. Columns: name, latitude, longitude, capacity and docked

@@ -15,6 +15,7 @@ Feature: End a trip at a hub
     When the guest ends the trip at hub "Marés Praia"
     Then the response status is 200
     And the trip is "ended"
+    And bike "EB-301" is "available"
     And bike "EB-301" is docked at hub "Marés Praia"
     And a lock command for bike "EB-301" at hub "Marés Praia" is sent to the simulator
 

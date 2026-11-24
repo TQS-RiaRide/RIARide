@@ -198,14 +198,6 @@ public class TripSteps {
         .isEqualTo(requestedAt.plus(BOOKING_HOLD));
   }
 
-  // BR10: the returned bike takes a slot at the hub and can be booked again.
-  @Then("bike {string} is docked at hub {string}")
-  public void bikeIsDockedAtHub(String code, String hubName) {
-    var bike = jdbc.queryForMap("select status, hub_id from vehicle where code = ?", code);
-    assertThat(bike.get("status")).isEqualTo("AVAILABLE");
-    assertThat(bike.get("hub_id")).isEqualTo(hubId(hubName));
-  }
-
   // The hubs of the nearbyHubs member of the last problem detail, by name, for example
   // "Marés Salinas, Marés Centro".
   @Then("the problem detail suggests the hubs {string} in that order")
