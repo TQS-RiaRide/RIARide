@@ -6,7 +6,6 @@ import java.util.Optional;
 // refer to a hotel without reaching into accounts' tables (architecture, section 5).
 public interface HotelDirectory {
 
-	// Exact match on the hotel's name; empty when no hotel of the group has it.
-	Optional<HotelSummary> findByName(String name);
-
+  // Exact match on the hotel's name; empty when no hotel of the group has it.
+  Optional<HotelSummary> findByName(String name);
 }

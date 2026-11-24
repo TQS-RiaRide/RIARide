@@ -14,32 +14,32 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ListHubVehiclesService {
 
-	private final HubRepository hubs;
-	private final VehicleRepository vehicles;
-	private final BookingBatteryPolicy policy;
+  private final HubRepository hubs;
+  private final VehicleRepository vehicles;
+  private final BookingBatteryPolicy policy;
 
-	public ListHubVehiclesService(HubRepository hubs, VehicleRepository vehicles, BookingBatteryPolicy policy) {
-		this.hubs = hubs;
-		this.vehicles = vehicles;
-		this.policy = policy;
-	}
+  public ListHubVehiclesService(
+      HubRepository hubs, VehicleRepository vehicles, BookingBatteryPolicy policy) {
+    this.hubs = hubs;
+    this.vehicles = vehicles;
+    this.policy = policy;
+  }
 
-	// Every type: the entry point for callers that do not filter, such as booking and trip stories.
-	@Transactional(readOnly = true)
-	public List<HubVehicle> list(UUID hubId) {
-		return list(hubId, null);
-	}
+  // Every type: the entry point for callers that do not filter, such as booking and trip stories.
+  @Transactional(readOnly = true)
+  public List<HubVehicle> list(UUID hubId) {
+    return list(hubId, null);
+  }
 
-	// type null lists every type.
-	@Transactional(readOnly = true)
-	public List<HubVehicle> list(UUID hubId, VehicleType type) {
-		if (!hubs.existsById(hubId)) {
-			throw new HubNotFoundException();
-		}
-		return vehicles.findByHubIdOrderByCode(hubId).stream()
-			.filter(vehicle -> type == null || vehicle.getType() == type)
-			.map(vehicle -> HubVehicle.of(vehicle, vehicle.isBookable(policy)))
-			.toList();
-	}
-
+  // type null lists every type.
+  @Transactional(readOnly = true)
+  public List<HubVehicle> list(UUID hubId, VehicleType type) {
+    if (!hubs.existsById(hubId)) {
+      throw new HubNotFoundException();
+    }
+    return vehicles.findByHubIdOrderByCode(hubId).stream()
+        .filter(vehicle -> type == null || vehicle.getType() == type)
+        .map(vehicle -> HubVehicle.of(vehicle, vehicle.isBookable(policy)))
+        .toList();
+  }
 }

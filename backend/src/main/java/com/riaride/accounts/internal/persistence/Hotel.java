@@ -10,21 +10,19 @@ import java.util.UUID;
 @Table(name = "hotel")
 public class Hotel {
 
-	@Id
-	private UUID id;
+  @Id private UUID id;
 
-	private String name;
+  private String name;
 
-	protected Hotel() {
-		// for JPA
-	}
+  protected Hotel() {
+    // for JPA
+  }
 
-	public UUID getId() {
-		return id;
-	}
+  public UUID getId() {
+    return id;
+  }
 
-	public String getName() {
-		return name;
-	}
-
+  public String getName() {
+    return name;
+  }
 }

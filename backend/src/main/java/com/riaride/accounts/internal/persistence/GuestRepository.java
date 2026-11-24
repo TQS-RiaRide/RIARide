@@ -7,12 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GuestRepository extends JpaRepository<Guest, UUID> {
 
-	boolean existsByStayId(UUID stayId);
+  boolean existsByStayId(UUID stayId);
 
-	boolean existsByEmail(String email);
+  boolean existsByEmail(String email);
 
-	boolean existsByKeycloakId(String keycloakId);
+  boolean existsByKeycloakId(String keycloakId);
 
-	Optional<Guest> findByKeycloakId(String keycloakId);
-
+  Optional<Guest> findByKeycloakId(String keycloakId);
 }

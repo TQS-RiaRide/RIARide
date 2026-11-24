@@ -21,94 +21,112 @@ import org.springframework.jdbc.core.JdbcTemplate;
 // Steps for the fleet's vehicles and their telemetry (RIA-59, RIA-53), reusable by RIA-58.
 public class FleetSteps {
 
-	// The telemetry lag bound of RIA-58.
-	private static final Duration TELEMETRY_LAG = Duration.ofSeconds(5);
+  // The telemetry lag bound of RIA-58.
+  private static final Duration TELEMETRY_LAG = Duration.ofSeconds(5);
 
-	private final ScenarioContext context;
-	private final JdbcTemplate jdbc;
+  private final ScenarioContext context;
+  private final JdbcTemplate jdbc;
 
-	public FleetSteps(ScenarioContext context, JdbcTemplate jdbc) {
-		this.context = context;
-		this.jdbc = jdbc;
-	}
+  public FleetSteps(ScenarioContext context, JdbcTemplate jdbc) {
+    this.context = context;
+    this.jdbc = jdbc;
+  }
 
-	// Before the hubs are removed (HubSteps, default order): vehicles reference hubs.
-	// Also after each scenario, so no vehicle is left to block a later "delete from hub".
-	@Before(order = 7000)
-	@After
-	public void removeVehicles() {
-		jdbc.update("delete from vehicle");
-	}
+  // Before the hubs are removed (HubSteps, default order): vehicles reference hubs.
+  // Also after each scenario, so no vehicle is left to block a later "delete from hub".
+  @Before(order = 7000)
+  @After
+  public void removeVehicles() {
+    jdbc.update("delete from vehicle");
+  }
 
-	// A hub at the hotel of the same name, with one available e-bike docked there.
-	@Given("a hub {string} with an available bike {string} with {int} % battery")
-	public void aHubWithAnAvailableBike(String hubName, String code, int batteryPct) {
-		insertBike(code, "AVAILABLE", batteryPct, aHotelHub(hubName));
-	}
+  // A hub at the hotel of the same name, with one available e-bike docked there.
+  @Given("a hub {string} with an available bike {string} with {int} % battery")
+  public void aHubWithAnAvailableBike(String hubName, String code, int batteryPct) {
+    insertBike(code, "AVAILABLE", batteryPct, aHotelHub(hubName));
+  }
 
-	// A hub at the hotel of the same name, with the e-bikes of the table docked there. Columns:
-	// code, status ("available", "in use", ...) and battery (%).
-	@Given("a hub {string} with these bikes:")
-	public void aHubWithTheseBikes(String hubName, DataTable bikes) {
-		var hubId = aHotelHub(hubName);
-		for (var bike : bikes.asMaps()) {
-			var status = bike.get("status").trim().toUpperCase(Locale.ROOT).replace(' ', '_');
-			insertBike(bike.get("code"), status, Integer.valueOf(bike.get("battery")), hubId);
-		}
-	}
+  // A hub at the hotel of the same name, with the e-bikes of the table docked there. Columns:
+  // code, status ("available", "in use", ...) and battery (%).
+  @Given("a hub {string} with these bikes:")
+  public void aHubWithTheseBikes(String hubName, DataTable bikes) {
+    var hubId = aHotelHub(hubName);
+    for (var bike : bikes.asMaps()) {
+      var status = bike.get("status").trim().toUpperCase(Locale.ROOT).replace(' ', '_');
+      insertBike(bike.get("code"), status, Integer.valueOf(bike.get("battery")), hubId);
+    }
+  }
 
-	private UUID aHotelHub(String hubName) {
-		var hubId = UUID.randomUUID();
-		jdbc.update("""
-			insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
-			select ?, name, 'HOTEL', id, 40.6405, -8.6538, 10 from hotel where name = ?
-			""", hubId, hubName);
-		return hubId;
-	}
+  private UUID aHotelHub(String hubName) {
+    var hubId = UUID.randomUUID();
+    jdbc.update(
+        """
+        insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
+        select ?, name, 'HOTEL', id, 40.6405, -8.6538, 10 from hotel where name = ?
+        """,
+        hubId,
+        hubName);
+    return hubId;
+  }
 
-	private void insertBike(String code, String status, int batteryPct, UUID hubId) {
-		jdbc.update("""
-			insert into vehicle (id, code, type, status, hub_id, battery_pct)
-			values (?, ?, 'E_BIKE', ?, ?, ?)
-			""", UUID.randomUUID(), code, status, hubId, batteryPct);
-	}
+  private void insertBike(String code, String status, int batteryPct, UUID hubId) {
+    jdbc.update(
+        """
+        insert into vehicle (id, code, type, status, hub_id, battery_pct)
+        values (?, ?, 'E_BIKE', ?, ?, ?)
+        """,
+        UUID.randomUUID(),
+        code,
+        status,
+        hubId,
+        batteryPct);
+  }
 
-	// Published over MQTT as the simulator does; the step returns once the platform has stored the
-	// reading, so the next step sees it.
-	@When("telemetry reports that bike {string} has {int} % battery")
-	public void telemetryReportsBattery(String code, int batteryPct) {
-		var hubId = jdbc.queryForObject("select hub_id from vehicle where code = ?", UUID.class, code);
-		TestMosquitto.publishTelemetry(code, batteryPct, Objects.toString(hubId, null));
-		await().atMost(TELEMETRY_LAG).until(() -> Integer.valueOf(batteryPct).equals(
-			jdbc.queryForObject("select battery_pct from vehicle where code = ?", Integer.class, code)));
-	}
+  // Published over MQTT as the simulator does; the step returns once the platform has stored the
+  // reading, so the next step sees it.
+  @When("telemetry reports that bike {string} has {int} % battery")
+  public void telemetryReportsBattery(String code, int batteryPct) {
+    var hubId = jdbc.queryForObject("select hub_id from vehicle where code = ?", UUID.class, code);
+    TestMosquitto.publishTelemetry(code, batteryPct, Objects.toString(hubId, null));
+    await()
+        .atMost(TELEMETRY_LAG)
+        .until(() ->
+            Integer.valueOf(batteryPct)
+                .equals(
+                    jdbc.queryForObject(
+                        "select battery_pct from vehicle where code = ?", Integer.class, code)));
+  }
 
-	@When("the guest lists the bikes at hub {string}")
-	public void theGuestListsTheBikesAtHub(String hubName) {
-		var hubId = jdbc.queryForObject("select id from hub where name = ?", UUID.class, hubName);
-		context.setLastResponse(given()
-			.auth().oauth2(context.accessToken())
-			.when()
-			.get("/api/v1/hubs/{hubId}/vehicles", hubId));
-	}
+  @When("the guest lists the bikes at hub {string}")
+  public void theGuestListsTheBikesAtHub(String hubName) {
+    var hubId = jdbc.queryForObject("select id from hub where name = ?", UUID.class, hubName);
+    context.setLastResponse(
+        given()
+            .auth()
+            .oauth2(context.accessToken())
+            .when()
+            .get("/api/v1/hubs/{hubId}/vehicles", hubId));
+  }
 
-	// The codes of the bookable bikes in the last listing, in the order listed, for example
-	// "EB-101, EB-102".
-	@Then("the bookable bikes are {string}")
-	public void theBookableBikesAre(String codes) {
-		var response = context.lastResponse();
-		assertThat(response.statusCode()).isEqualTo(200);
-		var expected = Arrays.stream(codes.split(",")).map(String::trim).toList();
-		assertThat(response.jsonPath().getList("findAll { it.bookable }.code", String.class))
-			.containsExactlyElementsOf(expected);
-	}
+  // The codes of the bookable bikes in the last listing, in the order listed, for example
+  // "EB-101, EB-102".
+  @Then("the bookable bikes are {string}")
+  public void theBookableBikesAre(String codes) {
+    var response = context.lastResponse();
+    assertThat(response.statusCode()).isEqualTo(200);
+    var expected = Arrays.stream(codes.split(",")).map(String::trim).toList();
+    assertThat(response.jsonPath().getList("findAll { it.bookable }.code", String.class))
+        .containsExactlyElementsOf(expected);
+  }
 
-	@Then("bike {string} is not bookable")
-	public void bikeIsNotBookable(String code) {
-		var response = context.lastResponse();
-		assertThat(response.statusCode()).isEqualTo(200);
-		var bookable = response.jsonPath().getList("findAll { it.code == '" + code + "' }.bookable", Boolean.class);
-		assertThat(bookable).containsExactly(false);
-	}
-
+  @Then("bike {string} is not bookable")
+  public void bikeIsNotBookable(String code) {
+    var response = context.lastResponse();
+    assertThat(response.statusCode()).isEqualTo(200);
+    var bookable =
+        response
+            .jsonPath()
+            .getList("findAll { it.code == '" + code + "' }.bookable", Boolean.class);
+    assertThat(bookable).containsExactly(false);
+  }
 }

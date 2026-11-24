@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface HubRepository extends JpaRepository<Hub, UUID> {
 
-	// Exact match: names that differ only in letter case are different hubs.
-	boolean existsByName(String name);
-
+  // Exact match: names that differ only in letter case are different hubs.
+  boolean existsByName(String name);
 }

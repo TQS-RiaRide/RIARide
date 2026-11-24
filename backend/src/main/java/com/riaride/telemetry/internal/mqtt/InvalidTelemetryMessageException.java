@@ -4,12 +4,11 @@ package com.riaride.telemetry.internal.mqtt;
 // one bad message never stops the subscription.
 class InvalidTelemetryMessageException extends RuntimeException {
 
-	InvalidTelemetryMessageException(String message) {
-		super(message);
-	}
+  InvalidTelemetryMessageException(String message) {
+    super(message);
+  }
 
-	InvalidTelemetryMessageException(String message, Throwable cause) {
-		super(message, cause);
-	}
-
+  InvalidTelemetryMessageException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

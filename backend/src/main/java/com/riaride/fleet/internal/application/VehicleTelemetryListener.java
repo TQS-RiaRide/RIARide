@@ -21,25 +21,28 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 class VehicleTelemetryListener {
 
-	private static final Logger log = LoggerFactory.getLogger(VehicleTelemetryListener.class);
+  private static final Logger log = LoggerFactory.getLogger(VehicleTelemetryListener.class);
 
-	private final VehicleRepository vehicles;
-	private final Clock clock;
+  private final VehicleRepository vehicles;
+  private final Clock clock;
 
-	VehicleTelemetryListener(VehicleRepository vehicles, Clock clock) {
-		this.vehicles = vehicles;
-		this.clock = clock;
-	}
+  VehicleTelemetryListener(VehicleRepository vehicles, Clock clock) {
+    this.vehicles = vehicles;
+    this.clock = clock;
+  }
 
-	// In the publisher's transaction. An unknown vehicle is logged at DEBUG: the simulator's demo
-	// fleet publishes every 5 s, before RIA-57 lets operators register those bikes.
-	@EventListener
-	@Transactional
-	void on(VehicleTelemetryReceived reading) {
-		var now = clock.instant();
-		vehicles.findByCode(reading.vehicleCode()).ifPresentOrElse(
-			vehicle -> vehicle.recordBattery(BatteryLevel.of(reading.batteryPct()), reading.emittedAt(), now),
-			() -> log.debug("Telemetry for unknown vehicle {} ignored", reading.vehicleCode()));
-	}
-
+  // In the publisher's transaction. An unknown vehicle is logged at DEBUG: the simulator's demo
+  // fleet publishes every 5 s, before RIA-57 lets operators register those bikes.
+  @EventListener
+  @Transactional
+  void on(VehicleTelemetryReceived reading) {
+    var now = clock.instant();
+    vehicles
+        .findByCode(reading.vehicleCode())
+        .ifPresentOrElse(
+            vehicle ->
+                vehicle.recordBattery(
+                    BatteryLevel.of(reading.batteryPct()), reading.emittedAt(), now),
+            () -> log.debug("Telemetry for unknown vehicle {} ignored", reading.vehicleCode()));
+  }
 }

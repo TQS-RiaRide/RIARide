@@ -10,11 +10,10 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(KeycloakAdminProperties.class)
 class KeycloakConfiguration {
 
-	@Bean
-	// The orphan-age check compares Keycloak's own creation timestamps, so it uses the real time,
-	// not the business clock (which tests fix to another date).
-	KeycloakIdentityProvider keycloakIdentityProvider(KeycloakAdminProperties properties) {
-		return new KeycloakIdentityProvider(RestClient.builder(), properties, Clock.systemUTC());
-	}
-
+  @Bean
+  // The orphan-age check compares Keycloak's own creation timestamps, so it uses the real time,
+  // not the business clock (which tests fix to another date).
+  KeycloakIdentityProvider keycloakIdentityProvider(KeycloakAdminProperties properties) {
+    return new KeycloakIdentityProvider(RestClient.builder(), properties, Clock.systemUTC());
+  }
 }

@@ -12,44 +12,43 @@ import jakarta.persistence.Table;
 @Table(name = "pass_price")
 public class PassPrice {
 
-	@Id
-	@Enumerated(EnumType.STRING)
-	@Column(name = "pass_type")
-	private PassType passType;
+  @Id
+  @Enumerated(EnumType.STRING)
+  @Column(name = "pass_type")
+  private PassType passType;
 
-	@Column(name = "price_cents", nullable = false)
-	private int priceCents;
+  @Column(name = "price_cents", nullable = false)
+  private int priceCents;
 
-	@Column(name = "deposit_cents", nullable = false)
-	private int depositCents;
+  @Column(name = "deposit_cents", nullable = false)
+  private int depositCents;
 
-	protected PassPrice() {
-		// for JPA
-	}
+  protected PassPrice() {
+    // for JPA
+  }
 
-	public PassPrice(PassType passType, int priceCents, int depositCents) {
-		this.passType = passType;
-		change(priceCents, depositCents);
-	}
+  public PassPrice(PassType passType, int priceCents, int depositCents) {
+    this.passType = passType;
+    change(priceCents, depositCents);
+  }
 
-	public final void change(int priceCents, int depositCents) {
-		if (priceCents <= 0 || depositCents <= 0) {
-			throw new IllegalArgumentException("A pass price and deposit must be positive");
-		}
-		this.priceCents = priceCents;
-		this.depositCents = depositCents;
-	}
+  public final void change(int priceCents, int depositCents) {
+    if (priceCents <= 0 || depositCents <= 0) {
+      throw new IllegalArgumentException("A pass price and deposit must be positive");
+    }
+    this.priceCents = priceCents;
+    this.depositCents = depositCents;
+  }
 
-	public PassType getPassType() {
-		return passType;
-	}
+  public PassType getPassType() {
+    return passType;
+  }
 
-	public int getPriceCents() {
-		return priceCents;
-	}
+  public int getPriceCents() {
+    return priceCents;
+  }
 
-	public int getDepositCents() {
-		return depositCents;
-	}
-
+  public int getDepositCents() {
+    return depositCents;
+  }
 }

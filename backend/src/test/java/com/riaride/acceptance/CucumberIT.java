@@ -23,9 +23,9 @@ import org.junit.platform.suite.api.Suite;
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.riaride.acceptance")
 @ConfigurationParameter(key = FILTER_TAGS_PROPERTY_NAME, value = "not @wip")
 @ConfigurationParameter(
-	key = PLUGIN_PROPERTY_NAME,
-	value = "pretty,"
-		+ "json:target/cucumber-reports/cucumber.json,"
-		+ "html:target/cucumber-reports/cucumber.html")
-class CucumberIT {
-}
+    key = PLUGIN_PROPERTY_NAME,
+    value =
+        "pretty,"
+            + "json:target/cucumber-reports/cucumber.json,"
+            + "html:target/cucumber-reports/cucumber.html")
+class CucumberIT {}

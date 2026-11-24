@@ -17,6 +17,7 @@ Run from `backend/`, with JDK 21 active (`java -version`).
 | Unit tests (Surefire, `*Test.java` / `*Tests.java`) | `./mvnw test` |
 | Integration tests only (Failsafe, `*IT.java`; need Docker for PostgreSQL and Keycloak containers) | `./mvnw verify -DskipUnitTests=true` |
 | All tests and JaCoCo report | `./mvnw verify` |
+| Format / check formatting (Spotless, Google Java Style; the check also runs in `verify` and CI) | `./mvnw spotless:apply` / `./mvnw spotless:check` |
 | Single unit test | `./mvnw test -Dtest=ModularityTests` (or `-Dtest=ModularityTests#verifiesModuleStructure`) |
 | Single integration test | `./mvnw verify -DskipUnitTests=true -Dit.test=HealthEndpointIT` |
 | Acceptance tests (Cucumber, Failsafe; needs Docker) | `./mvnw verify -DskipUnitTests=true -Dit.test=CucumberIT` (reports in `target/cucumber-reports/`; `@wip` scenarios are excluded) |

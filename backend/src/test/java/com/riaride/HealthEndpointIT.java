@@ -17,14 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 class HealthEndpointIT {
 
-	@Autowired
-	MockMvc mvc;
+  @Autowired MockMvc mvc;
 
-	@Test
-	void healthIsUp() throws Exception {
-		mvc.perform(get("/actuator/health"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.status").value("UP"));
-	}
-
+  @Test
+  void healthIsUp() throws Exception {
+    mvc.perform(get("/actuator/health"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("UP"));
+  }
 }
