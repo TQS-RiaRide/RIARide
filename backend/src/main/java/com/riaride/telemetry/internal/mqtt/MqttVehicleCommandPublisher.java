@@ -2,13 +2,8 @@ package com.riaride.telemetry.internal.mqtt;
 
 import com.riaride.telemetry.VehicleCommands;
 import java.time.Clock;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
@@ -22,8 +17,6 @@ import tools.jackson.databind.json.JsonMapper;
 class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
 
   private static final int QOS = 1;
-  private static final long RETRY_SECONDS = 5;
-  private static final long DISCONNECT_TIMEOUT_MS = 2_000;
   // How long a command waits for the broker's acknowledgement before it is logged as not sent.
   private static final long ACK_TIMEOUT_MS = 2_000;
   // Commands awaiting acknowledgement at once. Paho's default of 10 dropped UNLOCKs when many trips
@@ -32,17 +25,18 @@ class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
 
   private static final Logger log = LoggerFactory.getLogger(MqttVehicleCommandPublisher.class);
 
-  private final TelemetryMqttProperties properties;
   private final JsonMapper json;
   private final Clock clock;
-  private volatile ScheduledExecutorService connector;
-  private volatile MqttClient client;
-  private volatile boolean running;
+  private final MqttConnection connection;
 
   MqttVehicleCommandPublisher(TelemetryMqttProperties properties, JsonMapper json, Clock clock) {
-    this.properties = properties;
     this.json = json;
     this.clock = clock;
+    var options = new MqttConnectOptions();
+    options.setMaxInflight(MAX_IN_FLIGHT);
+    this.connection =
+        new MqttConnection(
+            properties, properties.clientId() + "-commands", "mqtt-commands-connect", options);
   }
 
   @Override
@@ -56,7 +50,7 @@ class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
   }
 
   private void publish(VehicleCommandMessage message) {
-    var current = client;
+    var current = connection.client();
     if (current == null || !current.isConnected()) {
       log.warn(
           "MQTT broker not connected; {} for vehicle {} dropped",
@@ -84,77 +78,20 @@ class MqttVehicleCommandPublisher implements VehicleCommands, SmartLifecycle {
   // first trip; otherwise keeps trying in the background.
   @Override
   public synchronized void start() {
-    if (running) {
+    if (connection.isRunning()) {
       return;
     }
-    try {
-      client =
-          new MqttClient(
-              properties.url(), properties.clientId() + "-commands", new MemoryPersistence());
-    } catch (MqttException invalidSettings) {
-      throw new IllegalStateException("Invalid MQTT broker settings", invalidSettings);
-    }
-    connector =
-        Executors.newSingleThreadScheduledExecutor(runnable -> {
-          var thread = new Thread(runnable, "mqtt-commands-connect");
-          thread.setDaemon(true);
-          return thread;
-        });
-    running = true;
-    connect();
-  }
-
-  private void connect() {
-    if (!running) {
-      return;
-    }
-    try {
-      client.connect(connectOptions());
-    } catch (MqttException unreachable) {
-      log.warn(
-          "MQTT broker not reachable for commands (reason {}); retrying in {} s",
-          unreachable.getReasonCode(),
-          RETRY_SECONDS);
-      var executor = connector;
-      if (executor != null && !executor.isShutdown()) {
-        executor.schedule(this::connect, RETRY_SECONDS, TimeUnit.SECONDS);
-      }
-    }
-  }
-
-  private MqttConnectOptions connectOptions() {
-    var options = new MqttConnectOptions();
-    options.setAutomaticReconnect(true);
-    options.setMaxInflight(MAX_IN_FLIGHT);
-    if (properties.hasCredentials()) {
-      options.setUserName(properties.username());
-      options.setPassword(
-          properties.password() == null ? new char[0] : properties.password().toCharArray());
-    }
-    return options;
+    connection.open();
+    connection.connect();
   }
 
   @Override
-  public synchronized void stop() {
-    running = false;
-    if (connector != null) {
-      connector.shutdownNow();
-    }
-    if (client == null) {
-      return;
-    }
-    try {
-      if (client.isConnected()) {
-        client.disconnectForcibly(DISCONNECT_TIMEOUT_MS);
-      }
-      client.close(true);
-    } catch (MqttException closing) {
-      log.debug("MQTT command client closed with reason {}", closing.getReasonCode());
-    }
+  public void stop() {
+    connection.close();
   }
 
   @Override
   public boolean isRunning() {
-    return running;
+    return connection.isRunning();
   }
 }
