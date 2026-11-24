@@ -40,7 +40,7 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
     if (connection.isRunning()) {
       return;
     }
-    connection.open().setCallback(this);
+    connection.open(this);
     connection.execute(connection::connect);
   }
 

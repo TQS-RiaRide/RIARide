@@ -3,6 +3,7 @@ package com.riaride.telemetry.internal.mqtt;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -51,12 +52,20 @@ final class MqttConnection {
     return options;
   }
 
-  // Creates the client, so the caller can set its callback before connecting.
-  synchronized MqttClient open() {
+  // Creates the client, which this connection owns and closes on stop.
+  void open() {
+    open(null);
+  }
+
+  // Creates the client with its callback set before connecting, so no message arrives without it.
+  synchronized void open(MqttCallback callback) {
     try {
       client = new MqttClient(properties.url(), clientId, new MemoryPersistence());
     } catch (MqttException invalidSettings) {
       throw new IllegalStateException("Invalid MQTT broker settings", invalidSettings);
+    }
+    if (callback != null) {
+      client.setCallback(callback);
     }
     connector =
         Executors.newSingleThreadScheduledExecutor(runnable -> {
@@ -65,7 +74,6 @@ final class MqttConnection {
           return thread;
         });
     running = true;
-    return client;
   }
 
   // Tries once on the caller's thread; while the broker is unreachable, retries in the background.
