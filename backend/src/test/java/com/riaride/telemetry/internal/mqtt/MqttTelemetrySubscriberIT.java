@@ -25,12 +25,11 @@ class MqttTelemetrySubscriberIT {
   // More than Paho's inbound queue of 10 messages, and the simulator's 12 bikes.
   private static final int BACKLOG = 15;
   private static final Duration TIMEOUT = Duration.ofSeconds(20);
-  // Outside the backlog's codes: a probe can still be queued when the subscriber stops, and is then
-  // delivered with the backlog, so probes are counted apart.
-  private static final String PROBE_VEHICLE = "EB-699";
+  // The probe has its own vehicle code and its own counter: a probe published just before the
+  // subscriber stops is queued with the backlog and must not count as one of its messages.
+  private static final String PROBE = "EB-PROBE";
 
-  private final AtomicInteger probesHandled = new AtomicInteger();
-
+  private final AtomicInteger probes = new AtomicInteger();
   private final AtomicInteger handled = new AtomicInteger();
   private final TelemetryMessageHandler handler = countingHandler();
   private final TelemetryMqttProperties properties =
@@ -71,8 +70,8 @@ class MqttTelemetrySubscriberIT {
         .atMost(TIMEOUT)
         .pollInterval(Duration.ofMillis(500))
         .until(() -> {
-          TestMosquitto.publishTelemetry(PROBE_VEHICLE, 50, null);
-          return probesHandled.get() > 0;
+          TestMosquitto.publishTelemetry(PROBE, 50, null);
+          return probes.get() > 0;
         });
     return started;
   }
@@ -82,8 +81,9 @@ class MqttTelemetrySubscriberIT {
     doAnswer(
             invocation -> {
               String topic = invocation.getArgument(0);
-              var counter = topic.contains("/" + PROBE_VEHICLE + "/") ? probesHandled : handled;
-              return counter.incrementAndGet();
+              return topic.contains("/" + PROBE + "/")
+                  ? probes.incrementAndGet()
+                  : handled.incrementAndGet();
             })
         .when(counting)
         .handle(anyString(), any());
