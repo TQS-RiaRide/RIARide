@@ -1,12 +1,14 @@
 package com.riaride.fleet.internal.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestcontainersConfiguration;
 import com.riaride.fleet.VehicleReservations;
 import com.riaride.telemetry.VehicleTelemetryReceived;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -80,14 +82,15 @@ class VehicleTelemetryLockingIT {
             transactions.executeWithoutResult(status -> {
               telemetry.on(reading);
               readingLoaded.countDown();
-              // Gives the start the chance to commit before this reading does. With the row lock
-              // the
-              // start cannot get the bike yet, so this wait ends by its timeout.
-              await(reserved);
+              // The reading commits only once the start either finished (no row lock: the bug) or
+              // waits for this transaction's row lock, seen in pg_locks. No fixed wait.
+              await()
+                  .atMost(Duration.ofSeconds(5))
+                  .until(() -> reserved.getCount() == 0 || startWaitsForALock());
             }));
     var startTrip =
         CompletableFuture.runAsync(() -> {
-          await(readingLoaded);
+          awaitLatch(readingLoaded);
           transactions.executeWithoutResult(status -> reservations.reserve("EB-201"));
           reserved.countDown();
         });
@@ -98,9 +101,15 @@ class VehicleTelemetryLockingIT {
     assertThat(bike.get("battery_pct")).isEqualTo(70);
   }
 
-  private static void await(CountDownLatch latch) {
+  private boolean startWaitsForALock() {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "select exists (select 1 from pg_locks where not granted)", Boolean.class));
+  }
+
+  private static void awaitLatch(CountDownLatch latch) {
     try {
-      latch.await(1, TimeUnit.SECONDS);
+      latch.await(5, TimeUnit.SECONDS);
     } catch (InterruptedException interrupted) {
       Thread.currentThread().interrupt();
       throw new IllegalStateException(interrupted);
