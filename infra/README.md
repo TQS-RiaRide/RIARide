@@ -32,6 +32,8 @@ Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT`, `KEYCLOAK_PORT`, `MQTT_PORT
 
 In the `app` profile the backend reaches the other services through the Compose network. Keycloak sets `KC_HOSTNAME` to `http://localhost:8180`, so tokens carry the same issuer whether the browser or the backend container asked for them. `STRIPE_SECRET_KEY` may stay empty: the backend container then starts with a placeholder test mode key, and only pass purchases fail.
 
+The backend subscribes to vehicle telemetry from the Mosquitto broker in this stack (ADR 0006). A backend run from the IDE uses the default `MQTT_URL`, `tcp://localhost:1883`; in the `app` profile Compose sets it to `tcp://mosquitto:1883`. `MQTT_USERNAME` and `MQTT_PASSWORD` are for a broker that requires them, and `MQTT_ENABLED=false` turns the adapter off. Without a reachable broker the backend still starts and retries every 5 seconds. The session is kept per `MQTT_CLIENT_ID` (default `riaride-backend`), so run one backend per client id.
+
 ## Keycloak
 
 - `keycloak/riaride-realm.json` is the realm: roles `GUEST`, `OPERATOR`, `TECHNICIAN`, `HOTEL_MANAGER`, `ADMIN`; the public client `riaride-spa` (Authorization Code with PKCE); a user profile with the admin-only attribute `hotel_id`, which the token carries as the `hotel_id` claim. It contains no users and no secrets, except the service account of `riaride-backend` (below). Keycloak imports it on start only if the realm does not exist; to re-import, remove the volume (`docker compose -f infra/compose.yaml down -v`).
