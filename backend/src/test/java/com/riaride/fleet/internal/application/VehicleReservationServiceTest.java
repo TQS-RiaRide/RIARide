@@ -79,4 +79,16 @@ class VehicleReservationServiceTest {
     assertThat(bike.getStatus()).isEqualTo(VehicleStatus.IN_USE);
     assertThat(bike.getHubId()).isNull();
   }
+
+  @Requirement("RIA-54")
+  @Test
+  void shouldReleaseReservedVehicleLockedById() {
+    var bike = availableBike("EB-201", 80);
+    bike.reserve(new BookingBatteryPolicy(20));
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+
+    service.release(bike.getId());
+
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+  }
 }

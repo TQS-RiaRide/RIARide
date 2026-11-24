@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,8 +45,8 @@ import org.springframework.context.ApplicationEventPublisher;
 // usable pass can start one, one at a time per pass (BR6). The bike is reserved and held for 15
 // minutes (BR11), the trip is STARTING, and the unlock is sent once the transaction commits. After
 // a failed start the reservation is still held: a retry on the same bike reuses it, and another
-// bike
-// is refused until it expires. The concurrent cases are in StartTripApiIT.
+// bike is refused until it expires. An expired hold is ended here and its bike released, even
+// before ReservationExpiryJob runs. The concurrent cases are in StartTripApiIT.
 @ExtendWith(MockitoExtension.class)
 class StartTripServiceTest {
 
@@ -201,5 +202,45 @@ class StartTripServiceTest {
 
     verify(trips, never()).saveAndFlush(any());
     verifyNoInteractions(events);
+  }
+
+  // The hold of a failed start ended (BR11): the bike is released and another one can be taken.
+  @Requirement("RIA-54")
+  @Test
+  void shouldExpireHeldReservationAndReserveAnotherBikeOnceTheHoldEnded() {
+    var held =
+        Reservation.hold(PASS, EB_201, NOW.minus(Duration.ofMinutes(15)), Duration.ofMinutes(15));
+    var eb202 = new ReservedVehicle(UUID.randomUUID(), "EB-202", HUB);
+    when(reservations.findByPassIdAndStatus(PASS, ReservationStatus.ACTIVE))
+        .thenReturn(Optional.of(held));
+    when(vehicles.reserve("EB-202")).thenReturn(eb202);
+
+    var trip = service.start(start("EB-202"));
+
+    assertThat(held.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+    var order = inOrder(reservations, vehicles);
+    order.verify(reservations).saveAndFlush(held);
+    order.verify(vehicles).release(VEHICLE);
+    order.verify(vehicles).reserve("EB-202");
+    assertThat(trip.getVehicleCode()).isEqualTo("EB-202");
+    assertThat(trip.getReservationId()).isNotEqualTo(held.getId());
+  }
+
+  // The same bike after its hold ended is reserved afresh, so its battery is checked again (BR12).
+  @Requirement("RIA-54")
+  @Test
+  void shouldReserveTheSameBikeAfreshOnceItsHoldEnded() {
+    var held =
+        Reservation.hold(PASS, EB_201, NOW.minus(Duration.ofMinutes(20)), Duration.ofMinutes(15));
+    when(reservations.findByPassIdAndStatus(PASS, ReservationStatus.ACTIVE))
+        .thenReturn(Optional.of(held));
+    when(vehicles.reserve("EB-201")).thenReturn(EB_201);
+
+    var trip = service.start(start("EB-201"));
+
+    assertThat(held.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+    verify(vehicles).release(VEHICLE);
+    verify(vehicles).reserve("EB-201");
+    assertThat(trip.getReservationId()).isNotEqualTo(held.getId());
   }
 }

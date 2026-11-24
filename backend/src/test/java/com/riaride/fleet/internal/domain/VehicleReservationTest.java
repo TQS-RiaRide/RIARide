@@ -80,4 +80,29 @@ class VehicleReservationTest {
     assertThatThrownBy(vehicle::startRide).isInstanceOf(IllegalStateException.class);
     assertThat(vehicle.getStatus()).isEqualTo(status);
   }
+
+  // The reservation expired without a ride (BR11): the bike can be booked again.
+  @Requirement("RIA-54")
+  @Test
+  void shouldBecomeAvailableWhenReleased() {
+    var vehicle = availableWithBattery(80);
+    vehicle.reserve(POLICY);
+
+    vehicle.release();
+
+    assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    assertThat(vehicle.getHubId()).isEqualTo(HUB);
+  }
+
+  // Only a reserved bike is released: a bike an operator moved to maintenance stays there.
+  @Requirement("RIA-54")
+  @ParameterizedTest
+  @EnumSource(value = VehicleStatus.class, names = "RESERVED", mode = EnumSource.Mode.EXCLUDE)
+  void shouldKeepItsStatusWhenReleasedWhileNotReserved(VehicleStatus status) {
+    var vehicle = Vehicle.withStatus("EB-201", VehicleType.E_BIKE, HUB, status);
+
+    vehicle.release();
+
+    assertThat(vehicle.getStatus()).isEqualTo(status);
+  }
 }

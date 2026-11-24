@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 // Unit test (Surefire): starting a trip holds the bike for the pass (BR11: 15 minutes). A failed
 // start leaves the reservation active, so the guest can try the same bike again; the trip that
-// starts uses it. Expiring it is story 3.3 (RIA-54).
+// starts uses it, and a hold that is not used expires (RIA-54).
 class ReservationTest {
 
   private static final Instant NOW = FixedClockConfiguration.NOW;
@@ -62,6 +62,37 @@ class ReservationTest {
     reservation.markUsed();
 
     assertThatThrownBy(reservation::markUsed).isInstanceOf(IllegalStateException.class);
+    assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.USED);
+  }
+
+  // Exactly 15 minutes after the reservation the hold is over, like the unlock timeout.
+  @Requirement("RIA-54")
+  @Test
+  void shouldExpireFrom15MinutesAfterTheReservation() {
+    var reservation = Reservation.hold(PASS, EB_201, NOW, HOLD);
+
+    assertThat(reservation.isExpiredAt(NOW.plus(HOLD).minusSeconds(1))).isFalse();
+    assertThat(reservation.isExpiredAt(NOW.plus(HOLD))).isTrue();
+    assertThat(reservation.isExpiredAt(NOW.plus(HOLD).plusSeconds(1))).isTrue();
+  }
+
+  @Requirement("RIA-54")
+  @Test
+  void shouldBecomeExpiredWhenTheHoldEnds() {
+    var reservation = Reservation.hold(PASS, EB_201, NOW, HOLD);
+
+    reservation.expire();
+
+    assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+  }
+
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotExpireAUsedReservation() {
+    var reservation = Reservation.hold(PASS, EB_201, NOW, HOLD);
+    reservation.markUsed();
+
+    assertThatThrownBy(reservation::expire).isInstanceOf(IllegalStateException.class);
     assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.USED);
   }
 }
