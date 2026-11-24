@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// Integration test (Failsafe): the reservation and trip tables (Flyway V7) on PostgreSQL in
+// Integration test (Failsafe): the reservation and trip tables (Flyway V7, V8) on PostgreSQL in
 // Testcontainers. The database itself guarantees one trip in progress per pass (BR6) and one active
 // reservation per bike and per pass, so concurrent starts cannot both succeed (RIA-54).
 @DataJpaTest
@@ -296,5 +296,50 @@ class TripRepositoryIT {
         .get()
         .extracting(Trip::getId)
         .isEqualTo(trip.getId());
+  }
+
+  // An expired hold frees the pass and the bike for a new reservation (BR11, V8).
+  @Requirement("RIA-54")
+  @Test
+  void shouldAllowNewReservationOnceTheLastOneExpired() {
+    var expired = reservation(passId, bike201, "EB-201", NOW);
+    expired.expire();
+    reservations.saveAndFlush(expired);
+    entityManager.clear();
+
+    reservation(passId, bike201, "EB-201", NOW.plus(HOLD));
+
+    assertThat(reservations.findById(expired.getId()))
+        .get()
+        .extracting(Reservation::getStatus)
+        .isEqualTo(ReservationStatus.EXPIRED);
+    assertThat(reservations.count()).isEqualTo(2);
+  }
+
+  // The expiry job looks for active holds at or past their end: exactly at it the hold is over.
+  @Requirement("RIA-54")
+  @Test
+  void shouldFindActiveReservationIdsPastTheirHold() {
+    var atEnd = reservation(passId, bike201, "EB-201", NOW.minus(HOLD));
+    var stillHeld = reservation(pass("CLOSED"), bike202, "EB-202", NOW.minus(HOLD).plusSeconds(1));
+
+    var found =
+        reservations.findIdsByStatusAndExpiresAtLessThanEqual(ReservationStatus.ACTIVE, NOW);
+
+    assertThat(found).containsExactly(atEnd.getId()).doesNotContain(stillHeld.getId());
+  }
+
+  @Requirement("RIA-54")
+  @Test
+  void shouldTellWhetherAReservationHasATripStillStarting() {
+    var reservation = reservation(passId, bike201, "EB-201", NOW);
+    assertThat(trips.existsByReservationIdAndStatus(reservation.getId(), TripStatus.STARTING))
+        .isFalse();
+
+    startingTrip(reservation, NOW);
+
+    assertThat(trips.existsByReservationIdAndStatus(reservation.getId(), TripStatus.STARTING))
+        .isTrue();
+    assertThat(reservations.findByIdForUpdate(reservation.getId())).isPresent();
   }
 }
