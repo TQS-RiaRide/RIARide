@@ -10,6 +10,7 @@ import com.riaride.trips.internal.domain.TripStatus;
 import com.riaride.trips.internal.persistence.ReservationRepository;
 import com.riaride.trips.internal.persistence.TripRepository;
 import java.time.Clock;
+import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 // reservation and one trip in progress per pass (BR6).
 //
 // A failed start leaves its reservation active, so the bike stays held for the pass: a retry on the
-// same bike reuses it, and another bike is refused until it expires (story 3.3).
+// same bike reuses it, and another bike is refused until it expires (BR11). An expired hold is
+// ended here, and its bike released, even if ReservationExpiryJob has not run yet.
 @Service
 public class StartTripService {
 
@@ -62,7 +64,10 @@ public class StartTripService {
       throw new TripAlreadyInProgressException();
     }
     var now = clock.instant();
-    var held = reservations.findByPassIdAndStatus(pass.passId(), ReservationStatus.ACTIVE);
+    var held =
+        reservations
+            .findByPassIdAndStatus(pass.passId(), ReservationStatus.ACTIVE)
+            .filter(reservation -> isStillHeld(reservation, now));
     Reservation reservation;
     if (held.isPresent()) {
       if (!held.get().isFor(command.vehicleCode())) {
@@ -78,5 +83,17 @@ public class StartTripService {
     var trip = trips.saveAndFlush(Trip.requestStart(reservation, guest.guestId(), now));
     events.publishEvent(new TripStartRequested(trip.getVehicleCode()));
     return trip;
+  }
+
+  // An expired hold ends before a new bike is reserved: flushed first, so the pass's partial unique
+  // index (uq_reservation_active_per_pass) is free for the new reservation.
+  private boolean isStillHeld(Reservation reservation, Instant now) {
+    if (!reservation.isExpiredAt(now)) {
+      return true;
+    }
+    reservation.expire();
+    reservations.saveAndFlush(reservation);
+    vehicles.release(reservation.getVehicleId());
+    return false;
   }
 }

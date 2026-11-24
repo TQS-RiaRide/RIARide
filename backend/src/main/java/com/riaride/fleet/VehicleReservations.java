@@ -12,4 +12,7 @@ public interface VehicleReservations {
 
   // Telemetry confirmed the unlock: the reserved bike is in use and leaves its hub.
   void startRide(UUID vehicleId);
+
+  // The reservation ended without a ride (BR11): a bike still reserved is available again.
+  void release(UUID vehicleId);
 }

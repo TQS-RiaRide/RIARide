@@ -60,6 +60,8 @@ riaride:
     reservation-hold: 15m
     # How often UnlockTimeoutJob looks for starts that are overdue.
     unlock-timeout-check-interval: 5s
+    # How often ReservationExpiryJob looks for holds that ended unused (BR11).
+    reservation-expiry-check-interval: 30s
 
 management:
   endpoints:

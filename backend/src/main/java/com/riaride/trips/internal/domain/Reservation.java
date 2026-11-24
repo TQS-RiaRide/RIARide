@@ -17,9 +17,8 @@ import org.springframework.data.domain.Persistable;
 
 // A bike held for a pass (BR11). Starting a trip reserves the bike first; if the unlock is not
 // confirmed in time the trip fails but the reservation stays, so the bike is still held and the
-// guest
-// can try it again until the reservation expires (BR13). Expiring it is story 3.3; here expiresAt
-// is only stored.
+// guest can try it again until the reservation expires (BR13). An unused hold expires at expiresAt
+// (ReservationExpiryJob, or the guest's next start), and its bike is released.
 @Entity
 @Table(name = "reservation")
 public class Reservation implements Persistable<UUID> {
@@ -73,6 +72,19 @@ public class Reservation implements Persistable<UUID> {
       throw new IllegalArgumentException("A reservation needs a pass, a bike, a time and a hold");
     }
     return new Reservation(passId, vehicle, now, hold);
+  }
+
+  // Exactly at expiresAt the hold is already over.
+  public boolean isExpiredAt(Instant now) {
+    return !now.isBefore(expiresAt);
+  }
+
+  // The hold ended without a trip.
+  public void expire() {
+    if (status != ReservationStatus.ACTIVE) {
+      throw new IllegalStateException("Only an active reservation can expire");
+    }
+    this.status = ReservationStatus.EXPIRED;
   }
 
   public boolean isFor(String code) {

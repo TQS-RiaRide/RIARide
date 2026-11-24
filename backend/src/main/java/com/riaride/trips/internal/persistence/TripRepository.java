@@ -17,6 +17,8 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
 
   boolean existsByPassIdAndStatusIn(UUID passId, Collection<TripStatus> statuses);
 
+  boolean existsByReservationIdAndStatus(UUID reservationId, TripStatus status);
+
   // The bike's latest trip, which an UNLOCKED reading confirms or answers with LOCK. Locked
   // (SELECT ... FOR UPDATE), so the unlock confirmation and the timeout job never decide the same
   // trip at once. The vehicle code is the id telemetry reports.

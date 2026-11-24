@@ -114,6 +114,14 @@ public class Vehicle implements Persistable<UUID> {
     this.status = VehicleStatus.RESERVED;
   }
 
+  // The reservation ended without a ride (BR11): the bike can be booked again. Only a reserved bike
+  // changes, so a bike an operator took out of service in the meantime stays out.
+  public void release() {
+    if (status == VehicleStatus.RESERVED) {
+      this.status = VehicleStatus.AVAILABLE;
+    }
+  }
+
   // Telemetry confirmed the unlock: the vehicle leaves its hub, so it no longer takes a slot.
   public void startRide() {
     if (status != VehicleStatus.RESERVED) {
