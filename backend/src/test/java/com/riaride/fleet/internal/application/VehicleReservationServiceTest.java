@@ -74,7 +74,7 @@ class VehicleReservationServiceTest {
     bike.reserve(new BookingBatteryPolicy(20));
     when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
 
-    service.startRide(bike.getId());
+    assertThat(service.startRide(bike.getId())).isTrue();
 
     assertThat(bike.getStatus()).isEqualTo(VehicleStatus.IN_USE);
     assertThat(bike.getHubId()).isNull();
@@ -90,5 +90,27 @@ class VehicleReservationServiceTest {
     service.release(bike.getId());
 
     assertThat(bike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+  }
+
+  // An operator took the bike out of service while its unlock was pending: no ride starts.
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotStartRideOfVehicleNoLongerReserved() {
+    var bike = availableBike("EB-201", 80);
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+
+    assertThat(service.startRide(bike.getId())).isFalse();
+
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    assertThat(bike.getHubId()).isEqualTo(HUB);
+  }
+
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotStartRideOfUnknownVehicle() {
+    var unknown = UUID.randomUUID();
+    when(vehicles.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
+
+    assertThat(service.startRide(unknown)).isFalse();
   }
 }

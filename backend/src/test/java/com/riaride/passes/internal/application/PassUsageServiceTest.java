@@ -148,4 +148,33 @@ class PassUsageServiceTest {
     assertThatThrownBy(() -> service.activateOnFirstTrip(unknown, NOW))
         .isInstanceOf(IllegalStateException.class);
   }
+
+  // Checked again when telemetry confirms the unlock, with the pass locked until the trip starts.
+  @Requirement("RIA-54")
+  @Test
+  void shouldAcceptAPaidPassForATripThatStarts() {
+    var pass = paidPass();
+    when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
+
+    assertThat(service.canStartTrip(pass.getId(), NOW)).isTrue();
+  }
+
+  // The pass was refunded or cancelled while the unlock was pending.
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotAcceptAPassThatIsNoLongerUsable() {
+    var pass = pendingPass();
+    when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
+
+    assertThat(service.canStartTrip(pass.getId(), NOW)).isFalse();
+  }
+
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotAcceptAnUnknownPassForATrip() {
+    var unknown = UUID.randomUUID();
+    when(passes.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
+
+    assertThat(service.canStartTrip(unknown, NOW)).isFalse();
+  }
 }

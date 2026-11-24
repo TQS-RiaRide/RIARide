@@ -212,4 +212,30 @@ class TripTest {
     assertThatThrownBy(() -> TripStatus.ACTIVE.remove(TripStatus.FAILED))
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  // The unlock came in time, but the bike or the pass could no longer take the trip (RIA-54): the
+  // trip fails instead, so the bike is locked again.
+  @Requirement("RIA-54")
+  @Test
+  void shouldFailAStartThatTheBikeOrPassCannotTake() {
+    var trip = startingTrip();
+    trip.confirmUnlock(secondsAfterRequest(5), secondsAfterRequest(5), TIMEOUT);
+
+    trip.failStart(secondsAfterRequest(5));
+
+    assertThat(trip.getStatus()).isEqualTo(TripStatus.FAILED);
+    assertThat(trip.getFailedAt()).isEqualTo(secondsAfterRequest(5));
+    assertThat(trip.getStartedAt()).isNull();
+  }
+
+  @Requirement("RIA-54")
+  @Test
+  void shouldNotFailAStartThatAlreadyFailed() {
+    var trip = startingTrip();
+    trip.failIfUnlockOverdue(secondsAfterRequest(30), TIMEOUT);
+
+    assertThatThrownBy(() -> trip.failStart(secondsAfterRequest(40)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(trip.getFailedAt()).isEqualTo(secondsAfterRequest(30));
+  }
 }

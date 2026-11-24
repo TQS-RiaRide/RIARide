@@ -93,6 +93,8 @@ class UnlockConfirmationListenerTest {
   @Test
   void shouldStartTripActivatePassAndPutBikeInUse() {
     var now = REQUESTED.plusSeconds(10);
+    when(passes.canStartTrip(PASS, now)).thenReturn(true);
+    when(vehicles.startRide(VEHICLE)).thenReturn(true);
 
     listenerAt(10).on(unlockedAt(now.minusSeconds(1)));
 
@@ -178,5 +180,38 @@ class UnlockConfirmationListenerTest {
 
     assertThat(trip.getStatus()).isEqualTo(TripStatus.STARTING);
     verifyNoInteractions(vehicles, passes, events);
+  }
+
+  // An operator took the bike out of service while the unlock was pending. The reading is still
+  // handled (no exception rolls back the battery reading): the trip fails and the bike is locked.
+  @Requirement("RIA-54")
+  @Test
+  void shouldFailAndLockWhenTheBikeIsNoLongerReserved() {
+    var now = REQUESTED.plusSeconds(10);
+    when(passes.canStartTrip(PASS, now)).thenReturn(true);
+    when(vehicles.startRide(VEHICLE)).thenReturn(false);
+
+    listenerAt(10).on(unlockedAt(now.minusSeconds(1)));
+
+    assertThat(trip.getStatus()).isEqualTo(TripStatus.FAILED);
+    verify(events).publishEvent(new TripFailed("EB-201", HUB));
+    verify(passes, never()).activateOnFirstTrip(any(), any());
+    assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+  }
+
+  // The pass was refunded or cancelled while the unlock was pending: no trip, the bike is locked.
+  @Requirement("RIA-54")
+  @Test
+  void shouldFailAndLockWhenThePassCanNoLongerStartATrip() {
+    var now = REQUESTED.plusSeconds(10);
+    when(passes.canStartTrip(PASS, now)).thenReturn(false);
+
+    listenerAt(10).on(unlockedAt(now.minusSeconds(1)));
+
+    assertThat(trip.getStatus()).isEqualTo(TripStatus.FAILED);
+    verify(events).publishEvent(new TripFailed("EB-201", HUB));
+    verify(vehicles, never()).startRide(any());
+    verify(passes, never()).activateOnFirstTrip(any(), any());
+    assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
   }
 }
