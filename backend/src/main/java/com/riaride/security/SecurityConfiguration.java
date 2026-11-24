@@ -40,12 +40,18 @@ class SecurityConfiguration {
                 // Guest sign-up (RIA-51): the guest has no account, and so no token, yet.
                 .requestMatchers(HttpMethod.POST, "/api/v1/guests")
                 .permitAll()
+                // Stay registration (RIA-50): hotel managers and admins only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/stays")
+                .hasAnyRole("HOTEL_MANAGER", "ADMIN")
                 // Hub registration (RIA-56): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs")
                 .hasAnyRole("OPERATOR", "ADMIN")
                 // Vehicle registration at a hub (RIA-57): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs/*/vehicles")
                 .hasAnyRole("OPERATOR", "ADMIN")
+                // Buying a pass (RIA-52): guests only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/passes")
+                .hasRole("GUEST")
                 // Starting a trip (RIA-54): guests only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/trips")
                 .hasRole("GUEST")
