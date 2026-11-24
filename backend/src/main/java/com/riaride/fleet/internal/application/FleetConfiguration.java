@@ -9,9 +9,8 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(FleetProperties.class)
 class FleetConfiguration {
 
-	@Bean
-	BookingBatteryPolicy bookingBatteryPolicy(FleetProperties properties) {
-		return new BookingBatteryPolicy(properties.minBookingBatteryPct());
-	}
-
+  @Bean
+  BookingBatteryPolicy bookingBatteryPolicy(FleetProperties properties) {
+    return new BookingBatteryPolicy(properties.minBookingBatteryPct());
+  }
 }

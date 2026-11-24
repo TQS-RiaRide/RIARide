@@ -14,51 +14,55 @@ import org.springframework.dao.DataIntegrityViolationException;
 // submitted values, so it never reaches the response.
 class VehicleProblemHandlerTest {
 
-	private static final String SQL_MESSAGE = "duplicate key value violates unique constraint: (lower(code))=(eb-401)";
+  private static final String SQL_MESSAGE =
+      "duplicate key value violates unique constraint: (lower(code))=(eb-401)";
 
-	private final VehicleProblemHandler handler = new VehicleProblemHandler();
+  private final VehicleProblemHandler handler = new VehicleProblemHandler();
 
-	private static DataIntegrityViolationException violationOf(String constraint) {
-		var cause = new ConstraintViolationException(SQL_MESSAGE, new SQLException(SQL_MESSAGE, "23505"), constraint);
-		return new DataIntegrityViolationException("could not execute statement", cause);
-	}
+  private static DataIntegrityViolationException violationOf(String constraint) {
+    var cause =
+        new ConstraintViolationException(
+            SQL_MESSAGE, new SQLException(SQL_MESSAGE, "23505"), constraint);
+    return new DataIntegrityViolationException("could not execute statement", cause);
+  }
 
-	@Requirement("RIA-57")
-	@Test
-	void shouldMapTheVehicleCodeConstraintToCodeAlreadyInUse() {
-		var problem = handler.dataIntegrityViolation(violationOf("uq_vehicle_code"));
+  @Requirement("RIA-57")
+  @Test
+  void shouldMapTheVehicleCodeConstraintToCodeAlreadyInUse() {
+    var problem = handler.dataIntegrityViolation(violationOf("uq_vehicle_code"));
 
-		assertThat(problem.getStatus()).isEqualTo(409);
-		assertThat(problem.getTitle()).isEqualTo("Vehicle code already in use");
-		assertThat(problem.getDetail()).doesNotContain("eb-401");
-	}
+    assertThat(problem.getStatus()).isEqualTo(409);
+    assertThat(problem.getTitle()).isEqualTo("Vehicle code already in use");
+    assertThat(problem.getDetail()).doesNotContain("eb-401");
+  }
 
-	// PostgreSQL may report the name in another case.
-	@Requirement("RIA-57")
-	@Test
-	void shouldMatchTheVehicleCodeConstraintIgnoringCase() {
-		var problem = handler.dataIntegrityViolation(violationOf("UQ_VEHICLE_CODE"));
+  // PostgreSQL may report the name in another case.
+  @Requirement("RIA-57")
+  @Test
+  void shouldMatchTheVehicleCodeConstraintIgnoringCase() {
+    var problem = handler.dataIntegrityViolation(violationOf("UQ_VEHICLE_CODE"));
 
-		assertThat(problem.getTitle()).isEqualTo("Vehicle code already in use");
-	}
+    assertThat(problem.getTitle()).isEqualTo("Vehicle code already in use");
+  }
 
-	@Requirement("RIA-57")
-	@Test
-	void shouldMapAnyOtherConstraintToAGenericConflict() {
-		var problem = handler.dataIntegrityViolation(violationOf("ck_vehicle_status"));
+  @Requirement("RIA-57")
+  @Test
+  void shouldMapAnyOtherConstraintToAGenericConflict() {
+    var problem = handler.dataIntegrityViolation(violationOf("ck_vehicle_status"));
 
-		assertThat(problem.getStatus()).isEqualTo(409);
-		assertThat(problem.getTitle()).isEqualTo("Conflict");
-		assertThat(problem.getDetail()).doesNotContain("eb-401");
-	}
+    assertThat(problem.getStatus()).isEqualTo(409);
+    assertThat(problem.getTitle()).isEqualTo("Conflict");
+    assertThat(problem.getDetail()).doesNotContain("eb-401");
+  }
 
-	@Requirement("RIA-57")
-	@Test
-	void shouldMapAViolationWithoutAConstraintNameToAGenericConflict() {
-		var problem = handler.dataIntegrityViolation(
-			new DataIntegrityViolationException("could not execute statement", new SQLException(SQL_MESSAGE)));
+  @Requirement("RIA-57")
+  @Test
+  void shouldMapAViolationWithoutAConstraintNameToAGenericConflict() {
+    var problem =
+        handler.dataIntegrityViolation(
+            new DataIntegrityViolationException(
+                "could not execute statement", new SQLException(SQL_MESSAGE)));
 
-		assertThat(problem.getTitle()).isEqualTo("Conflict");
-	}
-
+    assertThat(problem.getTitle()).isEqualTo("Conflict");
+  }
 }

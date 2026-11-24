@@ -19,36 +19,42 @@ import tools.jackson.databind.json.JsonMapper;
 @EnableMethodSecurity
 class SecurityConfiguration {
 
-	@Bean
-	SecurityFilterChain apiSecurity(HttpSecurity http, JsonMapper json) {
-		var problems = new ProblemDetailsSecurityHandler(json);
-		return http
-			// No cookies or sessions, so no CSRF token: requests authenticate with a bearer token only.
-			.csrf(AbstractHttpConfigurer::disable)
-			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			.authorizeHttpRequests(requests -> requests
-				.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-				// Guest sign-up (RIA-51): the guest has no account, and so no token, yet.
-				.requestMatchers(HttpMethod.POST, "/api/v1/guests").permitAll()
-				// Hub registration (RIA-56): operators and admins only.
-				.requestMatchers(HttpMethod.POST, "/api/v1/hubs").hasAnyRole("OPERATOR", "ADMIN")
-				// Vehicle registration at a hub (RIA-57): operators and admins only.
-				.requestMatchers(HttpMethod.POST, "/api/v1/hubs/*/vehicles").hasAnyRole("OPERATOR", "ADMIN")
-				.anyRequest().authenticated())
-			.oauth2ResourceServer(resourceServer -> resourceServer
-				.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-				.authenticationEntryPoint(problems)
-				.accessDeniedHandler(problems))
-			.exceptionHandling(exceptions -> exceptions
-				.authenticationEntryPoint(problems)
-				.accessDeniedHandler(problems))
-			.build();
-	}
+  @Bean
+  SecurityFilterChain apiSecurity(HttpSecurity http, JsonMapper json) {
+    var problems = new ProblemDetailsSecurityHandler(json);
+    return http
+        // No cookies or sessions, so no CSRF token: requests authenticate with a bearer token only.
+        .csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(requests ->
+            requests
+                .requestMatchers("/actuator/health", "/actuator/health/**")
+                .permitAll()
+                // Guest sign-up (RIA-51): the guest has no account, and so no token, yet.
+                .requestMatchers(HttpMethod.POST, "/api/v1/guests")
+                .permitAll()
+                // Hub registration (RIA-56): operators and admins only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/hubs")
+                .hasAnyRole("OPERATOR", "ADMIN")
+                // Vehicle registration at a hub (RIA-57): operators and admins only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/hubs/*/vehicles")
+                .hasAnyRole("OPERATOR", "ADMIN")
+                .anyRequest()
+                .authenticated())
+        .oauth2ResourceServer(resourceServer ->
+            resourceServer
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                .authenticationEntryPoint(problems)
+                .accessDeniedHandler(problems))
+        .exceptionHandling(exceptions ->
+            exceptions.authenticationEntryPoint(problems).accessDeniedHandler(problems))
+        .build();
+  }
 
-	private static JwtAuthenticationConverter jwtAuthenticationConverter() {
-		var converter = new JwtAuthenticationConverter();
-		converter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
-		return converter;
-	}
-
+  private static JwtAuthenticationConverter jwtAuthenticationConverter() {
+    var converter = new JwtAuthenticationConverter();
+    converter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
+    return converter;
+  }
 }

@@ -11,13 +11,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface HubRepository extends JpaRepository<Hub, UUID> {
 
-	// Exact match: names that differ only in letter case are different hubs.
-	boolean existsByName(String name);
+  // Exact match: names that differ only in letter case are different hubs.
+  boolean existsByName(String name);
 
-	// Locks the hub row until the transaction ends (SELECT ... FOR UPDATE), so two requests that
-	// dock a bike at the same hub check its free slots one after the other (BR10).
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select h from Hub h where h.id = :id")
-	Optional<Hub> findByIdForUpdate(@Param("id") UUID id);
-
+  // Locks the hub row until the transaction ends (SELECT ... FOR UPDATE), so two requests that
+  // dock a bike at the same hub check its free slots one after the other (BR10).
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select h from Hub h where h.id = :id")
+  Optional<Hub> findByIdForUpdate(@Param("id") UUID id);
 }

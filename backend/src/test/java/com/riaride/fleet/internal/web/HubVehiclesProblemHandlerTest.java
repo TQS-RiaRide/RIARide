@@ -14,42 +14,48 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 // (RIA-53). Each one names the parameter it is about; none repeats the submitted value.
 class HubVehiclesProblemHandlerTest {
 
-	private final HubVehiclesProblemHandler handler = new HubVehiclesProblemHandler();
+  private final HubVehiclesProblemHandler handler = new HubVehiclesProblemHandler();
 
-	private static MethodArgumentTypeMismatchException mismatchOf(String parameter) {
-		var exception = mock(MethodArgumentTypeMismatchException.class);
-		when(exception.getName()).thenReturn(parameter);
-		return exception;
-	}
+  private static MethodArgumentTypeMismatchException mismatchOf(String parameter) {
+    var exception = mock(MethodArgumentTypeMismatchException.class);
+    when(exception.getName()).thenReturn(parameter);
+    return exception;
+  }
 
-	@Requirement("RIA-53")
-	@Test
-	void shouldNameTheHubIdWhenItIsNotAUuid() {
-		var problem = handler.invalidArgument(mismatchOf("hubId"));
+  @Requirement("RIA-53")
+  @Test
+  void shouldNameTheHubIdWhenItIsNotAUuid() {
+    var problem = handler.invalidArgument(mismatchOf("hubId"));
 
-		assertThat(problem.getStatus()).isEqualTo(400);
-		assertThat(problem.getTitle()).isEqualTo("Invalid hub id");
-	}
+    assertThat(problem.getStatus()).isEqualTo(400);
+    assertThat(problem.getTitle()).isEqualTo("Invalid hub id");
+  }
 
-	@Requirement("RIA-53")
-	@Test
-	void shouldNameTheTypeWhenItIsUnknown() {
-		var problem = handler.invalidArgument(mismatchOf("type"));
+  @Requirement("RIA-53")
+  @Test
+  void shouldNameTheTypeWhenItIsUnknown() {
+    var problem = handler.invalidArgument(mismatchOf("type"));
 
-		assertThat(problem.getTitle()).isEqualTo("Invalid vehicle type");
-		assertThat(problem.getProperties()).containsKey("invalid-params");
-	}
+    assertThat(problem.getTitle()).isEqualTo("Invalid vehicle type");
+    assertThat(problem.getProperties()).containsKey("invalid-params");
+  }
 
-	// A parameter added later, such as paging, must not be reported as an invalid hub id.
-	@Requirement("RIA-53")
-	@Test
-	void shouldNameAnyOtherParameterGenerically() {
-		var problem = handler.invalidArgument(mismatchOf("page"));
+  // A parameter added later, such as paging, must not be reported as an invalid hub id.
+  @Requirement("RIA-53")
+  @Test
+  void shouldNameAnyOtherParameterGenerically() {
+    var problem = handler.invalidArgument(mismatchOf("page"));
 
-		assertThat(problem.getStatus()).isEqualTo(400);
-		assertThat(problem.getTitle()).isEqualTo("Invalid parameter");
-		assertThat(problem.getProperties()).containsEntry("invalid-params",
-			List.of(Map.of("name", "page", "reason", "The value does not have the expected type or format.")));
-	}
-
+    assertThat(problem.getStatus()).isEqualTo(400);
+    assertThat(problem.getTitle()).isEqualTo("Invalid parameter");
+    assertThat(problem.getProperties())
+        .containsEntry(
+            "invalid-params",
+            List.of(
+                Map.of(
+                    "name",
+                    "page",
+                    "reason",
+                    "The value does not have the expected type or format.")));
+  }
 }

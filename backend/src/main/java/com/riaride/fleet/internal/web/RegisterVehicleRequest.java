@@ -8,8 +8,7 @@ import java.util.UUID;
 // (Vehicle.register), so they are not repeated here.
 record RegisterVehicleRequest(String code, VehicleType type) {
 
-	RegisterVehicleCommand toCommand(UUID hubId) {
-		return new RegisterVehicleCommand(hubId, code, type);
-	}
-
+  RegisterVehicleCommand toCommand(UUID hubId) {
+    return new RegisterVehicleCommand(hubId, code, type);
+  }
 }

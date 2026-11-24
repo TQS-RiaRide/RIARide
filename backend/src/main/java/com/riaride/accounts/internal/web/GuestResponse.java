@@ -5,8 +5,7 @@ import java.util.UUID;
 
 record GuestResponse(UUID id, String email, String locale) {
 
-	static GuestResponse from(Guest guest) {
-		return new GuestResponse(guest.getId(), guest.getEmail(), guest.getLocale());
-	}
-
+  static GuestResponse from(Guest guest) {
+    return new GuestResponse(guest.getId(), guest.getEmail(), guest.getLocale());
+  }
 }

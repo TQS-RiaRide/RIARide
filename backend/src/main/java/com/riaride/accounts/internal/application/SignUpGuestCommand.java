@@ -4,9 +4,12 @@ package com.riaride.accounts.internal.application;
 // so neither reaches logs by accident.
 public record SignUpGuestCommand(String email, String password, String stayCode, String locale) {
 
-	@Override
-	public String toString() {
-		return "SignUpGuestCommand[email=" + email + ", password=********, stayCode=********, locale=" + locale + "]";
-	}
-
+  @Override
+  public String toString() {
+    return "SignUpGuestCommand[email="
+        + email
+        + ", password=********, stayCode=********, locale="
+        + locale
+        + "]";
+  }
 }

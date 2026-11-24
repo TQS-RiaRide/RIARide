@@ -15,27 +15,33 @@ import org.junit.jupiter.api.Test;
 // the connection, and the broker would redeliver the same message forever (QoS 1, kept session).
 class MqttTelemetrySubscriberTest {
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldDropAMessageWhoseHandlingFails() {
-		var handler = mock(TelemetryMessageHandler.class);
-		doThrow(new IllegalStateException("database down")).when(handler).handle(anyString(), any());
-		var subscriber = new MqttTelemetrySubscriber(
-			new TelemetryMqttProperties(true, "tcp://localhost:1883", "riaride-backend", null, null), handler);
+  @Requirement("RIA-59")
+  @Test
+  void shouldDropAMessageWhoseHandlingFails() {
+    var handler = mock(TelemetryMessageHandler.class);
+    doThrow(new IllegalStateException("database down")).when(handler).handle(anyString(), any());
+    var subscriber =
+        new MqttTelemetrySubscriber(
+            new TelemetryMqttProperties(
+                true, "tcp://localhost:1883", "riaride-backend", null, null),
+            handler);
 
-		assertThatCode(() -> subscriber.messageArrived("riaride/vehicles/EB-601/telemetry",
-			new MqttMessage("{}".getBytes(StandardCharsets.UTF_8))))
-			.doesNotThrowAnyException();
-	}
+    assertThatCode(() ->
+            subscriber.messageArrived(
+                "riaride/vehicles/EB-601/telemetry",
+                new MqttMessage("{}".getBytes(StandardCharsets.UTF_8))))
+        .doesNotThrowAnyException();
+  }
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldStopCleanlyWhenItNeverStarted() {
-		var subscriber = new MqttTelemetrySubscriber(
-			new TelemetryMqttProperties(true, "tcp://localhost:1883", "riaride-backend", null, null),
-			mock(TelemetryMessageHandler.class));
+  @Requirement("RIA-59")
+  @Test
+  void shouldStopCleanlyWhenItNeverStarted() {
+    var subscriber =
+        new MqttTelemetrySubscriber(
+            new TelemetryMqttProperties(
+                true, "tcp://localhost:1883", "riaride-backend", null, null),
+            mock(TelemetryMessageHandler.class));
 
-		assertThatCode(subscriber::stop).doesNotThrowAnyException();
-	}
-
+    assertThatCode(subscriber::stop).doesNotThrowAnyException();
+  }
 }

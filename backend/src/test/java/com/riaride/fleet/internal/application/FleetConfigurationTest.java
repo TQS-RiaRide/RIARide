@@ -14,33 +14,38 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 // so the backoffice usage rule can replace it later without touching the policy.
 class FleetConfigurationTest {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withUserConfiguration(FleetConfiguration.class);
+  private final ApplicationContextRunner contextRunner =
+      new ApplicationContextRunner().withUserConfiguration(FleetConfiguration.class);
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldBuildBookingPolicyFromConfiguredMinimumBattery() {
-		contextRunner.withPropertyValues("riaride.fleet.min-booking-battery-pct=20")
-			.run(context -> assertThat(context.getBean(BookingBatteryPolicy.class).minimumPercent())
-				.isEqualTo(20));
-	}
+  @Requirement("RIA-59")
+  @Test
+  void shouldBuildBookingPolicyFromConfiguredMinimumBattery() {
+    contextRunner
+        .withPropertyValues("riaride.fleet.min-booking-battery-pct=20")
+        .run(context ->
+            assertThat(context.getBean(BookingBatteryPolicy.class).minimumPercent()).isEqualTo(20));
+  }
 
-	@Requirement("RIA-59")
-	@ParameterizedTest
-	@ValueSource(ints = { -1, 101 })
-	void shouldFailStartupWhenMinimumBatteryOutside0To100Percent(int percent) {
-		contextRunner.withPropertyValues("riaride.fleet.min-booking-battery-pct=" + percent)
-			.run(context -> assertThat(context).hasFailed()
-				.getFailure()
-				.hasRootCauseInstanceOf(BindValidationException.class));
-	}
+  @Requirement("RIA-59")
+  @ParameterizedTest
+  @ValueSource(ints = {-1, 101})
+  void shouldFailStartupWhenMinimumBatteryOutside0To100Percent(int percent) {
+    contextRunner
+        .withPropertyValues("riaride.fleet.min-booking-battery-pct=" + percent)
+        .run(context ->
+            assertThat(context)
+                .hasFailed()
+                .getFailure()
+                .hasRootCauseInstanceOf(BindValidationException.class));
+  }
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldFailStartupWhenMinimumBatteryIsMissing() {
-		contextRunner.run(context -> assertThat(context).hasFailed()
-			.getFailure()
-			.hasRootCauseInstanceOf(BindValidationException.class));
-	}
-
+  @Requirement("RIA-59")
+  @Test
+  void shouldFailStartupWhenMinimumBatteryIsMissing() {
+    contextRunner.run(context ->
+        assertThat(context)
+            .hasFailed()
+            .getFailure()
+            .hasRootCauseInstanceOf(BindValidationException.class));
+  }
 }

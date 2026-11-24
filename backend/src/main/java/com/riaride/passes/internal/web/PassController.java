@@ -21,26 +21,32 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequestMapping("/api/v1/passes")
 class PassController {
 
-	private final PurchasePassService purchasePass;
+  private final PurchasePassService purchasePass;
 
-	PassController(PurchasePassService purchasePass) {
-		this.purchasePass = purchasePass;
-	}
+  PassController(PurchasePassService purchasePass) {
+    this.purchasePass = purchasePass;
+  }
 
-	@PostMapping
-	@PreAuthorize("hasRole('GUEST')")
-	ResponseEntity<PassResponse> purchase(
-		// At most 200 characters: the key is stored scoped by guest (37 more) and sent to Stripe,
-		// whose limit is 255.
-		@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 200) String idempotencyKey,
-		@Valid @RequestBody PurchasePassRequest request, JwtAuthenticationToken authentication) {
-		var pass = purchasePass.purchase(new PurchasePassCommand(authentication.getName(), request.passType(),
-			request.paymentMethod(), idempotencyKey));
-		var location = ServletUriComponentsBuilder.fromCurrentRequest()
-			.path("/{id}")
-			.buildAndExpand(pass.getId())
-			.toUri();
-		return ResponseEntity.created(location).body(PassResponse.from(pass));
-	}
-
+  @PostMapping
+  @PreAuthorize("hasRole('GUEST')")
+  ResponseEntity<PassResponse> purchase(
+      // At most 200 characters: the key is stored scoped by guest (37 more) and sent to Stripe,
+      // whose limit is 255.
+      @RequestHeader("Idempotency-Key") @NotBlank @Size(max = 200) String idempotencyKey,
+      @Valid @RequestBody PurchasePassRequest request,
+      JwtAuthenticationToken authentication) {
+    var pass =
+        purchasePass.purchase(
+            new PurchasePassCommand(
+                authentication.getName(),
+                request.passType(),
+                request.paymentMethod(),
+                idempotencyKey));
+    var location =
+        ServletUriComponentsBuilder.fromCurrentRequest()
+            .path("/{id}")
+            .buildAndExpand(pass.getId())
+            .toUri();
+    return ResponseEntity.created(location).body(PassResponse.from(pass));
+  }
 }

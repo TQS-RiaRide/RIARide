@@ -18,23 +18,24 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequestMapping("/api/v1/hubs/{hubId}/vehicles")
 class RegisterVehicleController {
 
-	private final RegisterVehicleService registerVehicle;
+  private final RegisterVehicleService registerVehicle;
 
-	RegisterVehicleController(RegisterVehicleService registerVehicle) {
-		this.registerVehicle = registerVehicle;
-	}
+  RegisterVehicleController(RegisterVehicleService registerVehicle) {
+    this.registerVehicle = registerVehicle;
+  }
 
-	@PostMapping
-	@PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
-	ResponseEntity<VehicleResponse> register(@PathVariable UUID hubId, @RequestBody RegisterVehicleRequest request) {
-		var vehicle = registerVehicle.register(request.toCommand(hubId));
-		// The vehicle stays a member of the fleet when it leaves this hub, so its own resource is
-		// /api/v1/vehicles/{id}, not under the hub.
-		var location = ServletUriComponentsBuilder.fromCurrentContextPath()
-			.path("/api/v1/vehicles/{id}")
-			.buildAndExpand(vehicle.getId())
-			.toUri();
-		return ResponseEntity.created(location).body(VehicleResponse.from(vehicle));
-	}
-
+  @PostMapping
+  @PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
+  ResponseEntity<VehicleResponse> register(
+      @PathVariable UUID hubId, @RequestBody RegisterVehicleRequest request) {
+    var vehicle = registerVehicle.register(request.toCommand(hubId));
+    // The vehicle stays a member of the fleet when it leaves this hub, so its own resource is
+    // /api/v1/vehicles/{id}, not under the hub.
+    var location =
+        ServletUriComponentsBuilder.fromCurrentContextPath()
+            .path("/api/v1/vehicles/{id}")
+            .buildAndExpand(vehicle.getId())
+            .toUri();
+    return ResponseEntity.created(location).body(VehicleResponse.from(vehicle));
+  }
 }

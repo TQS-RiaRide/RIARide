@@ -7,20 +7,19 @@ import java.util.regex.Pattern;
 // toString hides the value, so the code never reaches logs by accident.
 public record StayCode(String value) {
 
-	public static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-	public static final int LENGTH = 8;
+  public static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  public static final int LENGTH = 8;
 
-	private static final Pattern FORMAT = Pattern.compile("^[" + ALPHABET + "]{" + LENGTH + "}$");
+  private static final Pattern FORMAT = Pattern.compile("^[" + ALPHABET + "]{" + LENGTH + "}$");
 
-	public StayCode {
-		if (value == null || !FORMAT.matcher(value).matches()) {
-			throw new IllegalArgumentException("Stay code does not have the expected format");
-		}
-	}
+  public StayCode {
+    if (value == null || !FORMAT.matcher(value).matches()) {
+      throw new IllegalArgumentException("Stay code does not have the expected format");
+    }
+  }
 
-	@Override
-	public String toString() {
-		return "StayCode[********]";
-	}
-
+  @Override
+  public String toString() {
+    return "StayCode[********]";
+  }
 }
