@@ -24,11 +24,11 @@ Set `VITE_BACKEND_URL` to point the dev server at another backend.
 
 The app logs in with Keycloak through keycloak-js: Authorization Code with PKCE (S256), tokens kept in memory only and refreshed before each use ([ADR 0009](../docs/architecture/adr/0009-keycloak.md)). After login it calls `GET /api/v1/me` and shows a menu with only the workspaces of the user's roles (operator: operator dashboard and maintenance tickets, never the hotel backoffice). The menu only decides what the UI offers; the backend checks the role on every request.
 
-| Variable (build time) | Default | Meaning |
-|---|---|---|
-| `VITE_KEYCLOAK_URL` | `http://localhost:8180` | Keycloak as the browser reaches it |
-| `VITE_KEYCLOAK_REALM` | `riaride` | Realm |
-| `VITE_KEYCLOAK_CLIENT_ID` | `riaride-spa` | Public client of the web app |
+| Variable (build time)     | Default                 | Meaning                            |
+| ------------------------- | ----------------------- | ---------------------------------- |
+| `VITE_KEYCLOAK_URL`       | `http://localhost:8180` | Keycloak as the browser reaches it |
+| `VITE_KEYCLOAK_REALM`     | `riaride`               | Realm                              |
+| `VITE_KEYCLOAK_CLIENT_ID` | `riaride-spa`           | Public client of the web app       |
 
 The realm lets the SPA client redirect back to `http://localhost:5173` (dev server) and `http://localhost:8081` (container). Users for local testing come from `infra/keycloak/create-dev-users.sh`.
 
