@@ -4,7 +4,9 @@ import com.riaride.fleet.internal.application.RegisteredHub;
 import com.riaride.fleet.internal.domain.HubKind;
 import java.util.UUID;
 
-// hotel is the hotel's name, or null for a tourist spot hub.
+// hotel is the hotel's name, or null for a tourist spot hub. Only built for a hub that was just
+// registered, which has no bikes docked yet; a response for an existing hub must count its
+// vehicles (VehicleRepository.countByHubId).
 record HubResponse(
     UUID id,
     String name,
@@ -26,7 +28,7 @@ record HubResponse(
         hub.getLatitude(),
         hub.getLongitude(),
         hub.getCapacity(),
-        hub.getDockedBikes(),
-        hub.getFreeSlots());
+        0,
+        hub.getCapacity());
   }
 }

@@ -37,6 +37,9 @@ class SecurityConfiguration {
                 // Hub registration (RIA-56): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs")
                 .hasAnyRole("OPERATOR", "ADMIN")
+                // Vehicle registration at a hub (RIA-57): operators and admins only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/hubs/*/vehicles")
+                .hasAnyRole("OPERATOR", "ADMIN")
                 .anyRequest()
                 .authenticated())
         .oauth2ResourceServer(resourceServer ->
