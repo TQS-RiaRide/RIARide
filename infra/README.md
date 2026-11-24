@@ -32,7 +32,7 @@ Ports bind to `127.0.0.1` only. Set `POSTGRES_PORT`, `KEYCLOAK_PORT`, `MQTT_PORT
 
 In the `app` profile the backend reaches the other services through the Compose network. Keycloak sets `KC_HOSTNAME` to `http://localhost:8180`, so tokens carry the same issuer whether the browser or the backend container asked for them. `STRIPE_SECRET_KEY` may stay empty: the backend container then starts with a placeholder test mode key, and only pass purchases fail.
 
-The backend also subscribes to vehicle telemetry over MQTT (ADR 0006). Until Mosquitto joins this stack with the simulator (RIA-60), start the simulator's broker (`simulator/compose.yaml`) or set `MQTT_ENABLED=false`. `MQTT_URL` (default `tcp://localhost:1883`), `MQTT_USERNAME` and `MQTT_PASSWORD` point the backend at the broker; without a broker the backend still starts and retries every 5 seconds.
+The backend subscribes to vehicle telemetry from the Mosquitto broker in this stack (ADR 0006). A backend run from the IDE uses the default `MQTT_URL`, `tcp://localhost:1883`; in the `app` profile Compose sets it to `tcp://mosquitto:1883`. `MQTT_USERNAME` and `MQTT_PASSWORD` are for a broker that requires them, and `MQTT_ENABLED=false` turns the adapter off. Without a reachable broker the backend still starts and retries every 5 seconds. The session is kept per `MQTT_CLIENT_ID` (default `riaride-backend`), so run one backend per client id.
 
 ## Keycloak
 
