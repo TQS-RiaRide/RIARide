@@ -8,10 +8,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 class AccountsConfiguration {
 
-	// SecureRandom, so stay codes cannot be predicted from earlier ones.
-	@Bean
-	StayCodeGenerator stayCodeGenerator() {
-		return new StayCodeGenerator(new SecureRandom());
-	}
-
+  // SecureRandom, so stay codes cannot be predicted from earlier ones.
+  @Bean
+  StayCodeGenerator stayCodeGenerator() {
+    return new StayCodeGenerator(new SecureRandom());
+  }
 }

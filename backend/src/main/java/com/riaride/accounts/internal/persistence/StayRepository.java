@@ -8,8 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StayRepository extends JpaRepository<Stay, UUID> {
 
-	boolean existsByStayCode(StayCode stayCode);
+  boolean existsByStayCode(StayCode stayCode);
 
-	Optional<Stay> findByStayCode(StayCode stayCode);
-
+  Optional<Stay> findByStayCode(StayCode stayCode);
 }

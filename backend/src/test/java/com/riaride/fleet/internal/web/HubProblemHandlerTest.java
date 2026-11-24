@@ -19,69 +19,73 @@ import org.springframework.dao.DataIntegrityViolationException;
 @ExtendWith(OutputCaptureExtension.class)
 class HubProblemHandlerTest {
 
-	private static final String HUB_NAME = "Marés Praia – Beach Front";
-	private static final String SQL_MESSAGE =
-		"ERROR: duplicate key value violates unique constraint \"%s\" Detail: Key (name)=(" + HUB_NAME
-			+ ") already exists.";
+  private static final String HUB_NAME = "Marés Praia – Beach Front";
+  private static final String SQL_MESSAGE =
+      "ERROR: duplicate key value violates unique constraint \"%s\" Detail: Key (name)=("
+          + HUB_NAME
+          + ") already exists.";
 
-	private final HubProblemHandler handler = new HubProblemHandler();
+  private final HubProblemHandler handler = new HubProblemHandler();
 
-	// What Spring's exception translation produces when PostgreSQL rejects the insert.
-	private static DataIntegrityViolationException violationOf(String constraint) {
-		var sqlMessage = SQL_MESSAGE.formatted(constraint);
-		var sqlException = new SQLException(sqlMessage, "23505");
-		var hibernate = new ConstraintViolationException("could not execute statement [" + sqlMessage + "]",
-			sqlException, constraint);
-		return new DataIntegrityViolationException("could not execute statement [" + sqlMessage + "]", hibernate);
-	}
+  // What Spring's exception translation produces when PostgreSQL rejects the insert.
+  private static DataIntegrityViolationException violationOf(String constraint) {
+    var sqlMessage = SQL_MESSAGE.formatted(constraint);
+    var sqlException = new SQLException(sqlMessage, "23505");
+    var hibernate =
+        new ConstraintViolationException(
+            "could not execute statement [" + sqlMessage + "]", sqlException, constraint);
+    return new DataIntegrityViolationException(
+        "could not execute statement [" + sqlMessage + "]", hibernate);
+  }
 
-	@Requirement("RIA-56")
-	@Test
-	void shouldAnswerHubNameAlreadyInUseWhenConcurrentRegistrationViolatesUniqueName() {
-		var problem = handler.dataIntegrityViolation(violationOf("uq_hub_name"));
+  @Requirement("RIA-56")
+  @Test
+  void shouldAnswerHubNameAlreadyInUseWhenConcurrentRegistrationViolatesUniqueName() {
+    var problem = handler.dataIntegrityViolation(violationOf("uq_hub_name"));
 
-		assertThat(problem.getStatus()).isEqualTo(409);
-		assertThat(problem.getTitle()).isEqualTo("Hub name already in use");
-	}
+    assertThat(problem.getStatus()).isEqualTo(409);
+    assertThat(problem.getTitle()).isEqualTo("Hub name already in use");
+  }
 
-	@Requirement("RIA-56")
-	@Test
-	void shouldAnswerGenericConflictWhenAnotherConstraintIsViolated() {
-		var problem = handler.dataIntegrityViolation(violationOf("fk_hub_hotel"));
+  @Requirement("RIA-56")
+  @Test
+  void shouldAnswerGenericConflictWhenAnotherConstraintIsViolated() {
+    var problem = handler.dataIntegrityViolation(violationOf("fk_hub_hotel"));
 
-		assertThat(problem.getStatus()).isEqualTo(409);
-		assertThat(problem.getTitle()).isEqualTo("Conflict");
-	}
+    assertThat(problem.getStatus()).isEqualTo(409);
+    assertThat(problem.getTitle()).isEqualTo("Conflict");
+  }
 
-	@Requirement("RIA-56")
-	@Test
-	void shouldAnswerGenericConflictWhenNoConstraintIsNamed() {
-		var problem = handler.dataIntegrityViolation(new DataIntegrityViolationException(SQL_MESSAGE.formatted("")));
+  @Requirement("RIA-56")
+  @Test
+  void shouldAnswerGenericConflictWhenNoConstraintIsNamed() {
+    var problem =
+        handler.dataIntegrityViolation(
+            new DataIntegrityViolationException(SQL_MESSAGE.formatted("")));
 
-		assertThat(problem.getStatus()).isEqualTo(409);
-		assertThat(problem.getTitle()).isEqualTo("Conflict");
-	}
+    assertThat(problem.getStatus()).isEqualTo(409);
+    assertThat(problem.getTitle()).isEqualTo("Conflict");
+  }
 
-	@Requirement("RIA-56")
-	@Test
-	void shouldNeitherReturnNorLogSqlMessageWhenUniqueNameIsViolated(CapturedOutput output) {
-		var problem = handler.dataIntegrityViolation(violationOf("uq_hub_name"));
+  @Requirement("RIA-56")
+  @Test
+  void shouldNeitherReturnNorLogSqlMessageWhenUniqueNameIsViolated(CapturedOutput output) {
+    var problem = handler.dataIntegrityViolation(violationOf("uq_hub_name"));
 
-		assertThat(problem.getDetail())
-			.isNotBlank()
-			.doesNotContain(HUB_NAME, "uq_hub_name", "duplicate key", "Key (name)");
-		assertThat(output.getAll()).doesNotContain(HUB_NAME, "duplicate key", "Key (name)");
-	}
+    assertThat(problem.getDetail())
+        .isNotBlank()
+        .doesNotContain(HUB_NAME, "uq_hub_name", "duplicate key", "Key (name)");
+    assertThat(output.getAll()).doesNotContain(HUB_NAME, "duplicate key", "Key (name)");
+  }
 
-	@Requirement("RIA-56")
-	@Test
-	void shouldNeitherReturnNorLogSqlMessageWhenAnotherConstraintIsViolated(CapturedOutput output) {
-		var problem = handler.dataIntegrityViolation(violationOf("fk_hub_hotel"));
+  @Requirement("RIA-56")
+  @Test
+  void shouldNeitherReturnNorLogSqlMessageWhenAnotherConstraintIsViolated(CapturedOutput output) {
+    var problem = handler.dataIntegrityViolation(violationOf("fk_hub_hotel"));
 
-		assertThat(problem.getDetail())
-			.isNotBlank()
-			.doesNotContain(HUB_NAME, "fk_hub_hotel", "duplicate key", "Key (name)");
-		assertThat(output.getAll()).doesNotContain(HUB_NAME, "duplicate key", "Key (name)");
-	}
-
+    assertThat(problem.getDetail())
+        .isNotBlank()
+        .doesNotContain(HUB_NAME, "fk_hub_hotel", "duplicate key", "Key (name)");
+    assertThat(output.getAll()).doesNotContain(HUB_NAME, "duplicate key", "Key (name)");
+  }
 }

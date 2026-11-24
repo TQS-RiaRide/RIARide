@@ -10,24 +10,26 @@ import org.springframework.transaction.annotation.Transactional;
 // valid reading is logged and dropped: redelivering it would fail again.
 class TelemetryMessageHandler {
 
-	private static final Logger log = LoggerFactory.getLogger(TelemetryMessageHandler.class);
+  private static final Logger log = LoggerFactory.getLogger(TelemetryMessageHandler.class);
 
-	private final TelemetryMessageMapper mapper;
-	private final ApplicationEventPublisher events;
+  private final TelemetryMessageMapper mapper;
+  private final ApplicationEventPublisher events;
 
-	TelemetryMessageHandler(TelemetryMessageMapper mapper, ApplicationEventPublisher events) {
-		this.mapper = mapper;
-		this.events = events;
-	}
+  TelemetryMessageHandler(TelemetryMessageMapper mapper, ApplicationEventPublisher events) {
+    this.mapper = mapper;
+    this.events = events;
+  }
 
-	@Transactional
-	public void handle(String topic, byte[] payload) {
-		try {
-			events.publishEvent(mapper.map(topic, payload));
-		} catch (InvalidTelemetryMessageException invalid) {
-			// The payload is not logged: it is not ours to trust or to keep.
-			log.warn("Invalid telemetry message on {} dropped: {}", LogSafeTopic.of(topic), invalid.getMessage());
-		}
-	}
-
+  @Transactional
+  public void handle(String topic, byte[] payload) {
+    try {
+      events.publishEvent(mapper.map(topic, payload));
+    } catch (InvalidTelemetryMessageException invalid) {
+      // The payload is not logged: it is not ours to trust or to keep.
+      log.warn(
+          "Invalid telemetry message on {} dropped: {}",
+          LogSafeTopic.of(topic),
+          invalid.getMessage());
+    }
+  }
 }

@@ -12,22 +12,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// The vehicles at a hub, each marked bookable by BR12 (RIA-59), optionally of one type (?type=E_BIKE,
+// The vehicles at a hub, each marked bookable by BR12 (RIA-59), optionally of one type
+// (?type=E_BIKE,
 // RIA-53). Guests see it to choose a bike; operators and admins to follow the fleet.
 @RestController
 @RequestMapping("/api/v1/hubs/{hubId}/vehicles")
 class HubVehiclesController {
 
-	private final ListHubVehiclesService listHubVehicles;
+  private final ListHubVehiclesService listHubVehicles;
 
-	HubVehiclesController(ListHubVehiclesService listHubVehicles) {
-		this.listHubVehicles = listHubVehicles;
-	}
+  HubVehiclesController(ListHubVehiclesService listHubVehicles) {
+    this.listHubVehicles = listHubVehicles;
+  }
 
-	@GetMapping
-	@PreAuthorize("hasAnyRole('GUEST', 'OPERATOR', 'ADMIN')")
-	List<HubVehicle> list(@PathVariable UUID hubId, @RequestParam(required = false) VehicleType type) {
-		return listHubVehicles.list(hubId, type);
-	}
-
+  @GetMapping
+  @PreAuthorize("hasAnyRole('GUEST', 'OPERATOR', 'ADMIN')")
+  List<HubVehicle> list(
+      @PathVariable UUID hubId, @RequestParam(required = false) VehicleType type) {
+    return listHubVehicles.list(hubId, type);
+  }
 }

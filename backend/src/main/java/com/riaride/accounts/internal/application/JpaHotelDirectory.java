@@ -10,16 +10,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class JpaHotelDirectory implements HotelDirectory {
 
-	private final HotelRepository hotels;
+  private final HotelRepository hotels;
 
-	JpaHotelDirectory(HotelRepository hotels) {
-		this.hotels = hotels;
-	}
+  JpaHotelDirectory(HotelRepository hotels) {
+    this.hotels = hotels;
+  }
 
-	@Override
-	@Transactional(readOnly = true)
-	public Optional<HotelSummary> findByName(String name) {
-		return hotels.findByName(name).map(hotel -> new HotelSummary(hotel.getId(), hotel.getName()));
-	}
-
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<HotelSummary> findByName(String name) {
+    return hotels.findByName(name).map(hotel -> new HotelSummary(hotel.getId(), hotel.getName()));
+  }
 }

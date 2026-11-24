@@ -40,79 +40,91 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import({TestcontainersConfiguration.class, FixedClockConfiguration.class})
 class LowBatteryBookingIT {
 
-	private static final UUID HUB = UUID.fromString("00000000-0000-0000-0000-00000000b059");
-	private static final Duration TELEMETRY_LAG = Duration.ofSeconds(5);
+  private static final UUID HUB = UUID.fromString("00000000-0000-0000-0000-00000000b059");
+  private static final Duration TELEMETRY_LAG = Duration.ofSeconds(5);
 
-	@Autowired
-	private MockMvc mvc;
+  @Autowired private MockMvc mvc;
 
-	@Autowired
-	private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbc;
 
-	@MockitoBean
-	private JwtDecoder jwtDecoder;
+  @MockitoBean private JwtDecoder jwtDecoder;
 
-	@DynamicPropertySource
-	static void mqtt(DynamicPropertyRegistry registry) {
-		TestMosquitto.registerProperties(registry);
-	}
+  @DynamicPropertySource
+  static void mqtt(DynamicPropertyRegistry registry) {
+    TestMosquitto.registerProperties(registry);
+  }
 
-	@BeforeEach
-	void seedAvailableBikeWith80PercentBattery() {
-		removeVehiclesAndHub();
-		jdbc.update("""
-			insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
-			values (?, 'Cais dos Moliceiros', 'TOURIST_SPOT', null, 40.64, -8.65, 6)
-			""", HUB);
-		jdbc.update("""
-			insert into vehicle (id, code, type, status, hub_id, battery_pct)
-			values (?, 'EB-601', 'E_BIKE', 'AVAILABLE', ?, 80)
-			""", UUID.randomUUID(), HUB);
-		when(jwtDecoder.decode("GUEST")).thenReturn(Jwt.withTokenValue("GUEST")
-			.header("alg", "RS256")
-			.subject(UUID.randomUUID().toString())
-			.issuedAt(Instant.now())
-			.expiresAt(Instant.now().plusSeconds(300))
-			.claim("realm_access", Map.of("roles", List.of("GUEST")))
-			.build());
-	}
+  @BeforeEach
+  void seedAvailableBikeWith80PercentBattery() {
+    removeVehiclesAndHub();
+    jdbc.update(
+        """
+        insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
+        values (?, 'Cais dos Moliceiros', 'TOURIST_SPOT', null, 40.64, -8.65, 6)
+        """,
+        HUB);
+    jdbc.update(
+        """
+        insert into vehicle (id, code, type, status, hub_id, battery_pct)
+        values (?, 'EB-601', 'E_BIKE', 'AVAILABLE', ?, 80)
+        """,
+        UUID.randomUUID(),
+        HUB);
+    when(jwtDecoder.decode("GUEST"))
+        .thenReturn(
+            Jwt.withTokenValue("GUEST")
+                .header("alg", "RS256")
+                .subject(UUID.randomUUID().toString())
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(300))
+                .claim("realm_access", Map.of("roles", List.of("GUEST")))
+                .build());
+  }
 
-	@AfterEach
-	void removeVehiclesAndHub() {
-		jdbc.update("delete from vehicle");
-		jdbc.update("delete from hub where id = ?", HUB);
-	}
+  @AfterEach
+  void removeVehiclesAndHub() {
+    jdbc.update("delete from vehicle");
+    jdbc.update("delete from hub where id = ?", HUB);
+  }
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldStopOfferingABikeWhenTelemetryReports18PercentBattery() {
-		TestMosquitto.publishTelemetry("EB-601", 18, HUB.toString());
+  @Requirement("RIA-59")
+  @Test
+  void shouldStopOfferingABikeWhenTelemetryReports18PercentBattery() {
+    TestMosquitto.publishTelemetry("EB-601", 18, HUB.toString());
 
-		await().atMost(TELEMETRY_LAG).untilAsserted(() -> mvc
-			.perform(get("/api/v1/hubs/{hubId}/vehicles", HUB).header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0].code").value("EB-601"))
-			.andExpect(jsonPath("$[0].batteryPct").value(18))
-			.andExpect(jsonPath("$[0].status").value("AVAILABLE"))
-			.andExpect(jsonPath("$[0].bookable").value(false)));
-	}
+    await()
+        .atMost(TELEMETRY_LAG)
+        .untilAsserted(() ->
+            mvc.perform(
+                    get("/api/v1/hubs/{hubId}/vehicles", HUB)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].code").value("EB-601"))
+                .andExpect(jsonPath("$[0].batteryPct").value(18))
+                .andExpect(jsonPath("$[0].status").value("AVAILABLE"))
+                .andExpect(jsonPath("$[0].bookable").value(false)));
+  }
 
-	@Requirement("RIA-59")
-	@Test
-	void shouldOfferTheBikeAgainWhenItIsChargedBackTo20Percent() {
-		TestMosquitto.publishTelemetry("EB-601", 18, HUB.toString());
-		await().atMost(TELEMETRY_LAG).until(() -> batteryOf("EB-601") == 18);
+  @Requirement("RIA-59")
+  @Test
+  void shouldOfferTheBikeAgainWhenItIsChargedBackTo20Percent() {
+    TestMosquitto.publishTelemetry("EB-601", 18, HUB.toString());
+    await().atMost(TELEMETRY_LAG).until(() -> batteryOf("EB-601") == 18);
 
-		TestMosquitto.publishTelemetry("EB-601", 20, HUB.toString());
+    TestMosquitto.publishTelemetry("EB-601", 20, HUB.toString());
 
-		await().atMost(TELEMETRY_LAG).untilAsserted(() -> mvc
-			.perform(get("/api/v1/hubs/{hubId}/vehicles", HUB).header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
-			.andExpect(jsonPath("$[0].batteryPct").value(20))
-			.andExpect(jsonPath("$[0].bookable").value(true)));
-	}
+    await()
+        .atMost(TELEMETRY_LAG)
+        .untilAsserted(() ->
+            mvc.perform(
+                    get("/api/v1/hubs/{hubId}/vehicles", HUB)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer GUEST"))
+                .andExpect(jsonPath("$[0].batteryPct").value(20))
+                .andExpect(jsonPath("$[0].bookable").value(true)));
+  }
 
-	private int batteryOf(String code) {
-		return jdbc.queryForObject("select battery_pct from vehicle where code = ?", Integer.class, code);
-	}
-
+  private int batteryOf(String code) {
+    return jdbc.queryForObject(
+        "select battery_pct from vehicle where code = ?", Integer.class, code);
+  }
 }

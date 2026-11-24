@@ -14,5 +14,4 @@ import org.springframework.validation.annotation.Validated;
  */
 @ConfigurationProperties("riaride.fleet")
 @Validated
-public record FleetProperties(@NotNull @Min(0) @Max(100) Integer minBookingBatteryPct) {
-}
+public record FleetProperties(@NotNull @Min(0) @Max(100) Integer minBookingBatteryPct) {}

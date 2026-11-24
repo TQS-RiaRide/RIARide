@@ -8,9 +8,8 @@ import org.springframework.modulith.core.ApplicationModules;
 // There are no modules yet, so this passes trivially until the first one is added.
 class ModularityTests {
 
-	@Test
-	void verifiesModuleStructure() {
-		ApplicationModules.of(RiaRideApplication.class).verify();
-	}
-
+  @Test
+  void verifiesModuleStructure() {
+    ApplicationModules.of(RiaRideApplication.class).verify();
+  }
 }
