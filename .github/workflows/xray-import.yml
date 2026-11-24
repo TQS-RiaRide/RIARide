@@ -58,7 +58,7 @@ jobs:
         # The Xray JUnit reports: every JUnit result, with the @Requirement links (QA Manual 2.3).
         # The plain Surefire and Failsafe reports hold the same results without the links.
         if: hashFiles('reports/**/xray-reports/TEST-junit-jupiter-*.xml') != ''
-        uses: mikepenz/xray-action@f38a2e6b5b6d20a48597be7f5e5789186cda4af6 # v3.3.1
+        uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
           password: ${{ secrets.XRAY_CLIENT_SECRET }}
@@ -74,7 +74,7 @@ jobs:
       - name: Import simulator results
         # pytest JUnit XML; each test carries its story in a "requirements" property.
         if: hashFiles('reports/simulator-test-reports/simulator-*.xml') != ''
-        uses: mikepenz/xray-action@f38a2e6b5b6d20a48597be7f5e5789186cda4af6 # v3.3.1
+        uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
           password: ${{ secrets.XRAY_CLIENT_SECRET }}
@@ -88,7 +88,7 @@ jobs:
 
       - name: Import Cucumber results
         if: hashFiles('reports/**/cucumber*.json') != ''
-        uses: mikepenz/xray-action@f38a2e6b5b6d20a48597be7f5e5789186cda4af6 # v3.3.1
+        uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
           password: ${{ secrets.XRAY_CLIENT_SECRET }}
