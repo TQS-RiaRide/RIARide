@@ -95,7 +95,7 @@ services:
       # The backend refuses to start without a test mode key (ADR 0008). This placeholder
       # lets it start; pass purchases need a real sk_test_ key in infra/.env.
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder_local_only}
-      # Read by the MQTT adapter when it lands.
+      # The backend's telemetry adapter subscribes here (RIA-59).
       MQTT_URL: tcp://mosquitto:1883
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
