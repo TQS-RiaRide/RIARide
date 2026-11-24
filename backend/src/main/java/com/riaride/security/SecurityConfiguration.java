@@ -20,8 +20,14 @@ import tools.jackson.databind.json.JsonMapper;
 class SecurityConfiguration {
 
   @Bean
-  SecurityFilterChain apiSecurity(HttpSecurity http, JsonMapper json) {
-    var problems = new ProblemDetailsSecurityHandler(json);
+  ProblemDetailsSecurityHandler problemDetailsSecurityHandler(JsonMapper json) {
+    return new ProblemDetailsSecurityHandler(json);
+  }
+
+  // The body is a single chained return so the analyzer can see the chain is stateless and
+  // bearer-token only, which is what makes disabling CSRF safe here.
+  @Bean
+  SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailsSecurityHandler problems) {
     return http
         // No cookies or sessions, so no CSRF token: requests authenticate with a bearer token only.
         .csrf(AbstractHttpConfigurer::disable)
