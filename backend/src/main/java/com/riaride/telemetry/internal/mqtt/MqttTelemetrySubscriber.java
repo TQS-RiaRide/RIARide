@@ -84,10 +84,16 @@ class MqttTelemetrySubscriber implements SmartLifecycle, MqttCallbackExtended {
 		return options;
 	}
 
-	// Called on the first connection and on every automatic reconnection.
+	// Called on the first connection and on every automatic reconnection, on Paho's only callback
+	// thread. The blocking subscribe must not run here: with a kept session the broker sends the
+	// queued messages right after CONNACK, before the SUBACK. Once Paho's inbound queue is full its
+	// receiver stops reading, the SUBACK never arrives, and both threads wait forever.
 	@Override
 	public void connectComplete(boolean reconnect, String serverUri) {
-		subscribe();
+		var executor = connector;
+		if (running && executor != null && !executor.isShutdown()) {
+			executor.execute(this::subscribe);
+		}
 	}
 
 	// Paho does not retry a failed subscription, so this does: a connected but unsubscribed adapter
