@@ -203,7 +203,7 @@ Starting immediately creates a reservation first, so there is one code path. A s
 
 A hub without a free slot rejects the end of the trip. The response lists the nearest hubs that have a free slot, ordered by straight-line distance from the hub's `position`, and the trip continues.
 
-Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip.
+Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. The time beyond the grace period is charged per started 15-minute block: 2.00 EUR per block, with no grace period (Product Owner decisions, RIA-88), so 3 h 20 min is 2 blocks. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip.
 
 The `PaymentGateway` port reports a failed charge as transient (network error, Stripe 5xx, rate limit) or permanent (card declined, `authentication_required`). Spring Modulith keeps a failed publication as incomplete but does not retry it on its own, so a scheduled job in `trips` resubmits incomplete overtime publications with backoff, up to a maximum number of attempts. A permanent failure, or the last failed attempt, is final: the `payment` row is `FAILED`, `trips` asks `passes` to take the overtime from the deposit, which is still held because the trip is not settled yet, and the case appears on the operator dashboard. Only then is the trip settled.
 
@@ -296,10 +296,9 @@ docs/       Reports and this proposal
 | The guidelines list end users reporting problems, which has no flow | Could be a guest-sourced ticket opened through the `maintenance` public API | Product Owner |
 | University VM availability, and public reachability for the teaching staff | Deploys use a self-hosted runner, so inbound access from GitHub is not needed; teaching staff access must still be confirmed | DevOps Master |
 | Memory: each stack, including Prometheus and Grafana, is estimated at about 4 GB, and staging and production share the VM | Keycloak and the JVM may need limits; if both stacks do not fit, monitoring is shared and staging stops between uses | DevOps Master |
-| Overtime grace period: the comment in the team document was resolved without changing the rule | Configured as 0 until confirmed | Product Owner |
 | 3-day pass: assumed to last 72 h after activation | Rule to confirm | Product Owner |
 | Whether 1-day and 3-day passes also end at check-out | Affects the overtime limit | Product Owner |
-| Overtime price and deposit amount are undefined | Configurable, values needed for seed data | Product Owner |
+| Deposit amount is provisional (50 EUR, RIA-52) | Configurable, value needed for seed data | Product Owner |
 | Epic 8 in the team document still mentions per-hotel prices | Contradicts decision 13 | Product Owner |
 | Exact versions of Spring Boot, Spring Modulith and Keycloak | Pinned in the walking skeleton | DevOps Master |
 | SonarQube Cloud OSS plan: the organization's plan and the gate on a real pull request are to be confirmed | The repository must stay public; otherwise the fallback is SonarQube Server Developer Edition ([ADR 0014](adr/0014-sqa-tools.md)) | QA Engineer |
