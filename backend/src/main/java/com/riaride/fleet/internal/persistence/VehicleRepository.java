@@ -27,8 +27,9 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
 
   // Locks the vehicle row until the transaction ends (SELECT ... FOR UPDATE), so two trips that
   // ask for the same bike reserve it one after the other, and only the first gets it (RIA-54).
+  // The code is compared as V6 indexes it, so the guest may type it in any case.
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("select v from Vehicle v where v.code = :code")
+  @Query("select v from Vehicle v where lower(v.code) = lower(:code)")
   Optional<Vehicle> findByCodeForUpdate(@Param("code") String code);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)

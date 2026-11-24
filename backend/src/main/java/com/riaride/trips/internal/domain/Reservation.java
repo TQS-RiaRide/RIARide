@@ -87,8 +87,9 @@ public class Reservation implements Persistable<UUID> {
     this.status = ReservationStatus.EXPIRED;
   }
 
+  // Codes are unique regardless of case (V6), so eb-201 is the same bike as EB-201.
   public boolean isFor(String code) {
-    return vehicleCode.equals(code);
+    return vehicleCode.equalsIgnoreCase(code);
   }
 
   // The trip on this bike started.
