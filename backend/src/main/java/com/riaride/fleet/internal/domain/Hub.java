@@ -166,14 +166,4 @@ public class Hub implements Persistable<UUID> {
   public int getCapacity() {
     return capacity;
   }
-
-  // Bikes cannot be registered yet (RIA-57), so no hub has any docked. Once they can, this
-  // counts the bikes docked at the hub.
-  public int getDockedBikes() {
-    return 0;
-  }
-
-  public int getFreeSlots() {
-    return capacity - getDockedBikes();
-  }
 }

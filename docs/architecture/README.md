@@ -240,7 +240,7 @@ The message formats are the JSON Schemas in [`contracts/mqtt/`](../../contracts/
 
 **Payments.** `PaymentGateway` offers charge and refund operations in domain terms, each with an idempotency key. The Stripe adapter confirms PaymentIntents server-side with test payment methods. At purchase it creates a Stripe Customer and confirms the PaymentIntent with `setup_future_usage=off_session`, which saves the payment method. Overtime is charged off-session to that Customer and payment method, which the adapter reads from the purchase payment's `provider_ref`, so no other module stores Stripe identifiers. The MVP needs no webhooks.
 
-**REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details. Request bodies are strict for the whole API: a JSON number with a fraction in a whole-number field is rejected with a 400 (`spring.jackson.deserialization.accept-float-as-int: false`), so `1.5` and `1.0` are both refused instead of being truncated.
+**REST.** Versioned under `/api/v1`, documented with OpenAPI, from which the frontend client is generated. Errors use RFC 9457 Problem Details. Request bodies are strict for the whole API: a JSON number with a fraction in a whole-number field is rejected with a 400 (`spring.jackson.deserialization.accept-float-as-int: false`), so `1.5` and `1.0` are both refused instead of being truncated. A number for an enum field is also a 400 (`spring.jackson.datatype.enum.fail-on-numbers-for-enums: true`), instead of being read as the enum's ordinal.
 
 ## 10. Security
 
