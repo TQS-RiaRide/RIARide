@@ -51,3 +51,60 @@ button {
 .status-down {
   color: #b42318;
 }
+
+button:hover {
+  background: #e8f3f6;
+}
+
+button:focus-visible {
+  outline: 3px solid #f2b705;
+  outline-offset: 2px;
+}
+
+button.primary {
+  background: #0b6e8a;
+  color: #fff;
+}
+
+button.primary:hover {
+  background: #095a71;
+}
+
+.header-actions,
+.auth-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.auth-error {
+  margin: 0;
+  color: #b42318;
+}
+
+.workspace-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspace-menu button[aria-current='page'] {
+  background: #0b6e8a;
+  color: #fff;
+}
+
+.workspace-panel {
+  margin: 1rem 0 1.5rem;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid #0b6e8a;
+  background: #fff;
+  border-radius: 0 0.4rem 0.4rem 0;
+}
+
+.workspace-panel h2 {
+  margin-top: 0;
+}
