@@ -24,14 +24,14 @@ describe('appOrigin', () => {
     expect(appOrigin(undefined)).toBe('http://localhost:5173');
   });
 
-  it('reads the accepted redirect URI from the page address when the form has none', () => {
+  it('never trusts client data in the page address, which anyone can write into a link', () => {
     window.history.replaceState(
       null,
       '',
-      `/reset?client_data=${clientData('http://localhost:8081/')}`,
+      `/login-actions/authenticate?client_data=${clientData('http://evil.test/')}`,
     );
 
-    expect(appOrigin(undefined)).toBe('http://localhost:8081');
+    expect(appOrigin(undefined)).toBeNull();
   });
 
   it('never trusts the redirect URI the browser asked for, which Keycloak may have refused', () => {
