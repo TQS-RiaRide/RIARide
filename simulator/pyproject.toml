@@ -22,6 +22,8 @@ junit_family = "xunit1"
 [tool.coverage.run]
 source = ["riaride_simulator"]
 branch = true
+# Coverage exclusions: QA Manual, section 3.3 (also sonar-project.properties)
+omit = ["*/__main__.py"]
 
 [tool.coverage.report]
 show_missing = true
