@@ -14,7 +14,7 @@ test.describe('Open a maintenance ticket @RIA-92', { annotation: STORY }, () => 
     const { available } = testData();
     await logIn(page, OPERATOR);
 
-    await page.getByRole('button', { name: 'Maintenance tickets' }).click();
+    await page.getByRole('link', { name: 'Maintenance tickets' }).click();
     await page.getByLabel('Bike code').fill(available);
     await page.getByLabel('Fault').fill('Rear brake does not work');
     await page.getByRole('button', { name: 'Open ticket' }).click();
@@ -30,7 +30,7 @@ test.describe('Open a maintenance ticket @RIA-92', { annotation: STORY }, () => 
     const { retired } = testData();
     await logIn(page, OPERATOR);
 
-    await page.getByRole('button', { name: 'Maintenance tickets' }).click();
+    await page.getByRole('link', { name: 'Maintenance tickets' }).click();
     await page.getByLabel('Bike code').fill(retired);
     await page.getByLabel('Fault').fill('Flat tyre');
     await page.getByRole('button', { name: 'Open ticket' }).click();
@@ -45,7 +45,7 @@ test.describe('Open a maintenance ticket @RIA-92', { annotation: STORY }, () => 
     const { available } = testData();
     await logIn(page, OPERATOR);
 
-    await page.getByRole('button', { name: 'Maintenance tickets' }).click();
+    await page.getByRole('link', { name: 'Maintenance tickets' }).click();
     await page.getByLabel('Bike code').fill(available);
     await page.getByRole('button', { name: 'Open ticket' }).click();
 
@@ -56,7 +56,7 @@ test.describe('Open a maintenance ticket @RIA-92', { annotation: STORY }, () => 
   test('a technician sees the tickets workspace without the form', async ({ page }) => {
     await logIn(page, TECHNICIAN);
 
-    await expect(page.getByRole('heading', { level: 2 })).toHaveText('Maintenance tickets');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Maintenance tickets');
     await expect(page.getByRole('heading', { name: 'Open a ticket' })).toHaveCount(0);
   });
 
@@ -64,7 +64,7 @@ test.describe('Open a maintenance ticket @RIA-92', { annotation: STORY }, () => 
     page,
   }) => {
     await logIn(page, OPERATOR);
-    await page.getByRole('button', { name: 'Maintenance tickets' }).click();
+    await page.getByRole('link', { name: 'Maintenance tickets' }).click();
     await expect(page.getByRole('heading', { name: 'Open a ticket' })).toBeVisible();
 
     await expectNoSeriousAccessibilityViolations(page);

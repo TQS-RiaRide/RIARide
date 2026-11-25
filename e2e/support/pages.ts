@@ -11,10 +11,10 @@ export function testData(): TestData {
 // Logs in through the real Keycloak page, as a person would.
 export async function logIn(page: Page, username: string): Promise<void> {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Log in' }).click();
-  await page.getByLabel('Username or email').fill(username);
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await page.getByLabel('Email or username').fill(username);
   await page.getByLabel('Password', { exact: true }).fill(devUserPassword());
-  await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Workspaces' })).toBeVisible();
 }
 
