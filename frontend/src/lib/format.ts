@@ -21,6 +21,23 @@ export function formatPercent(value: number, language: string, fractionDigits = 
   }).format(value / 100);
 }
 
+const METRES_PER_KM = 1000;
+
+/** A distance between hubs: metres below one kilometre, then kilometres with one decimal. */
+export function formatDistance(meters: number, language: string): string {
+  const locale = intlLocale(language);
+  if (meters < METRES_PER_KM) {
+    return new Intl.NumberFormat(locale, { style: 'unit', unit: 'meter' }).format(
+      Math.round(meters),
+    );
+  }
+  return new Intl.NumberFormat(locale, {
+    style: 'unit',
+    unit: 'kilometer',
+    maximumFractionDigits: 1,
+  }).format(meters / METRES_PER_KM);
+}
+
 export function formatDateTime(iso: string, language: string): string {
   return new Intl.DateTimeFormat(intlLocale(language), {
     dateStyle: 'medium',
