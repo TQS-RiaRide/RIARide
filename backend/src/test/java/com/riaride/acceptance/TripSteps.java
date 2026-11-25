@@ -27,9 +27,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 // Steps for RIA-54 (start a trip now) and RIA-55 (end a trip at a hub), against the API, the MQTT
-// broker and the database. The
-// simulator is played by the steps: they listen on the command topics and publish its telemetry.
-// Time moves only when a step moves the TestClock, so the 30-second timeout needs no sleep.
+// broker and the database. The simulator is played by the steps: they listen on the command topics
+// and publish its telemetry. Time moves only when a step moves the TestClock, so the 30-second
+// timeout needs no sleep.
 public class TripSteps {
 
   // The telemetry lag bound of RIA-58.
