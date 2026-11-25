@@ -21,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 // Unit test (Surefire): the operator changes a bike's status by its id (RIA-91). The bike is
 // loaded with its row locked, so a booking cannot reserve it while it is being retired; the
-// concurrent and persisted cases are in ChangeVehicleStatusApiIT.
+// persisted cases are in ChangeVehicleStatusApiIT.
 @ExtendWith(MockitoExtension.class)
 class ChangeVehicleStatusServiceTest {
 
