@@ -3,6 +3,10 @@ import { fetchCurrentUser, type CurrentUser } from './api';
 import type { AuthClient } from './authClient';
 import { AuthContext, type AuthState } from './authContext';
 
+function hasPersonas(client: AuthClient): client is AuthClient & { signInAs(id: string): void } {
+  return typeof (client as Partial<{ signInAs: unknown }>).signInAs === 'function';
+}
+
 interface AuthProviderProps {
   client: AuthClient;
   loadUser?: (token: string) => Promise<CurrentUser>;
@@ -49,6 +53,7 @@ export default function AuthProvider({
       login: () => void client.login(),
       logout: () => void client.logout(),
       getToken: () => client.getToken(),
+      signInAs: hasPersonas(client) ? (id: string) => client.signInAs(id) : undefined,
     }),
     [client, state],
   );

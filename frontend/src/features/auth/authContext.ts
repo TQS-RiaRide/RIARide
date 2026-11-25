@@ -14,6 +14,8 @@ export interface AuthContextValue {
   logout(): void;
   /** A valid access token for calls to the backend, refreshed first if it is about to expire. */
   getToken(): Promise<string>;
+  /** Demo mode only: signs in as one of the synthetic personas. */
+  signInAs?: (personaId: string) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
