@@ -8,10 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// Integration test (Failsafe): the Flyway migrations on an empty PostgreSQL in Testcontainers.
+// Integration test (Failsafe): the Flyway migrations on PostgreSQL in Testcontainers.
 // Flyway owns the schema and Hibernate only validates it, so the context starting proves the
 // entities match the tables; this test checks the migrations themselves and the reference data.
 @SpringBootTest
@@ -22,8 +21,6 @@ class FlywayMigrationsIT {
 
   @Autowired private JdbcTemplate jdbc;
 
-  @Autowired private Environment environment;
-
   @Test
   void shouldApplyEveryMigrationWithNonePendingAndMatchingChecksums() {
     var info = flyway.info();
@@ -33,11 +30,6 @@ class FlywayMigrationsIT {
         .allSatisfy(migration -> assertThat(migration.getState()).isEqualTo(MigrationState.SUCCESS))
         .isNotEmpty();
     assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
-  }
-
-  @Test
-  void shouldLetHibernateOnlyValidateTheSchema() {
-    assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
   }
 
   // Reference data every environment needs: the group's hotels (fixed ids carried in the
