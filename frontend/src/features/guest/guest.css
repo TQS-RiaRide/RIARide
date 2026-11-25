@@ -1,0 +1,589 @@
+.guest-home,
+.trips-page,
+.trip-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.guest-hello {
+  padding-top: var(--space-3);
+}
+
+.guest-title {
+  font-size: clamp(2rem, 1.6rem + 1.8vw, 2.5rem);
+  max-width: 14ch;
+}
+
+.section-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.text-btn {
+  min-height: var(--hit);
+  padding: 0 var(--space-1);
+  border: none;
+  background: none;
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.text-btn:hover {
+  color: var(--color-action);
+}
+
+/* Active trip banner */
+.trip-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-ok-soft);
+  color: var(--color-ok-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.trip-banner:hover {
+  color: var(--color-ok-strong);
+  background: #d6eadf;
+}
+
+.trip-banner-text {
+  flex: 1;
+}
+
+.trip-banner-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-ok);
+  animation: live 2.4s ease-out infinite;
+}
+
+/* Pass card */
+.pass-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  box-shadow: 0 14px 30px rgb(16 37 58 / 0.18);
+}
+
+.pass-card-loading {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: none;
+  min-height: 150px;
+}
+
+.pass-card-empty {
+  background: var(--color-ink);
+}
+
+.pass-card-empty .btn {
+  justify-self: start;
+  margin-top: var(--space-2);
+}
+
+.pass-waves {
+  position: absolute;
+  right: -30px;
+  bottom: -40px;
+  fill: none;
+  stroke: var(--color-water-light);
+  stroke-width: 2;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.pass-head {
+  display: grid;
+}
+
+.pass-kind {
+  font-size: var(--text-sm);
+  color: var(--color-on-ink-3);
+}
+
+.pass-name {
+  margin-top: var(--space-1);
+  font-size: 1.625rem;
+  letter-spacing: -0.02em;
+}
+
+.pass-rule {
+  position: relative;
+  max-width: 34ch;
+  font-size: var(--text-sm);
+  color: var(--color-on-ink-2);
+}
+
+.pass-deposit {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-ink-line);
+  font-size: var(--text-sm);
+  color: var(--color-on-ink-3);
+}
+
+.pass-deposit .num {
+  color: var(--color-on-ink);
+}
+
+/* Hubs and bikes */
+.hub-section {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+.hub-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hub-chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  margin: 0 calc(-1 * var(--space-5));
+  padding: 2px var(--space-5) var(--space-1);
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.hub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  scroll-snap-align: start;
+  transition:
+    background-color var(--duration-fast) ease-out,
+    color var(--duration-fast) ease-out;
+}
+
+.hub-chip[aria-selected='true'] {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-ink);
+  font-weight: 500;
+}
+
+.hub-chip-count {
+  font-size: var(--text-xs);
+  opacity: 0.8;
+}
+
+.bike-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.bike-error {
+  margin: var(--space-3);
+}
+
+.bike-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 72px;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-line-soft);
+}
+
+.bike-list > li:last-child {
+  border-bottom: none;
+}
+
+.bike-row-off {
+  background: var(--color-surface-sunk);
+}
+
+.bike-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.bike-code {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.bike-unavailable {
+  min-height: 48px;
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+}
+
+.bike-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
+}
+
+/* The range is the figure a guest plans with; the battery % stays for screen readers only. */
+.bike-meta .battery .num {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Bike code sheet */
+.code-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.code-input {
+  min-height: 64px;
+  font-size: 1.75rem;
+  text-align: center;
+}
+
+/* Buy pass */
+.choice-price {
+  font-weight: 600;
+}
+
+.buy-lines {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) 0 0;
+  border-top: 1px dashed var(--color-line-strong);
+}
+
+.buy-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+}
+
+.buy-line > span:first-child {
+  color: var(--color-ink-3);
+}
+
+.buy-note {
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
+}
+
+.buy-card {
+  margin: var(--space-5) 0;
+}
+
+.buy-foot {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.buy-foot .btn,
+.sheet-cta {
+  width: 100%;
+}
+
+.buy-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.choice-check {
+  color: var(--color-ok);
+}
+
+.choice-sub-warn {
+  color: var(--color-danger);
+}
+
+.end-error {
+  margin-top: var(--space-4);
+}
+
+/* Trip */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  justify-self: start;
+  min-height: var(--hit);
+  color: var(--color-ink-3);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.trip-card {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-card);
+}
+
+.trip-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: inherit;
+}
+
+.trip-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.trip-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5fd3a6;
+}
+
+.trip-starting .trip-status-dot {
+  background: var(--color-warn-dot);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.trip-failed .trip-status-dot,
+.trip-ended .trip-status-dot {
+  background: var(--color-on-ink-3);
+}
+
+.trip-bike {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.trip-clock {
+  font-size: var(--text-timer);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.trip-track {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-line-soft);
+  overflow: hidden;
+}
+
+.trip-track-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: var(--color-ink);
+  transition: transform 1s linear;
+}
+
+.trip-note,
+.trip-ended {
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+}
+
+.trip-ended {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line-soft);
+  color: var(--color-ok-strong);
+  font-weight: 500;
+}
+
+.trip-unlocking {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-ink-2);
+}
+
+.unlock-ring {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid var(--color-line);
+  border-top-color: var(--color-action);
+  animation: spin 900ms linear infinite;
+}
+
+.trip-failed {
+  color: var(--color-danger-strong);
+}
+
+.trip-end-btn {
+  width: 100%;
+  text-decoration: none;
+}
+
+/* History */
+.history-block {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.history {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.history > li + li {
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 64px;
+  padding: var(--space-3) var(--space-4);
+}
+
+.history-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.history-link:hover {
+  color: inherit;
+  background: var(--color-surface-sunk);
+}
+
+.history-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.history-title {
+  font-weight: 600;
+}
+
+.history-to {
+  font-weight: 400;
+  color: var(--color-ink-2);
+}
+
+.history-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
+}
+
+.history-value {
+  font-weight: 500;
+}
+
+/*
+ * Wide screens: the guest app stops being a phone column. Your pass sits in a column that stays
+ * in view, the bikes take the rest in two columns, and the trips page puts charges beside trips.
+ */
+@media (min-width: 1024px) {
+  .guest-home {
+    grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--space-10);
+  }
+
+  .guest-side {
+    position: sticky;
+    top: calc(var(--guest-top-height) + var(--space-4));
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .hub-section {
+    padding-top: var(--space-3);
+  }
+
+  .hub-chips {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+  }
+
+  .bike-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bike-list > .bike-row:nth-child(odd):not(.bike-unavailable) {
+    border-right: 1px solid var(--color-line-soft);
+  }
+
+  .bike-list > li:nth-last-child(2):nth-child(odd):not(:has(~ .bike-unavailable)) {
+    border-bottom: none;
+  }
+
+  .bike-list > .bike-unavailable,
+  .bike-list > li:has(> .empty-state) {
+    grid-column: 1 / -1;
+  }
+
+  .trips-page {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+    align-items: start;
+    column-gap: var(--space-8);
+  }
+
+  .trips-page > .guest-title {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+
+  .trip-page {
+    max-width: 36rem;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
