@@ -103,4 +103,41 @@ describe('App', () => {
     expect(menu).not.toHaveTextContent('Hotel backoffice');
     expect(screen.queryByText('Log in to see the features of your role.')).not.toBeInTheDocument();
   });
+
+  // RIA-92: operators and admins open tickets from the maintenance tickets workspace.
+  it('lets an operator open a ticket from the maintenance tickets workspace', async () => {
+    await renderApp(
+      { ok: true, status: 'UP' },
+      {
+        id: 'user-1',
+        name: 'Rui Almeida',
+        email: 'rui.almeida@example.test',
+        roles: ['OPERATOR'],
+        workspaces: ['OPERATOR_DASHBOARD', 'MAINTENANCE_TICKETS'],
+      },
+    );
+
+    expect(screen.queryByRole('heading', { name: 'Open a ticket' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Maintenance tickets' }));
+
+    expect(screen.getByRole('heading', { name: 'Open a ticket' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Bike code')).toBeInTheDocument();
+  });
+
+  // A technician sees the tickets workspace too, but only operators and admins open tickets.
+  it('does not offer a technician the form to open a ticket', async () => {
+    await renderApp(
+      { ok: true, status: 'UP' },
+      {
+        id: 'user-2',
+        name: 'Ana Costa',
+        email: 'ana.costa@example.test',
+        roles: ['TECHNICIAN'],
+        workspaces: ['MAINTENANCE_TICKETS'],
+      },
+    );
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Maintenance tickets');
+    expect(screen.queryByRole('heading', { name: 'Open a ticket' })).not.toBeInTheDocument();
+  });
 });
