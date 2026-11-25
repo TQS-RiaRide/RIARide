@@ -4,7 +4,10 @@ import { expectNoSeriousAccessibilityViolations, logIn, testData } from '../supp
 
 // RIA-92: an operator opens a maintenance ticket for a faulty bike from the web UI (core use case,
 // QA Manual 5.3). The rules behind it are covered by Cucumber; this covers the UI path.
-test.describe('Open a maintenance ticket @RIA-92', () => {
+// The "requirements" annotation becomes a JUnit property, so Xray links each result to the story.
+const STORY = { type: 'requirements', description: 'RIA-92' };
+
+test.describe('Open a maintenance ticket @RIA-92', { annotation: STORY }, () => {
   test('the operator opens a ticket and the bike goes to maintenance with a 24-hour deadline', async ({
     page,
   }) => {

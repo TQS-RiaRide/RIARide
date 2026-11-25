@@ -11,7 +11,15 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
-    ? [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/junit.xml' }]]
+    ? [
+        ['list'],
+        ['html', { open: 'never' }],
+        [
+          'junit',
+          // Annotations become JUnit properties: "requirements" links a result to its story in Xray.
+          { outputFile: 'test-results/junit.xml', embedAnnotationsAsProperties: true },
+        ],
+      ]
     : [['list'], ['html', { open: 'never' }]],
   use: {
     // Keycloak lets the SPA return only to http://localhost:8081 (infra/README.md).
