@@ -68,7 +68,7 @@ Run from `e2e/` against the Compose stack started with the `app` profile, after 
 |---|---|
 | Install | `npm ci` then `npx playwright install chromium` |
 | Run (Playwright and axe) | `npm test` |
-| On demand in CI, on a branch | `gh workflow run e2e.yml --ref <branch>` |
+| On demand in CI | Add the label `e2e` to the pull request, or `gh workflow run e2e.yml --ref <branch>` once the workflow is on `main` |
 
 ### Simulator commands
 

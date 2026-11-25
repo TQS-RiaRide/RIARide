@@ -1,25 +1,32 @@
 name: E2E
 
 # Playwright end-to-end and accessibility tests of the web UI against the Compose stack
-# (QA Manual 5.3 and 5.4). They run outside the regular build: nightly on main, and on demand on
-# any branch, so the author of a story that changes a core UI flow links a green run in the pull
-# request (QA Manual 4.1). Every password is generated for the run and never leaves it.
+# (QA Manual 5.3 and 5.4). They run outside the regular build: nightly on main, and on demand,
+# so the author of a story that changes a core UI flow links a green run in the pull request (QA
+# Manual 4.1). On demand means either "Run workflow" on a branch, or adding the label `e2e` to a
+# pull request (needed until this workflow is on main, since GitHub offers "Run workflow" only for
+# workflows on the default branch). Every password is generated for the run and never leaves it.
 
 on:
   schedule:
     - cron: "30 2 * * *" # 02:30 UTC, on the default branch (main)
   workflow_dispatch:
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
 
+# Another label added to the pull request (ai:*) must not cancel a run, so only runs started the
+# same way share a group.
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: e2e-${{ github.ref }}-${{ github.event.label.name || github.event_name }}
   cancel-in-progress: true
 
 jobs:
   e2e:
     name: Playwright against the Compose stack
+    if: github.event_name != 'pull_request' || github.event.label.name == 'e2e'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

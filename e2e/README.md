@@ -1,6 +1,6 @@
 # End-to-end tests
 
-Playwright (TypeScript) drives the web UI in Chromium against the Compose stack, with axe checking accessibility (QA Manual 5.3 and 5.4). These tests cover the UI path of the core use cases; Cucumber covers the business rules. They run outside the regular build: nightly on `main`, on demand on any branch, and before each tag (`.github/workflows/e2e.yml`).
+Playwright (TypeScript) drives the web UI in Chromium against the Compose stack, with axe checking accessibility (QA Manual 5.3 and 5.4). These tests cover the UI path of the core use cases; Cucumber covers the business rules. They run outside the regular build: nightly on `main`, on demand (the label `e2e` on a pull request, or *Run workflow* on a branch), and before each tag (`.github/workflows/e2e.yml`).
 
 Each run creates its own hub and bikes through the public API, with codes unique to the run, so runs never depend on each other or on the demo data.
 
