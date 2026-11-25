@@ -1,44 +1,61 @@
-import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from './components/LanguageSwitcher';
-import AuthControls from './features/auth/AuthControls';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { createBrowserRouter, createMemoryRouter, RouterProvider } from 'react-router';
+import { Toaster } from 'sonner';
+import { routes } from './app/routes';
+import type { Backend, DataMode } from './backend/Backend';
+import { BackendProvider } from './backend/BackendContext';
+import { createDemoBackend } from './backend/demoBackend';
+import { createLiveBackend } from './backend/liveBackend';
+import { createRegistryStore } from './backend/registry';
 import { useAuth } from './features/auth/useAuth';
-import HealthStatus from './features/health/HealthStatus';
-import OpenTicketForm from './features/maintenance/OpenTicketForm';
-import Workspaces from './features/workspaces/Workspaces';
 
-// The roles that may open a maintenance ticket (RIA-92); the backend refuses the others.
-const TICKET_OPENERS = ['OPERATOR', 'ADMIN'];
+interface AppProps {
+  mode?: DataMode;
+  /** Tests pass a backend and a starting URL; the app then uses an in-memory router. */
+  backend?: Backend;
+  initialPath?: string;
+}
 
-export default function App() {
-  const { t } = useTranslation();
-  const { t: tAuth } = useTranslation('auth');
+function newQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      // Stale-while-revalidate: cached data shows at once and refreshes in the background.
+      queries: { staleTime: 10_000, gcTime: 5 * 60_000, retry: 1, refetchOnWindowFocus: true },
+      mutations: { retry: 0 },
+    },
+  });
+}
+
+export default function App({ mode = 'live', backend: given, initialPath }: AppProps) {
   const { state, getToken } = useAuth();
+  const [queryClient] = useState(newQueryClient);
+  const [demo] = useState(() => (mode === 'demo' ? createDemoBackend() : null));
+  const userId = state.status === 'authenticated' ? state.user.id : 'anonymous';
+
+  const backend = useMemo(
+    () =>
+      given ?? demo ?? createLiveBackend({ getToken, registry: createRegistryStore(() => userId) }),
+    [given, demo, getToken, userId],
+  );
+
+  const [router] = useState(() =>
+    initialPath === undefined
+      ? createBrowserRouter(routes)
+      : createMemoryRouter(routes, { initialEntries: [initialPath] }),
+  );
 
   return (
-    <main className="app">
-      <header>
-        <h1>{t('appName')}</h1>
-        <div className="header-actions">
-          <LanguageSwitcher />
-          <AuthControls />
-        </div>
-      </header>
-      {state.status === 'authenticated' ? (
-        <Workspaces
-          workspaces={state.user.workspaces}
-          content={
-            state.user.roles.some((role) => TICKET_OPENERS.includes(role))
-              ? { MAINTENANCE_TICKETS: <OpenTicketForm getToken={getToken} /> }
-              : {}
-          }
+    <QueryClientProvider client={queryClient}>
+      <BackendProvider backend={backend}>
+        <RouterProvider router={router} />
+        <Toaster
+          position="bottom-center"
+          offset={{ bottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+          mobileOffset={{ bottom: 'calc(88px + env(safe-area-inset-bottom))' }}
+          toastOptions={{ className: 'toast sq', duration: 6000 }}
         />
-      ) : (
-        <section className="intro">
-          <p className="tagline">{t('tagline')}</p>
-          {state.status !== 'loading' && <p>{tAuth('welcome')}</p>}
-        </section>
-      )}
-      <HealthStatus />
-    </main>
+      </BackendProvider>
+    </QueryClientProvider>
   );
 }
