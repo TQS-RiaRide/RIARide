@@ -293,6 +293,19 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+						<configuration>
+							<!-- Coverage exclusions (QA Manual, section 3.3). Keep in sync
+							     with sonar.coverage.exclusions in sonar-project.properties. -->
+							<excludes>
+								<exclude>com/riaride/RiaRideApplication*.class</exclude>
+								<exclude>**/*Configuration.class</exclude>
+								<exclude>**/*Configuration$*.class</exclude>
+								<exclude>**/*Properties.class</exclude>
+								<exclude>**/*Properties$*.class</exclude>
+								<exclude>**/internal/web/*Request.class</exclude>
+								<exclude>**/internal/web/*Response.class</exclude>
+							</excludes>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
