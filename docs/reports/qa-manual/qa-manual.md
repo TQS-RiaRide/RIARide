@@ -169,7 +169,7 @@ The gate applies to new code only, so old code improves as it is changed and the
 | Generated code | `*.gen.*` |
 | Test code | Left out of the analysis entirely (`sonar.exclusions`) |
 
-A class with logic does not belong under these patterns: logic goes in a class that is measured, and reviewers check this (section 3.2). Excluded files still run in the integration tests. Adding an exclusion is a change to this manual, reviewed like any other.
+A class with logic does not belong under these patterns: logic goes in a class whose coverage is measured. Excluded files still run in the integration tests. Adding an exclusion is a change to this manual, reviewed like any other.
 
 Coverage says which lines ran, not whether a test would catch a bug, and AI-generated tests can reach 80 % with weak assertions. Reviewers therefore check that tests assert behaviour (review checklist, section 3.2).
 
