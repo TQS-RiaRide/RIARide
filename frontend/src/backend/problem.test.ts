@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NetworkError, ProblemError, isProblem, problemFrom } from './problem';
+import { NetworkError, ProblemError, isProblem, nearbyHubsOf, problemFrom } from './problem';
 
 function jsonResponse(body: unknown, status: number, statusText = ''): Response {
   return new Response(JSON.stringify(body), {
@@ -120,5 +120,50 @@ describe('isProblem', () => {
   it('rejects other errors', () => {
     expect(isProblem(new NetworkError())).toBe(false);
     expect(isProblem('409')).toBe(false);
+  });
+});
+
+// RIA-55: a full hub's problem suggests the nearest hubs with a free slot.
+describe('nearbyHubsOf', () => {
+  it('reads the suggested hubs of a full hub from the problem body', async () => {
+    const problem = await problemFrom(
+      jsonResponse(
+        {
+          title: 'Hub full',
+          detail: 'The hub has no free slot.',
+          nearbyHubs: [
+            { hubId: 'h-1', name: 'Centro Histórico', freeSlots: 2, distanceMeters: 89 },
+            { hubId: 'h-2', name: 'Marés Salinas', freeSlots: 1, distanceMeters: 1625 },
+          ],
+        },
+        409,
+      ),
+    );
+
+    expect(nearbyHubsOf(problem)).toEqual([
+      { hubId: 'h-1', name: 'Centro Histórico', freeSlots: 2, distanceMeters: 89 },
+      { hubId: 'h-2', name: 'Marés Salinas', freeSlots: 1, distanceMeters: 1625 },
+    ]);
+  });
+
+  it('skips suggestions that are not hubs and has none for other errors', async () => {
+    const problem = await problemFrom(
+      jsonResponse(
+        {
+          title: 'Hub full',
+          nearbyHubs: [
+            { hubId: 'h-1' },
+            null,
+            'h-2',
+            { hubId: 'h-3', name: 'Farol', freeSlots: 1, distanceMeters: 'far' },
+          ],
+        },
+        409,
+      ),
+    );
+
+    expect(nearbyHubsOf(problem)).toEqual([]);
+    expect(nearbyHubsOf(new ProblemError(409, 'Hub full', null, []))).toEqual([]);
+    expect(nearbyHubsOf(new Error('offline'))).toEqual([]);
   });
 });
