@@ -8,6 +8,7 @@ import com.riaride.RowLocks;
 import com.riaride.TestcontainersConfiguration;
 import com.riaride.fleet.internal.domain.Hub;
 import com.riaride.fleet.internal.domain.HubKind;
+import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,7 +90,8 @@ class HubRepositoryIT {
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void shouldLockTheHubUntilTheTransactionEnds() {
-    var hubId = hubs.saveAndFlush(touristSpot("Miradouro da Ria")).getId();
+    // Committed, so named uniquely: a failed cleanup must not block later runs.
+    var hubId = hubs.saveAndFlush(touristSpot("Lock test " + UUID.randomUUID())).getId();
     try {
       var lockedInside =
           new TransactionTemplate(transactionManager)
