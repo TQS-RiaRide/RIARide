@@ -47,7 +47,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | D6 | Observability with SLO alerts | V | Decided (I4) | Section 4.3 |
 | AI1 | Team AI policy and declaration of AI use | E | Done | Sections 6.1 and 6.2 |
 | AI2 | Versioned agent instructions | E | Done | [`AGENTS.md`](../../../AGENTS.md) → [`CLAUDE.md`](../../../CLAUDE.md), covering style, definition of done, test rules, backend and frontend build commands and the limits on agents' Jira and SonarQube access. Sections 6.3 and 6.4 |
-| AI3 | AI-assisted code review | E | Done | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Evidence: [#25](https://github.com/TQS-RiaRide/RIARide/pull/25), where the Claude review's finding is recorded as partly accepted in the AI review findings table, and [#40](https://github.com/TQS-RiaRide/RIARide/pull/40). Section 6.6 |
+| AI3 | AI-assisted code review | E | Done | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Evidence: [#25](https://github.com/TQS-RiaRide/RIARide/pull/25), where the Claude review's finding is recorded as partly accepted in the AI review findings table, and [#40](https://github.com/TQS-RiaRide/RIARide/pull/40). Findings are counted by severity and decision with [`tools/ai-review-findings`](../../../tools/ai-review-findings/README.md) (RIA-108). Section 6.6 |
 | AI4 | Specification-driven generation (≥ 2 stories) | E | Partial | Section 6.5. Story 1, RIA-56 Register a hub ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), generated from its approved Gherkin scenarios through the agent flow of section 6.3; story 2 is planned for I3 from an OpenSpec proposal |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.7; data collected from every PR from now on |
 | AI6 | Coordination of several agents | V | Done | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), first used for RIA-56 ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), and the `Agent boundaries` CI check enforces their roles |
@@ -126,7 +126,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 
 - **When:** every change to `dev` or `main` goes through a pull request. No direct pushes.
 - **Who approves:** at least one team member other than the author. The author merges after approval and a green CI. Agents never approve or merge.
-- **AI review:** each non-draft pull request receives an advisory review from Claude ([`docs/ai-review.md`](../../ai-review.md)), with findings tagged `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`. The author records each finding as accepted or rejected, with a reason, in the PR template's *AI review findings* table. The human reviewer checks that table before approving.
+- **AI review:** each non-draft pull request receives an advisory review from Claude ([`docs/ai-review.md`](../../ai-review.md)), with findings tagged `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`. The author records each finding in the PR template's *AI review findings* table: the finding starts with its severity (`HIGH: ...`), then the decision (Accepted, Accepted in part, Rejected or Deferred) and the reason. The human reviewer checks that table before approving. [`tools/ai-review-findings`](../../../tools/ai-review-findings/README.md) counts the findings of every pull request by severity and decision (section 6.7).
 
 **Review checklist**
 
@@ -137,7 +137,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 - [ ] Input is validated at the boundary; errors are handled and do not leak internal data.
 - [ ] No secrets, credentials or personal data; test data is synthetic.
 - [ ] Security hotspots raised by SonarQube on this change are reviewed.
-- [ ] The AI review findings table is filled in, and the reasons for rejections are sound.
+- [ ] The AI review findings table is filled in, each finding starts with its severity, and the reasons for rejections are sound.
 - [ ] The pull request has its AI label (section 6.2); the `AI label` check fails without it.
 - [ ] Documentation that the change affects is updated (API documentation, `CLAUDE.md`, this manual).
 - [ ] The reviewer can explain the change; anyone may be asked to explain any merged code.
@@ -252,6 +252,7 @@ A story is done when all of the following hold:
 | Backend | Spotless check → unit tests (Surefire) → integration and Cucumber tests (Failsafe, Testcontainers) → JaCoCo → OWASP Dependency-Check → SonarQube |
 | Frontend | ESLint and Prettier check → Vitest with coverage → build → `npm audit` → SonarQube |
 | Simulator | ruff → pytest with coverage → `pip-audit` → SonarQube |
+| Tools | ruff → pytest with coverage → SonarQube, for the AI review findings script (section 6.7); it has no runtime dependencies to audit |
 | AI review | Advisory review of non-draft pull requests from this repository, when opened, reopened or marked ready (section 6.6) |
 
 The workflow always starts, and every component job runs in parallel on every push and pull request; none is conditional, so a missing or moved project file fails its job instead of skipping it. A final summary job depends on all of them, runs with `if: always()` and fails unless every `needs.<job>.result` is `success`; a `failure`, `cancelled` or `skipped` result fails it. Without `if: always()`, the summary job would itself be skipped when a component job fails, and branch protection treats a skipped required check as passing. It is the required status check. Path filters at workflow level are not used, because a workflow that never starts would leave a required check waiting forever. On `main`, the test reports are also imported into Xray (section 2.3).
@@ -473,7 +474,7 @@ All agent jobs have permission only to read the code and comment on pull request
 *Written in I5*, from data collected on every pull request from now on:
 
 - **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. The `AI label` check ([`ai-label.yml`](../../../.github/workflows/ai-label.yml)) fails a pull request with none of the three, more than one, or an unknown `ai:*` label; it is a required check in the branch protection of `dev` and `main`, so it blocks the merge. Dependabot pull requests get `ai:none` automatically. The earlier pull requests that have no label (#3 to #14, #17 and #20) will be labelled by the QA Engineer from their template declarations before the I5 analysis.
-- **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so a script can count them.
+- **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so [`tools/ai-review-findings`](../../../tools/ai-review-findings/README.md) can count them, in total and per `ai:*` label. Rows recorded before this convention (RIA-108) have no severity and are counted as `UNRATED`.
 - **Agent actions in Jira and SonarQube:** agent comments on stories and fixes of SonarQube issues proposed by agents (section 6.4), and how many of those fixes needed human rework.
 - **Defects and rework traced to AI:** Jira bugs and follow-up pull requests that name the original pull request, and quality gate failures on AI-labelled pull requests.
 
