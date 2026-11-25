@@ -99,7 +99,12 @@ jobs:
       - run: npm run lint --if-present
       - run: npm run format:check --if-present
       # Runs the tests with coverage: coverage/lcov.info is imported by SonarQube.
-      - run: npm run test:coverage
+      # The JUnit report, with each test's story in a "requirements" property
+      # (src/test/xray.ts), is imported into Xray (QA Manual 2.3).
+      - run: >-
+          npm run test:coverage --
+          --reporter=default --reporter=junit
+          --outputFile.junit=reports/frontend-unit.xml
       - run: npm run build
 
       - name: Upload coverage for SonarQube
@@ -109,6 +114,15 @@ jobs:
           path: frontend/coverage/lcov.info
           if-no-files-found: error
           retention-days: 1
+
+      # Imported into Xray by the Xray import workflow (QA Manual 2.3).
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-test-reports
+          path: frontend/reports/
+          if-no-files-found: ignore
 
   simulator:
     name: Simulator lint & tests
