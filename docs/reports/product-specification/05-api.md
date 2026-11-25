@@ -13,6 +13,7 @@ Implemented so far, on `dev`:
 | `POST /api/v1/hubs/{hubId}/vehicles` | Operator, admin | Registers a bike at a hub with a free slot | 6.2 (RIA-57) |
 | `GET /api/v1/hubs/{hubId}/vehicles?type=` | Guest, operator, admin | Lists the vehicles at a hub, optionally of one type, each marked bookable | 3.1 and 9.2 (RIA-53, RIA-59) |
 | `PUT /api/v1/vehicles/{id}/status` | Operator, admin | Activates (`AVAILABLE`), deactivates (`MAINTENANCE`) or retires (`RETIRED`) a bike; a retired bike leaves its hub, and a change the lifecycle does not allow, such as retiring a bike in use, is a 409 | 6.3 (RIA-91) |
+| `POST /api/v1/tickets` | Operator, admin | Opens a maintenance ticket for a bike, given its code and the fault, due 24 hours later. An available or reserved bike moves to maintenance (its reservation is cancelled); a bike in use stays in use, flagged `maintenancePending`, and moves to maintenance when its trip ends. Unknown bike 404, retired bike 409 | 7.1 (RIA-92) |
 | `POST /api/v1/trips` | Guest | Starts a trip on a bike now; the trip starts when telemetry confirms the unlock | 3.2 (RIA-54) |
 | `GET /api/v1/trips/{id}` | Guest | Reads one of the guest's own trips | 3.2 (RIA-54) |
 | `GET /api/v1/me` | Any logged-in user | Returns the user, their roles and the workspaces of the web app their roles may open | 1.3 (RIA-86) |
