@@ -3,7 +3,7 @@ import type { Backend } from './Backend';
 import { createDemoBackend } from './demoBackend';
 import { DEMO_KPIS, HOTELS } from './demoData';
 import { BASE_PASS_PRICES } from './liveBackend';
-import { ProblemError } from './problem';
+import { ProblemError, nearbyHubsOf } from './problem';
 import type { RegisterHubRequest } from './types';
 
 const START = Date.parse('2026-11-25T10:00:00.000Z');
@@ -305,6 +305,17 @@ describe('demo backend: trips', () => {
 
     expect(error).toMatchObject({ status: 409, title: 'Hub full' });
     expect((await backend.trip(trip.id)).status).toBe('IN_USE');
+  });
+
+  it('suggests the three nearest hubs with a free slot when the hub is full (RIA-55)', async () => {
+    const trip = await startedTrip();
+
+    const error = await problemOf(backend.endTrip(trip.id, 'h-centro'));
+
+    const nearby = nearbyHubsOf(error);
+    expect(nearby.map((h) => h.name)).toEqual(['Centro Histórico', 'Marés Salinas', 'Marés Praia']);
+    expect(nearby[0].distanceMeters).toBeLessThan(200);
+    expect(nearby.every((h) => h.freeSlots > 0)).toBe(true);
   });
 
   it('refuses to end a trip at an unknown hub', async () => {
