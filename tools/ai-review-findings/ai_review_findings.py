@@ -94,8 +94,12 @@ def extract_findings(body: str | None) -> list[Finding]:
         if not _is_finding_row(cells):
             continue
         text = cells[0]
-        decision = cells[1] if len(cells) > 1 else ""
-        findings.append(Finding(parse_severity(text), parse_decision(decision), text))
+        finding = Finding(
+            parse_severity(text), parse_decision(cells[1] if len(cells) > 1 else ""), text
+        )
+        # A row with neither is a note such as "No AI review findings | Not applicable".
+        if finding.severity != UNRATED or finding.decision != UNKNOWN:
+            findings.append(finding)
     return findings
 
 
