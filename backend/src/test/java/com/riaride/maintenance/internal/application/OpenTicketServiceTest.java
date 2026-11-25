@@ -125,6 +125,16 @@ class OpenTicketServiceTest {
 
   @Requirement("RIA-92")
   @Test
+  void shouldLookUpTheBikeByItsCodeWithoutSurroundingSpaces() {
+    givenFaultHandled(FaultHandling.OUT_OF_SERVICE);
+
+    var opened = service.open(" EB-901\t", "Flat tyre");
+
+    assertThat(opened.vehicleCode()).isEqualTo("EB-901");
+  }
+
+  @Requirement("RIA-92")
+  @Test
   void shouldNotOpenTicketForUnknownBike() {
     when(fleet.reportFault("EB-999")).thenThrow(new VehicleNotFoundException());
 

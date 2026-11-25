@@ -274,6 +274,40 @@ class OpenTicketApiIT {
         .andExpect(jsonPath("$['invalid-params'][0].name").value("vehicleCode"));
   }
 
+  // Problem details never repeat what was submitted (QA Manual 3.4).
+  @Requirement("RIA-92")
+  @Test
+  void shouldNotRepeatTheSubmittedValuesInAProblemDetail() throws Exception {
+    var unknown =
+        openTicket("OPERATOR", ticketFor("RIA92-MARKER-CODE", "MARKER-FAULT"))
+            .andExpect(status().isNotFound())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    var invalid =
+        openTicket("OPERATOR", ticketFor("RIA92-MARKER-CODE", " "))
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    assertThat(unknown).doesNotContain("MARKER");
+    assertThat(invalid).doesNotContain("MARKER");
+  }
+
+  // The operator may copy the code with spaces around it.
+  @Requirement("RIA-92")
+  @Test
+  void shouldIgnoreSpacesAroundTheBikeCode() throws Exception {
+    var bike = bike("RIA92-110", "AVAILABLE");
+
+    openTicket("OPERATOR", ticketFor("  RIA92-110 ", "Flat tyre"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.vehicleCode").value("RIA92-110"));
+
+    assertThat(storedBike(bike)).containsEntry("status", "MAINTENANCE");
+  }
+
   @Requirement("RIA-92")
   @Test
   void shouldRefuseABodyThatIsNotJson() throws Exception {
