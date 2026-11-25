@@ -26,6 +26,11 @@ public final class TestRows {
   }
 
   public static UUID guest(JdbcTemplate jdbc, String stayCode, String email) {
+    return guest(jdbc, stayCode, email, UUID.randomUUID().toString());
+  }
+
+  // keycloakId: the token subject the guest signs in with.
+  public static UUID guest(JdbcTemplate jdbc, String stayCode, String email, String keycloakId) {
     var id = UUID.randomUUID();
     jdbc.update(
         """
@@ -33,7 +38,7 @@ public final class TestRows {
         values (?, ?, ?, ?, 'pt')
         """,
         id,
-        UUID.randomUUID().toString(),
+        keycloakId,
         stay(jdbc, stayCode),
         email);
     return id;
