@@ -38,6 +38,7 @@ export default function OpenTicketForm({ getToken, submit = openTicket }: OpenTi
   const codeId = useId();
   const codeHintId = useId();
   const descriptionId = useId();
+  const errorId = useId();
   const [vehicleCode, setVehicleCode] = useState('');
   const [description, setDescription] = useState('');
   const [sending, setSending] = useState(false);
@@ -66,6 +67,9 @@ export default function OpenTicketForm({ getToken, submit = openTicket }: OpenTi
   };
 
   const isInvalid = (field: TicketField) => failure?.fields.includes(field) ?? false;
+  // A refused field is described by the error, so a screen reader that comes back to it says why.
+  const describedBy = (field: TicketField, ...others: string[]) =>
+    [...others, ...(isInvalid(field) ? [errorId] : [])].join(' ') || undefined;
 
   const failureMessage = (current: Failure) => {
     if (current.kind !== 'invalid') return t(`openTicket.errors.${current.kind}`);
@@ -86,7 +90,7 @@ export default function OpenTicketForm({ getToken, submit = openTicket }: OpenTi
           onChange={(event) => setVehicleCode(event.target.value)}
           maxLength={32}
           autoComplete="off"
-          aria-describedby={codeHintId}
+          aria-describedby={describedBy('vehicleCode', codeHintId)}
           aria-invalid={isInvalid('vehicleCode') ? 'true' : undefined}
         />
         <p id={codeHintId} className="field-hint">
@@ -100,6 +104,7 @@ export default function OpenTicketForm({ getToken, submit = openTicket }: OpenTi
           onChange={(event) => setDescription(event.target.value)}
           maxLength={500}
           rows={3}
+          aria-describedby={describedBy('description')}
           aria-invalid={isInvalid('description') ? 'true' : undefined}
         />
         <button type="submit" className="primary" disabled={sending}>
@@ -107,7 +112,7 @@ export default function OpenTicketForm({ getToken, submit = openTicket }: OpenTi
         </button>
       </form>
       {failure && (
-        <p role="alert" className="form-error">
+        <p id={errorId} role="alert" className="form-error">
           {failureMessage(failure)}
         </p>
       )}

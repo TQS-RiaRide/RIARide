@@ -18,6 +18,7 @@
       "notFound": "No bike has this code.",
       "retired": "This bike is retired, so it cannot get a ticket.",
       "forbidden": "Your account cannot open tickets.",
+      "sessionExpired": "Your session has ended. Log in again to open the ticket.",
       "unexpected": "The ticket could not be opened. Try again."
     }
   }

@@ -18,6 +18,7 @@
       "notFound": "Nenhuma bicicleta tem este código.",
       "retired": "Esta bicicleta foi retirada, por isso não pode ter pedidos.",
       "forbidden": "A sua conta não pode abrir pedidos.",
+      "sessionExpired": "A sua sessão terminou. Inicie sessão novamente para abrir o pedido.",
       "unexpected": "Não foi possível abrir o pedido. Tente novamente."
     }
   }

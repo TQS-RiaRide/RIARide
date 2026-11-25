@@ -19,7 +19,8 @@ export interface OpenedTicket {
 
 export type TicketField = keyof OpenTicketRequest;
 
-export type TicketErrorKind = 'invalid' | 'notFound' | 'retired' | 'forbidden' | 'unexpected';
+export type TicketErrorKind =
+  'invalid' | 'notFound' | 'retired' | 'forbidden' | 'sessionExpired' | 'unexpected';
 
 /** Why a ticket could not be opened; for 'invalid', the form fields the backend refused. */
 export class TicketError extends Error {
@@ -98,6 +99,7 @@ async function errorFor(response: Response): Promise<TicketError> {
     case 400:
       return new TicketError('invalid', await invalidFields(response));
     case 401:
+      return new TicketError('sessionExpired');
     case 403:
       return new TicketError('forbidden');
     case 404:
