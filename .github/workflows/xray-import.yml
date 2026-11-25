@@ -49,9 +49,11 @@ jobs:
           case "$RUN_ID" in
             ''|*[!0-9]*) echo "::error::run_id must be the numeric id of a CI run."; exit 1 ;;
           esac
+          # By the workflow file, not its display name, which a rename would change.
           run=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID" \
-            --jq '[.name, .head_branch, .event, .conclusion] | join(" ")')
-          if [ "$run" != "CI main push success" ] && [ "$run" != "CI main push failure" ]; then
+            --jq '[.path, .head_branch, .event, .conclusion] | join(" ")')
+          ci=".github/workflows/ci.yml main push"
+          if [ "$run" != "$ci success" ] && [ "$run" != "$ci failure" ]; then
             echo "::error::Run $RUN_ID is not a completed CI run of a push to main ($run)."
             exit 1
           fi
@@ -74,7 +76,8 @@ jobs:
           fi
 
       # With a pattern, no matching artifact is not an error: nothing is
-      # downloaded and the import steps below are skipped.
+      # downloaded and the import steps below are skipped. If a check above
+      # failed, this step is skipped too, so no report exists and none is imported.
       - name: Download test reports from the CI run
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
