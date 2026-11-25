@@ -11,6 +11,7 @@ Feature: Change a bike's state
       | EB-702 | available | 80      |
       | EB-703 | in use    | 60      |
 
+  @TEST_RIA-180
   Scenario: The operator retires an available bike and guests no longer see it
     When the operator retires bike "EB-701"
     Then the response status is 200
