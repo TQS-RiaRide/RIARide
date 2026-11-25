@@ -60,9 +60,11 @@ jobs:
 
       - name: Install Playwright and Chromium
         working-directory: e2e
+        # No dependency needs an install script, and the Playwright CLI is the locked one in
+        # node_modules, so nothing is fetched or run beyond package-lock.json.
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
+          npm ci --ignore-scripts
+          ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Type check
         working-directory: e2e
