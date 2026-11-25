@@ -109,7 +109,17 @@ class RoleAccessMatrixIT {
               Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
           new Endpoint("POST", "/api/v1/passes", "/api/v1/passes", Set.of(Role.GUEST)),
           new Endpoint("POST", "/api/v1/trips", "/api/v1/trips", Set.of(Role.GUEST)),
-          new Endpoint("GET", "/api/v1/trips/{id}", "/api/v1/trips/" + ANY_ID, Set.of(Role.GUEST)));
+          new Endpoint("GET", "/api/v1/trips/{id}", "/api/v1/trips/" + ANY_ID, Set.of(Role.GUEST)),
+          new Endpoint(
+              "POST",
+              "/api/v1/trips/{id}/end",
+              "/api/v1/trips/" + ANY_ID + "/end",
+              Set.of(Role.GUEST)),
+          new Endpoint(
+              "PUT",
+              "/api/v1/vehicles/{id}/status",
+              "/api/v1/vehicles/" + ANY_ID + "/status",
+              Set.of(Role.OPERATOR, Role.ADMIN)));
 
   // Forbidden roles get 403 even when the path or query is malformed, before it is converted.
   private static final List<Endpoint> MALFORMED_REQUESTS =
@@ -124,8 +134,14 @@ class RoleAccessMatrixIT {
               "/api/v1/hubs/{hubId}/vehicles",
               "/api/v1/hubs/not-a-uuid/vehicles?type=NOT_A_TYPE",
               Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
+          new Endpoint("GET", "/api/v1/trips/{id}", "/api/v1/trips/not-a-uuid", Set.of(Role.GUEST)),
           new Endpoint(
-              "GET", "/api/v1/trips/{id}", "/api/v1/trips/not-a-uuid", Set.of(Role.GUEST)));
+              "POST", "/api/v1/trips/{id}/end", "/api/v1/trips/not-a-uuid/end", Set.of(Role.GUEST)),
+          new Endpoint(
+              "PUT",
+              "/api/v1/vehicles/{id}/status",
+              "/api/v1/vehicles/not-a-uuid/status",
+              Set.of(Role.OPERATOR, Role.ADMIN)));
 
   // Open to everyone, with or without a token.
   private static final List<Endpoint> PUBLIC_ENDPOINTS =
