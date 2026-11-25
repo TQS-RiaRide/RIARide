@@ -1,8 +1,9 @@
 // Keycloak does not know where the app lives. Once it has checked the app's redirect URI against
-// the client, it carries it in the `client_data` parameter of its own form and page addresses
-// ({"ru": "<redirect uri>"}, base64url). Its origin is taken from there, never from the
-// redirect_uri the browser asked for, which may be the one Keycloak just refused, and is kept for
-// the session so later pages still link back.
+// the client, it carries it in the `client_data` parameter of the form address it renders into
+// the page (kcContext.url.loginAction; {"ru": "<redirect uri>"}, base64url). The origin is taken
+// only from there: never from the page's own address, where a crafted link could put any
+// client_data or a redirect_uri Keycloak refused. It is kept for the session so later pages, such
+// as the error page, which has no form, still link back.
 
 const STORAGE_KEY = 'riaride.appOrigin';
 
@@ -44,8 +45,7 @@ export function appOrigin(
   formAction: string | undefined,
   storage: Storage = window.sessionStorage,
 ): string | null {
-  const checked =
-    redirectOrigin(clientDataOf(formAction)) ?? redirectOrigin(clientDataOf(window.location.href));
+  const checked = redirectOrigin(clientDataOf(formAction));
   if (checked) {
     storage.setItem(STORAGE_KEY, checked);
     return checked;
