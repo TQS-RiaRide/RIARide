@@ -41,7 +41,8 @@ public class OpenTicketService {
       throw new InvalidTicketException("vehicleCode", "A ticket needs the code of the bike.");
     }
     MaintenanceTicket.validDescription(description);
-    var vehicle = fleet.reportFault(vehicleCode);
+    // The operator may copy the code with spaces around it; codes never contain spaces.
+    var vehicle = fleet.reportFault(vehicleCode.strip());
     var ticket =
         tickets.save(
             MaintenanceTicket.openByOperator(
