@@ -12,6 +12,8 @@ export interface AuthContextValue {
   state: AuthState;
   login(): void;
   logout(): void;
+  /** A valid access token for calls to the backend, refreshed first if it is about to expire. */
+  getToken(): Promise<string>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

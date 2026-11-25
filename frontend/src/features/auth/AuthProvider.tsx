@@ -48,6 +48,7 @@ export default function AuthProvider({
       state,
       login: () => void client.login(),
       logout: () => void client.logout(),
+      getToken: () => client.getToken(),
     }),
     [client, state],
   );

@@ -3,12 +3,16 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import AuthControls from './features/auth/AuthControls';
 import { useAuth } from './features/auth/useAuth';
 import HealthStatus from './features/health/HealthStatus';
+import OpenTicketForm from './features/maintenance/OpenTicketForm';
 import Workspaces from './features/workspaces/Workspaces';
+
+// The roles that may open a maintenance ticket (RIA-92); the backend refuses the others.
+const TICKET_OPENERS = ['OPERATOR', 'ADMIN'];
 
 export default function App() {
   const { t } = useTranslation();
   const { t: tAuth } = useTranslation('auth');
-  const { state } = useAuth();
+  const { state, getToken } = useAuth();
 
   return (
     <main className="app">
@@ -20,7 +24,14 @@ export default function App() {
         </div>
       </header>
       {state.status === 'authenticated' ? (
-        <Workspaces workspaces={state.user.workspaces} />
+        <Workspaces
+          workspaces={state.user.workspaces}
+          content={
+            state.user.roles.some((role) => TICKET_OPENERS.includes(role))
+              ? { MAINTENANCE_TICKETS: <OpenTicketForm getToken={getToken} /> }
+              : {}
+          }
+        />
       ) : (
         <section className="intro">
           <p className="tagline">{t('tagline')}</p>
