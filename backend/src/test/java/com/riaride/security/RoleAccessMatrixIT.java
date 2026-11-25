@@ -119,7 +119,9 @@ class RoleAccessMatrixIT {
               "PUT",
               "/api/v1/vehicles/{id}/status",
               "/api/v1/vehicles/" + ANY_ID + "/status",
-              Set.of(Role.OPERATOR, Role.ADMIN)));
+              Set.of(Role.OPERATOR, Role.ADMIN)),
+          new Endpoint(
+              "POST", "/api/v1/tickets", "/api/v1/tickets", Set.of(Role.OPERATOR, Role.ADMIN)));
 
   // Forbidden roles get 403 even when the path or query is malformed, before it is converted.
   private static final List<Endpoint> MALFORMED_REQUESTS =

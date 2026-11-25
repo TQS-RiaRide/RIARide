@@ -2,6 +2,7 @@ package com.riaride.maintenance.internal.application;
 
 import com.riaride.fleet.VehicleMaintenance;
 import com.riaride.maintenance.MaintenanceTicketOpened;
+import com.riaride.maintenance.internal.domain.InvalidTicketException;
 import com.riaride.maintenance.internal.domain.MaintenanceTicket;
 import com.riaride.maintenance.internal.persistence.MaintenanceTicketRepository;
 import java.time.Clock;
@@ -36,6 +37,9 @@ public class OpenTicketService {
 
   @Transactional
   public OpenedTicket open(String vehicleCode, String description) {
+    if (vehicleCode == null || vehicleCode.isBlank()) {
+      throw new InvalidTicketException("vehicleCode", "A ticket needs the code of the bike.");
+    }
     MaintenanceTicket.validDescription(description);
     var vehicle = fleet.reportFault(vehicleCode);
     var ticket =
