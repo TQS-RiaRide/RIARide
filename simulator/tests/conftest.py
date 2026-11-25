@@ -13,16 +13,22 @@ from riaride_simulator.fleet import Fleet
 from riaride_simulator.simulator import Simulator
 
 CONTRACTS = Path(__file__).resolve().parents[2] / "contracts" / "mqtt"
-STORY = "RIA-58"
+# The test modules that verify a story, by module name. Only the messages the simulator exchanges
+# with the platform (the MQTT contracts and the broker round trips) are evidence for RIA-58
+# (Receive telemetry from the simulator); its configuration and fleet logic verify no story, so
+# their results reach Xray unlinked (QA Manual 2.3).
+STORY_BY_MODULE = {"test_contract": "RIA-58", "test_mqtt_broker": "RIA-58"}
 
 HUB_PRAIA = "11111111-1111-4111-8111-111111111111"
 HUB_SALINAS = "22222222-2222-4222-8222-222222222222"
 
 
 @pytest.fixture(autouse=True)
-def _xray_requirement(record_property):
-    """Links every test to its story in the JUnit report CI imports into Xray (QA Manual 2.3)."""
-    record_property("requirements", STORY)
+def _xray_requirement(request, record_property):
+    """Links a test to its story in the JUnit report CI imports into Xray (QA Manual 2.3)."""
+    story = STORY_BY_MODULE.get(request.module.__name__.rsplit(".", 1)[-1])
+    if story is not None:
+        record_property("requirements", story)
 
 
 class FakePublisher:

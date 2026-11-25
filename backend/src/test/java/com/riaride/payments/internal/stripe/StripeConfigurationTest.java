@@ -2,7 +2,6 @@ package com.riaride.payments.internal.stripe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.payments.PaymentGateway;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -17,7 +16,6 @@ class StripeConfigurationTest {
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner().withUserConfiguration(StripeConfiguration.class);
 
-  @Requirement("RIA-52")
   @Test
   void shouldCreateGatewayWithTestModeKey() {
     contextRunner
@@ -25,13 +23,11 @@ class StripeConfigurationTest {
         .run(context -> assertThat(context).hasSingleBean(PaymentGateway.class));
   }
 
-  @Requirement("RIA-52")
   @Test
   void shouldFailStartupWhenKeyIsMissing() {
     contextRunner.run(context -> assertThat(context).hasFailed());
   }
 
-  @Requirement("RIA-52")
   @Test
   void shouldFailStartupWhenKeyIsBlank() {
     contextRunner
@@ -40,7 +36,6 @@ class StripeConfigurationTest {
   }
 
   // Test mode only: a live key would move real money.
-  @Requirement("RIA-52")
   @Test
   void shouldFailStartupWithLiveKeyWithoutShowingIt() {
     var liveKey = "sk_live_51NeverInTests";
@@ -55,7 +50,6 @@ class StripeConfigurationTest {
         });
   }
 
-  @Requirement("RIA-52")
   @Test
   void shouldHideKeyWhenPropertiesArePrinted() {
     var properties =
