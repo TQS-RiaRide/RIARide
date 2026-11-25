@@ -164,12 +164,11 @@ The gate applies to new code only, so old code improves as it is changed and the
 | Excluded | Pattern |
 |---|---|
 | Entry points | `RiaRideApplication.java`, `frontend/src/main.tsx`, the simulator's `__main__.py` |
-| Spring configuration and properties classes | `*Configuration.java`, `*Properties.java` |
-| Request and response records of the web adapters | `*/internal/web/*Request.java`, `*/internal/web/*Response.java` |
+| Spring configuration classes that only wire beans | Named one by one: `ClockConfiguration`, `AccountsConfiguration`, `KeycloakConfiguration`, `FleetConfiguration`, `TripsConfiguration`, `DisabledMqttConfiguration`, `TelemetryMqttConfiguration` |
 | Generated code | `*.gen.*` |
 | Test code | Left out of the analysis entirely (`sonar.exclusions`) |
 
-A class with logic does not belong under these patterns: logic goes in a class whose coverage is measured. Excluded files still run in the integration tests. Adding an exclusion is a change to this manual, reviewed like any other.
+A file with logic is measured, even if it is configuration or a data record: `SecurityConfiguration` (the access rules), `StripeConfiguration` (the test mode key check), the `*Properties` classes (some hide secrets in `toString`) and the request and response records of the web adapters (they map and default values) all count. Configuration classes are listed by name rather than by a `*Configuration` pattern, so a new one is measured until someone decides to exclude it. Adding an exclusion is a change to this manual, reviewed like any other.
 
 Coverage says which lines ran, not whether a test would catch a bug, and AI-generated tests can reach 80 % with weak assertions. Reviewers therefore check that tests assert behaviour (review checklist, section 3.2).
 
