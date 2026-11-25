@@ -15,6 +15,17 @@ type Field = 'email' | 'password' | 'stayCode';
 
 const MIN_PASSWORD = 8;
 
+/**
+ * Something before an @, and after it a domain with a dot that is neither first nor last; no
+ * spaces. A linear scan, where a regular expression would backtrack on long input.
+ */
+function looksLikeEmail(value: string): boolean {
+  if (/\s/.test(value)) return false;
+  const at = value.indexOf('@');
+  const dot = value.lastIndexOf('.');
+  return at > 0 && dot > at + 1 && dot < value.length - 1;
+}
+
 // A guest signs up with an email, a password and the stay code the front desk gave them (BR1).
 // The code field accepts one-time-code autofill, so a code that arrives by SMS fills itself.
 export default function SignUpPage() {
@@ -38,7 +49,7 @@ export default function SignUpPage() {
   if (state.status === 'authenticated') return <Navigate to={PATHS.home} replace />;
 
   const localCheck = (): Field[] => [
-    ...(/^\S+@\S+\.\S+$/.test(values.email.trim()) ? [] : (['email'] as const)),
+    ...(looksLikeEmail(values.email.trim()) ? [] : (['email'] as const)),
     ...(values.password.length >= MIN_PASSWORD ? [] : (['password'] as const)),
     ...(values.stayCode.trim() ? [] : (['stayCode'] as const)),
   ];
