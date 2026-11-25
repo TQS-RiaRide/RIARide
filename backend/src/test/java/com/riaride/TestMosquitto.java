@@ -79,18 +79,20 @@ public final class TestMosquitto {
                 batteryPct,
                 lockState,
                 hubId == null ? "null" : "\"" + hubId + "\"");
+    publish("riaride/vehicles/" + vehicleCode + "/telemetry", payload);
+  }
+
+  // Publishes any payload, valid or not, at QoS 1 and returns once the broker has acknowledged it,
+  // so messages published one after the other reach the platform in that order.
+  public static void publish(String topic, String payload) {
     try (var client =
         new MqttClient(
             url(), "riaride-simulator-test-" + UUID.randomUUID(), new MemoryPersistence())) {
       client.connect();
-      client.publish(
-          "riaride/vehicles/" + vehicleCode + "/telemetry",
-          payload.getBytes(StandardCharsets.UTF_8),
-          1,
-          false);
+      client.publish(topic, payload.getBytes(StandardCharsets.UTF_8), 1, false);
       client.disconnect();
     } catch (MqttException failed) {
-      throw new IllegalStateException("Could not publish telemetry to the test broker", failed);
+      throw new IllegalStateException("Could not publish to the test broker", failed);
     }
   }
 
