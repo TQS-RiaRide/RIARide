@@ -6,9 +6,12 @@ FROM node:24-alpine AS theme
 RUN apk add --no-cache maven openjdk21-jdk
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# No dependency needs an install script, so none is allowed to run.
+RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build:keycloak-theme
 
 FROM quay.io/keycloak/keycloak:26.8.0
 COPY --from=theme /app/dist_keycloak/riaride-keycloak-theme.jar /opt/keycloak/providers/
+# Keycloak's own unprivileged user, as in the base image.
+USER 1000
