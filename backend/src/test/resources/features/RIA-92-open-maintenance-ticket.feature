@@ -3,6 +3,7 @@ Feature: Open a maintenance ticket
   As an operator, I want to open a ticket for a broken bike,
   so that it is repaired within the deadline.
 
+  @TEST_RIA-177
   Scenario: The operator opens a ticket for an available bike with a fault
     Given a hub "Marés Centro" with these bikes:
       | code   | status    | battery |
