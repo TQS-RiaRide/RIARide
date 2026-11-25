@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { nearbyHubsOf } from '../../backend/problem';
 import { useEndTrip, useHubs } from '../../backend/queries';
 import Sheet from '../../components/ui/Sheet';
 import { Button, Icon, Skeleton } from '../../components/ui/ui';
 import { useErrorText } from '../../lib/errors';
+import { formatDistance } from '../../lib/format';
 
 interface EndTripSheetProps {
   open: boolean;
@@ -13,18 +15,27 @@ interface EndTripSheetProps {
 }
 
 // A trip ends only at a hub with a free slot (BR10). Full hubs stay in the list, disabled, so the
-// guest sees why; hubs with room come first.
+// guest sees why; hubs with room come first. A hub that filled up meanwhile is refused with the
+// nearest hubs that have room (RIA-55), offered as one-tap choices.
 export default function EndTripSheet({ open, onOpenChange, tripId, onEnded }: EndTripSheetProps) {
-  const { t } = useTranslation('guest');
+  const { t, i18n } = useTranslation('guest');
   const hubs = useHubs();
   const end = useEndTrip();
   const errorText = useErrorText();
   const [hubId, setHubId] = useState<string | null>(null);
+  const nearestId = useId();
 
   const ordered = [...(hubs.data ?? [])].sort(
     (a, b) => Number(b.freeSlots > 0) - Number(a.freeSlots > 0) || a.name.localeCompare(b.name),
   );
   const chosen = ordered.find((h) => h.id === hubId && h.freeSlots > 0);
+  const nearby = end.isError ? nearbyHubsOf(end.error) : [];
+
+  const choose = (id: string) => {
+    setHubId(id);
+    end.reset();
+    void hubs.refetch();
+  };
 
   useEffect(() => {
     if (open) end.reset();
@@ -84,7 +95,7 @@ export default function EndTripSheet({ open, onOpenChange, tripId, onEnded }: En
               aria-checked={selected}
               disabled={full}
               className="choice sq"
-              onClick={() => setHubId(hub.id)}
+              onClick={() => choose(hub.id)}
             >
               <span className="choice-main">
                 <span className="choice-title">{hub.name}</span>
@@ -110,6 +121,33 @@ export default function EndTripSheet({ open, onOpenChange, tripId, onEnded }: En
             '404': 'guest:end.errors.unknownHub',
           })}
         </p>
+      )}
+      {nearby.length > 0 && (
+        <div role="group" aria-labelledby={nearestId} className="end-nearest">
+          <p id={nearestId} className="field-label">
+            {t('end.nearest')}
+          </p>
+          <div className="choice-list">
+            {nearby.map((hub) => (
+              <button
+                key={hub.hubId}
+                type="button"
+                className="choice sq"
+                onClick={() => choose(hub.hubId)}
+              >
+                <span className="choice-main">
+                  <span className="choice-title">{hub.name}</span>
+                  <span className="choice-sub num">
+                    {t('end.nearbyHub', {
+                      distance: formatDistance(hub.distanceMeters, i18n.language),
+                      free: t('end.free', { count: hub.freeSlots }),
+                    })}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </Sheet>
   );

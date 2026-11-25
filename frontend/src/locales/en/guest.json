@@ -133,7 +133,9 @@
       "full": "That hub filled up a moment ago. Choose one with a free slot.",
       "notRunning": "This trip is no longer running.",
       "unknownHub": "We could not find that hub. Choose another."
-    }
+    },
+    "nearest": "Nearest hubs with a free slot",
+    "nearbyHub": "{{distance}} · {{free}}"
   },
   "trips": {
     "title": "Your trips",

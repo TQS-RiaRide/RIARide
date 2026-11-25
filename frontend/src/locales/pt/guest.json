@@ -133,7 +133,9 @@
       "full": "Esse hub encheu há instantes. Escolha um com lugar livre.",
       "notRunning": "Esta viagem já não está em curso.",
       "unknownHub": "Não encontrámos esse hub. Escolha outro."
-    }
+    },
+    "nearest": "Hubs mais próximos com lugar livre",
+    "nearbyHub": "{{distance}} · {{free}}"
   },
   "trips": {
     "title": "As suas viagens",
