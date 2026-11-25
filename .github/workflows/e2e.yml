@@ -58,11 +58,13 @@ jobs:
           cache: npm
           cache-dependency-path: e2e/package-lock.json
 
+      # No dependency needs an install script, so none runs; the browser comes from the Playwright
+      # version locked in package-lock.json, never from a package npx would fetch.
       - name: Install Playwright and Chromium
         working-directory: e2e
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
+          npm ci --ignore-scripts
+          ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Type check
         working-directory: e2e
