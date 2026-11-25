@@ -1,4 +1,5 @@
 import {
+  formatDistance,
   VILA_RIA_TIME_ZONE,
   estimatedRangeKm,
   formatClock,
@@ -246,5 +247,18 @@ describe('intlLocale', () => {
   it('keeps other languages as they are', () => {
     expect(intlLocale('en')).toBe('en');
     expect(intlLocale('en-GB')).toBe('en-GB');
+  });
+});
+
+describe('formatDistance', () => {
+  it('gives metres below one kilometre', () => {
+    expect(formatDistance(89, 'en')).toBe('89 m');
+    expect(formatDistance(999, 'en')).toBe('999 m');
+  });
+
+  it("gives kilometres with one decimal from one kilometre, in the reader's notation", () => {
+    expect(formatDistance(1000, 'en')).toBe('1 km');
+    expect(formatDistance(1625, 'en')).toBe('1.6 km');
+    expect(formatDistance(1625, 'pt')).toBe('1,6 km');
   });
 });
