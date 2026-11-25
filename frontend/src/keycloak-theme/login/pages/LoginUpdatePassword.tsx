@@ -44,7 +44,6 @@ export default function LoginUpdatePassword({
             className="input sq"
             type="password"
             autoComplete="new-password"
-            autoFocus
             aria-invalid={messagesPerField.existsError('password') || undefined}
             aria-describedby={describedBy}
           />

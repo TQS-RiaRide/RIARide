@@ -63,7 +63,6 @@ export default function Login({
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
-                autoFocus
                 aria-invalid={refused || undefined}
                 aria-describedby={refused ? ERROR_ID : undefined}
               />
