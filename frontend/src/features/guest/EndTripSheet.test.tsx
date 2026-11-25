@@ -96,6 +96,37 @@ describe('EndTripSheet', () => {
     expect(await within(sheet).findByRole('alert')).toHaveTextContent(message);
   });
 
+  // RIA-55: a hub that filled up meanwhile is refused with the nearest hubs that have room.
+  it('suggests the nearest hubs with a free slot when the chosen one filled up', async () => {
+    const { backend, tripId } = await ridingBackend();
+    const full = new ProblemError(409, 'Hub full', null, [], {
+      nearbyHubs: [
+        { hubId: 'h-historico', name: 'Centro Histórico', freeSlots: 2, distanceMeters: 89 },
+        { hubId: 'h-salinas', name: 'Marés Salinas', freeSlots: 1, distanceMeters: 1625 },
+      ],
+    });
+    const sheet = await openEndSheet(refusingEnd(backend, full), tripId);
+    fireEvent.click(await within(sheet).findByRole('radio', { name: /Farol da Barra/ }));
+    fireEvent.click(within(sheet).getByRole('button', { name: 'End at Farol da Barra' }));
+
+    const nearest = await within(sheet).findByRole('group', {
+      name: 'Nearest hubs with a free slot',
+    });
+    const suggestions = within(nearest).getAllByRole('button');
+    expect(suggestions.map((button) => button.textContent)).toEqual([
+      'Centro Histórico89 m · 2 free slots',
+      'Marés Salinas1.6 km · 1 free slot',
+    ]);
+
+    fireEvent.click(suggestions[1]);
+
+    expect(within(sheet).getByRole('radio', { name: /Marés Salinas/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(within(sheet).getByRole('button', { name: 'End at Marés Salinas' })).toBeEnabled();
+  });
+
   it('says when there is no hub to choose from', async () => {
     const { backend, tripId } = await ridingBackend();
 
