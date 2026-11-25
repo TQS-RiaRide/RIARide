@@ -29,7 +29,13 @@ export default defineConfig(({ mode }) => {
         provider: 'v8',
         reporter: ['text', 'lcov'],
         include: ['src/**/*.{ts,tsx}'],
-        exclude: ['src/main.tsx', 'src/**/*.test.{ts,tsx}', 'src/setupTests.ts'],
+        exclude: [
+          // Coverage exclusions: QA Manual, section 3.3 (also sonar-project.properties)
+          'src/main.tsx',
+          'src/**/*.gen.*',
+          'src/**/*.test.{ts,tsx}',
+          'src/setupTests.ts',
+        ],
       },
     },
   };
