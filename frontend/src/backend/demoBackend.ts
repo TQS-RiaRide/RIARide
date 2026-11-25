@@ -9,7 +9,7 @@ import {
   demoVehicles,
 } from './demoData';
 import { BASE_PASS_PRICES } from './liveBackend';
-import { ProblemError } from './problem';
+import { ProblemError, type NearbyHub } from './problem';
 import {
   MIN_BOOKABLE_BATTERY,
   type FleetVehicle,
@@ -56,6 +56,20 @@ function problem(
     detail,
     fields.map((name) => ({ name, reason: null })),
   );
+}
+
+const MAX_SUGGESTIONS = 3;
+const EARTH_RADIUS_METERS = 6_371_000;
+
+/** Straight-line distance between two hubs, rounded to the metre, like the backend (RIA-55). */
+function distanceMeters(a: Hub, b: Hub): number {
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = rad(b.latitude - a.latitude);
+  const dLon = rad(b.longitude - a.longitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(h)));
 }
 
 function stayCode(hotelName: string, random: () => number): string {
@@ -111,6 +125,20 @@ export function createDemoBackend({
     const count = docked(hub.id).length;
     return { ...hub, dockedBikes: count, freeSlots: Math.max(hub.capacity - count, 0) };
   };
+
+  const nearbyHubs = (full: Hub): NearbyHub[] =>
+    state.hubs
+      .filter((hub) => hub.id !== full.id)
+      .map(hubWithOccupancy)
+      .filter((hub) => hub.freeSlots > 0)
+      .map((hub) => ({
+        hubId: hub.id,
+        name: hub.name,
+        freeSlots: hub.freeSlots,
+        distanceMeters: distanceMeters(full, hub),
+      }))
+      .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .slice(0, MAX_SUGGESTIONS);
 
   const bookable = (vehicle: Vehicle) =>
     vehicle.status === 'AVAILABLE' && (vehicle.batteryPct ?? 0) >= MIN_BOOKABLE_BATTERY;
@@ -246,7 +274,13 @@ export function createDemoBackend({
         const hub = state.hubs.find((h) => h.id === hubId);
         if (!hub) throw problem(404, 'Hub not found', 'No hub has this id.');
         if (hubWithOccupancy(hub).freeSlots === 0) {
-          throw problem(409, 'Hub full', 'This hub has no free slot. Try one of the nearest hubs.');
+          throw new ProblemError(
+            409,
+            'Hub full',
+            'The hub has no free slot. Choose another hub or free a slot first.',
+            [],
+            { nearbyHubs: nearbyHubs(hub) },
+          );
         }
         const vehicle = state.vehicles.find((v) => v.code === trip.vehicleCode);
         if (vehicle) replaceVehicle({ ...vehicle, status: 'AVAILABLE', hubId });
