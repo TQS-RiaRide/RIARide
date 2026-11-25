@@ -33,7 +33,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | T8 | Automated accessibility checks | V | Decided (I4) | Sections 3.4 and 5.4 |
 | T9 | GBFS feed contract test | V | Decided (I4) | Section 5.5; depends on the Product Owner adopting the GBFS extension |
 | T10 | Further non-functional tests | V | Decided (I5) | Section 5.4 |
-| Q1 | Static analysis and coverage dashboard | E | Done | Section 3.3. [SonarQube Cloud dashboard](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide), analysed by the SonarQube job of [`ci.yml`](../../../.github/workflows/ci.yml) on every push and pull request. Agents read its results (section 6.4) |
+| Q1 | Static analysis and coverage dashboard | E | Done | Section 3.3. [SonarQube Cloud dashboard](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide), analysed by the SonarQube job of [`ci.yml`](../../../.github/workflows/ci.yml) on every push and pull request, with the coverage exclusions in [`sonar-project.properties`](../../../sonar-project.properties); linked from the [README](../../../README.md). Agents read its results (section 6.4) |
 | Q2 | Blocking quality gate on new code | E | Done | Section 3.3. The gate result is part of the required `CI result` check (RIA-160, [PR #51](https://github.com/TQS-RiaRide/RIARide/pull/51)); [PR #37](https://github.com/TQS-RiaRide/RIARide/pull/37) was blocked by a security rating of C until its dependencies were installed as hashed wheels |
 | Q3 | Dependency vulnerability scanning | E | Partial | [`dependabot.yml`](https://github.com/TQS-RiaRide/RIARide/blob/main/.github/dependabot.yml) on `main` for Maven, npm, pip and GitHub Actions. Updates for a component fail until its manifest exists. Per-build scan: section 3.4 |
 | Q4 | Peer code review | E | Done | [PR template](../../../.github/pull_request_template.md), section 3.2; branch protection on `dev` and `main` requires one approval (section 4.1) |
@@ -159,7 +159,17 @@ SonarQube Cloud, on the free plan for open-source projects, analyzes every pull 
 
 The gate applies to new code only, so old code improves as it is changed and the gate never blocks on history. Overall metrics are followed on the dashboard but do not block. Agents read the gate status and the issues of a pull request to propose fixes, but only people review hotspots or change the gate (section 6.4).
 
-**Coverage exclusions:** only by path, listed in the build configuration: the `config` packages, the `dto` packages, the application `main` class, generated code and test code. A class with logic does not belong in those packages. Adding an exclusion is a change to this manual, reviewed like any other.
+**Coverage exclusions:** only by path, listed in `sonar.coverage.exclusions` in [`sonar-project.properties`](../../../sonar-project.properties) and mirrored in the JaCoCo report ([`backend/pom.xml`](../../../backend/pom.xml)), Vitest ([`frontend/vite.config.ts`](../../../frontend/vite.config.ts)) and coverage.py ([`simulator/pyproject.toml`](../../../simulator/pyproject.toml)), so a local report shows the same figure as SonarQube:
+
+| Excluded | Pattern |
+|---|---|
+| Entry points | `RiaRideApplication.java`, `frontend/src/main.tsx`, the simulator's `__main__.py` |
+| Spring configuration and properties classes | `*Configuration.java`, `*Properties.java` |
+| Request and response records of the web adapters | `*/internal/web/*Request.java`, `*/internal/web/*Response.java` |
+| Generated code | `*.gen.*` |
+| Test code | Left out of the analysis entirely (`sonar.exclusions`) |
+
+A class with logic does not belong under these patterns: logic goes in a class that is measured, and reviewers check this (section 3.2). Excluded files still run in the integration tests. Adding an exclusion is a change to this manual, reviewed like any other.
 
 Coverage says which lines ran, not whether a test would catch a bug, and AI-generated tests can reach 80 % with weak assertions. Reviewers therefore check that tests assert behaviour (review checklist, section 3.2).
 
