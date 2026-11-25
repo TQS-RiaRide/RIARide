@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import NamedTuple
 
 SEVERITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
 UNRATED = "UNRATED"
@@ -34,3 +35,13 @@ def parse_decision(decision: str) -> str:
         if text.startswith(word):
             return result
     return UNKNOWN
+
+
+class Finding(NamedTuple):
+    severity: str
+    decision: str
+    text: str
+
+
+def extract_findings(body: str | None) -> list[Finding]:
+    raise NotImplementedError
