@@ -19,7 +19,11 @@ export function linkToStory(story: string): (context: { annotate: Annotate }) =>
   };
 }
 
-/** Links every test in the enclosing file or describe block to a story, e.g. requirement('RIA-92'). */
+/**
+ * Links every test in the enclosing file or describe block to a story, e.g. requirement('RIA-92').
+ * Call it once per test: at file level or in one describe block, never both, since each call adds
+ * its own property and Xray expects a single "requirements" property per test.
+ */
 export function requirement(story: string): void {
   beforeEach(linkToStory(story));
 }
