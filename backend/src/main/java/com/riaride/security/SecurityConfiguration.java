@@ -11,10 +11,12 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.web.SecurityFilterChain;
 import tools.jackson.databind.json.JsonMapper;
 
-// Stateless bearer-token API. Every endpoint needs a valid Keycloak token except health;
-// modules restrict their endpoints by role with @PreAuthorize. An endpoint whose callers must be
-// refused before the body is read and validated also gets a role rule here, so a caller without
-// the role gets 403 and learns nothing about the input rules.
+// Stateless bearer-token API. Every endpoint needs a valid Keycloak token except health and guest
+// sign-up. Modules restrict their endpoints by role with @PreAuthorize, and every endpoint with a
+// role also gets the same rule here, so a caller without the role gets 403 before the body, path
+// or query is read and converted, and learns nothing about the input rules. RoleAccessMatrixIT
+// keeps both in step: it calls every endpoint with every role, and fails on an endpoint it does
+// not list.
 @Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
 class SecurityConfiguration {
@@ -40,6 +42,13 @@ class SecurityConfiguration {
                 // Guest sign-up (RIA-51): the guest has no account, and so no token, yet.
                 .requestMatchers(HttpMethod.POST, "/api/v1/guests")
                 .permitAll()
+                // Stay registration (RIA-50): hotel managers and admins only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/stays")
+                .hasAnyRole("HOTEL_MANAGER", "ADMIN")
+                // Vehicles at a hub (RIA-53, RIA-59): guests choose a bike, operators and admins
+                // follow the fleet.
+                .requestMatchers(HttpMethod.GET, "/api/v1/hubs/*/vehicles")
+                .hasAnyRole("GUEST", "OPERATOR", "ADMIN")
                 // Hub registration (RIA-56): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs")
                 .hasAnyRole("OPERATOR", "ADMIN")
@@ -49,8 +58,13 @@ class SecurityConfiguration {
                 // Activating, deactivating or retiring a bike (RIA-91): operators and admins only.
                 .requestMatchers(HttpMethod.PUT, "/api/v1/vehicles/*/status")
                 .hasAnyRole("OPERATOR", "ADMIN")
-                // Starting a trip (RIA-54): guests only.
+                // Buying a pass (RIA-52): guests only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/passes")
+                .hasRole("GUEST")
+                // Starting a trip and reading it (RIA-54): guests only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/trips")
+                .hasRole("GUEST")
+                .requestMatchers(HttpMethod.GET, "/api/v1/trips/*")
                 .hasRole("GUEST")
                 // Ending a trip at a hub (RIA-55): guests only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/trips/*/end")
