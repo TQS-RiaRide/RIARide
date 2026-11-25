@@ -72,7 +72,8 @@ public class MaintenanceTicket implements Persistable<UUID> {
     return new MaintenanceTicket(vehicleId, validDescription(description), now, sla);
   }
 
-  private static String validDescription(String description) {
+  // Also used before the bike is touched, so that an invalid request changes nothing.
+  public static String validDescription(String description) {
     var trimmed = description == null ? "" : description.strip();
     if (trimmed.isEmpty() || trimmed.length() > MAX_DESCRIPTION_LENGTH) {
       throw new InvalidTicketException(
