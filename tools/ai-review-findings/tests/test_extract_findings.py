@@ -103,3 +103,17 @@ def test_reads_row_with_missing_decision_as_unknown() -> None:
     body = "### AI review findings\n\n| Finding | Decision | Reason |\n|---|---|---|\n| LOW: x |\n"
 
     assert extract_findings(body) == [Finding("LOW", "UNKNOWN", "LOW: x")]
+
+
+def test_skips_note_rows_with_neither_severity_nor_decision() -> None:
+    body = """### AI review findings
+
+| Finding | Accepted / Rejected | Reason |
+|---|---|---|
+| No AI review findings | Not applicable | |
+| Copilot: no review (quota) |  |  |
+| Pending AI review run | n/a | |
+| LOW: real one | Accepted | Fixed |
+"""
+
+    assert extract_findings(body) == [Finding("LOW", "ACCEPTED", "LOW: real one")]
