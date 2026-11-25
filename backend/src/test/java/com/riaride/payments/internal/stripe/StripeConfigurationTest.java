@@ -17,7 +17,7 @@ class StripeConfigurationTest {
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner().withUserConfiguration(StripeConfiguration.class);
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldCreateGatewayWithTestModeKey() {
     contextRunner
@@ -25,13 +25,13 @@ class StripeConfigurationTest {
         .run(context -> assertThat(context).hasSingleBean(PaymentGateway.class));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldFailStartupWhenKeyIsMissing() {
     contextRunner.run(context -> assertThat(context).hasFailed());
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldFailStartupWhenKeyIsBlank() {
     contextRunner
@@ -40,7 +40,7 @@ class StripeConfigurationTest {
   }
 
   // Test mode only: a live key would move real money.
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldFailStartupWithLiveKeyWithoutShowingIt() {
     var liveKey = "sk_live_51NeverInTests";
@@ -55,7 +55,7 @@ class StripeConfigurationTest {
         });
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldHideKeyWhenPropertiesArePrinted() {
     var properties =

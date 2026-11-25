@@ -15,7 +15,7 @@ import org.junit.platform.suite.api.Suite;
 // Scenarios tagged @wip have no step definitions yet and are excluded;
 // each story removes the tag when it implements its steps.
 // The JSON report is imported into Xray (QA Manual 2.3).
-// An empty run fails: the @RIA-68 health scenario is a permanent smoke test, so at least one
+// An empty run fails: the @smoke health scenario (RIA-68) is a permanent smoke test, so at least one
 // scenario always runs, and zero means the features were not found.
 @Suite
 @IncludeEngines("cucumber")

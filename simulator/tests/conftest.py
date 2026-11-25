@@ -13,7 +13,7 @@ from riaride_simulator.fleet import Fleet
 from riaride_simulator.simulator import Simulator
 
 CONTRACTS = Path(__file__).resolve().parents[2] / "contracts" / "mqtt"
-STORY = "RIA-60"
+STORY = "RIA-58"
 
 HUB_PRAIA = "11111111-1111-4111-8111-111111111111"
 HUB_SALINAS = "22222222-2222-4222-8222-222222222222"
