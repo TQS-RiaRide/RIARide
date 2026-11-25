@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { linkToStory } from './xray';
+import { linkToStory, requirement } from './xray';
 
 describe('linkToStory', () => {
   it('annotates the test with the story key as its requirements property', async () => {
@@ -16,4 +16,14 @@ describe('linkToStory', () => {
       expect(() => linkToStory(key)).toThrow('Not a Jira story key');
     },
   );
+});
+
+describe('requirement', () => {
+  requirement('RIA-52');
+
+  it('annotates each test of the block with its story', ({ task }) => {
+    expect(task.annotations.map(({ type, message }) => [type, message])).toEqual([
+      ['requirements', 'RIA-52'],
+    ]);
+  });
 });
