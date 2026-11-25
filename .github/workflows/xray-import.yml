@@ -2,16 +2,25 @@ name: Xray import
 
 # Sends the test results of every CI run on main to Xray Cloud, so each
 # story's requirement coverage reflects the latest build (QA Manual, 2.3).
-# Each run creates at most three Test Executions in the iteration's Test Plan:
-# one for the backend JUnit XML reports, one for the simulator's pytest JUnit
-# XML reports and one for the Cucumber JSON reports. Each import is its own
-# request, so they cannot share one.
+# Each run creates at most four Test Executions in the iteration's Test Plan:
+# one for the backend JUnit XML reports, one for the frontend's Vitest JUnit
+# XML report, one for the simulator's pytest JUnit XML reports and one for the
+# Cucumber JSON reports. Each import is its own request, so they cannot share one.
+#
+# It can also be started by hand with the id of an earlier CI run on main, to
+# import that run again after an import failed.
 
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Id of the CI run on main to import (the number in its URL)"
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -23,10 +32,30 @@ jobs:
     # Import failed runs too: a failing test must show as failing in Xray.
     # Skip cancelled or skipped runs, which have no complete reports.
     if: >-
-      github.event.workflow_run.event == 'push' &&
-      contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' &&
+      contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion))
     runs-on: ubuntu-latest
+    env:
+      RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
     steps:
+      # A run started by hand must name a completed CI run of a push to main,
+      # so no other branch's results reach the iteration's Test Plan.
+      - name: Check the CI run to import
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          case "$RUN_ID" in
+            ''|*[!0-9]*) echo "::error::run_id must be the numeric id of a CI run."; exit 1 ;;
+          esac
+          run=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID" \
+            --jq '[.name, .head_branch, .event, .conclusion] | join(" ")')
+          if [ "$run" != "CI main push success" ] && [ "$run" != "CI main push failure" ]; then
+            echo "::error::Run $RUN_ID is not a completed CI run of a push to main ($run)."
+            exit 1
+          fi
+
       # An unset secret or variable expands to an empty string, which would
       # import without a Test Plan or fail with an unclear Xray error.
       - name: Check Xray configuration
@@ -51,13 +80,15 @@ jobs:
         with:
           pattern: "*-test-reports"
           path: reports
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ env.RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Import JUnit results
         # The Xray JUnit reports: every JUnit result, with the @Requirement links (QA Manual 2.3).
         # The plain Surefire and Failsafe reports hold the same results without the links.
-        if: hashFiles('reports/**/xray-reports/TEST-junit-jupiter-*.xml') != ''
+        # !cancelled(): each import runs even if an earlier one failed, so one
+        # rejected report does not hide the others; the job still fails.
+        if: ${{ !cancelled() && hashFiles('reports/**/xray-reports/TEST-junit-jupiter-*.xml') != '' }}
         uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
@@ -71,9 +102,24 @@ jobs:
           # The action ignores import errors by default; fail the job instead.
           failOnImportError: "true"
 
+      - name: Import frontend results
+        # Vitest JUnit XML; each test carries its story in a "requirements" property.
+        if: ${{ !cancelled() && hashFiles('reports/frontend-test-reports/frontend-*.xml') != '' }}
+        uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
+        with:
+          username: ${{ secrets.XRAY_CLIENT_ID }}
+          password: ${{ secrets.XRAY_CLIENT_SECRET }}
+          xrayCloud: "true"
+          testFormat: junit
+          testPaths: "reports/frontend-test-reports/frontend-*.xml"
+          combineInSingleTestExec: "true"
+          projectKey: RIA
+          testPlanKey: ${{ vars.XRAY_TEST_PLAN_KEY }}
+          failOnImportError: "true"
+
       - name: Import simulator results
         # pytest JUnit XML; each test carries its story in a "requirements" property.
-        if: hashFiles('reports/simulator-test-reports/simulator-*.xml') != ''
+        if: ${{ !cancelled() && hashFiles('reports/simulator-test-reports/simulator-*.xml') != '' }}
         uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
@@ -87,7 +133,7 @@ jobs:
           failOnImportError: "true"
 
       - name: Import Cucumber results
-        if: hashFiles('reports/**/cucumber*.json') != ''
+        if: ${{ !cancelled() && hashFiles('reports/**/cucumber*.json') != '' }}
         uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
