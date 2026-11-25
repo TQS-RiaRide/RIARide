@@ -52,12 +52,14 @@ Run from `frontend/`, with Node.js 22.22.2 or later in the 22 line, or 24.15.0 o
 |---|---|
 | Install dependencies | `npm ci` |
 | Dev server (`/api/v1` forwarded to `http://localhost:8080`; `VITE_BACKEND_URL` overrides it) | `npm run dev` (at `http://localhost:5173`) |
+| Dev server with sample data and synthetic roles, no backend or Keycloak | `npm run dev:demo` |
 | Lint (typescript-eslint strict, react-hooks) | `npm run lint` |
 | Format / check formatting (Prettier) | `npm run format` / `npm run format:check` |
 | Unit tests (Vitest, React Testing Library) | `npm test` |
 | Tests with LCOV coverage (`coverage/`, read by SonarQube) | `npm run test:coverage` |
 | Single test file or test | `npx vitest run src/features/health/api.test.ts -t "unreachable"` |
 | Type check and production build (`dist/`) | `npm run build` |
+| Keycloak login theme jar (`dist_keycloak/`; the app's components on Keycloak's pages; needs Maven and a JDK) | `npm run build:keycloak-theme` |
 | Docker image | `docker build -t riaride-frontend .` |
 
 ### End-to-end tests
