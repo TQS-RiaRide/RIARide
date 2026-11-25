@@ -75,6 +75,15 @@ public class MaintenanceSteps {
         .isEqualTo(openedAt.plus(Duration.ofHours(hours)));
   }
 
+  // The reservation the trip start made (RIA-54), cancelled once the ticket commits.
+  @Then("the guest's booking of bike {string} is cancelled")
+  public void theGuestsBookingIsCancelled(String code) {
+    assertThat(
+            jdbc.queryForList(
+                "select status from reservation where vehicle_code = ?", String.class, code))
+        .containsExactly("CANCELLED");
+  }
+
   @Then("bike {string} has no ticket")
   public void bikeHasNoTicket(String code) {
     assertThat(

@@ -16,6 +16,19 @@ Feature: Open a maintenance ticket
     When the guest lists the bikes at hub "Marés Centro"
     Then bike "EB-801" is not bookable
 
+  Scenario: A reserved bike goes to maintenance and its booking is cancelled
+    Given a hub "Marés Centro" with an available bike "EB-201" with 80 % battery
+    And a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
+    And the guest has a valid "stay" pass
+    And the guest has a "starting" trip with bike "EB-201"
+    When the operator opens a ticket for bike "EB-201" with the fault "Front light is broken"
+    Then the response status is 201
+    And bike "EB-201" is "maintenance"
+    And the guest's booking of bike "EB-201" is cancelled
+    When telemetry reports that bike "EB-201" is unlocked
+    Then the trip is "failed"
+    And bike "EB-201" is "maintenance"
+
   Scenario: A bike in use moves to maintenance only when its trip ends
     Given a hub "Marés Centro" with an available bike "EB-301" with 80 % battery
     And a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
