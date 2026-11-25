@@ -1,0 +1,109 @@
+/*
+ * RiaRide design tokens: the "Ria & Salinas" world.
+ * Salt-white ground, deep ria-night ink, buoy orange for the one action that matters,
+ * reed green for good news. Colours are chosen to pass WCAG AA on their usual surface.
+ */
+:root {
+  /* Surfaces */
+  --color-ground: #f6f2ea;
+  --color-surface: #fffdf8;
+  --color-surface-sunk: #faf6ee;
+  --color-surface-hover: #f3ede1;
+  --color-line: #e7dfcf;
+  --color-line-strong: #d9cfba;
+  --color-line-soft: #f0eadd;
+
+  /* Ink */
+  --color-ink: #10253a;
+  --color-ink-2: #3f5468;
+  --color-ink-3: #4a5d70;
+  --color-ink-muted: #5a6b7b;
+  --color-on-ink: #f6f2ea;
+  --color-on-ink-2: #c9d6e2;
+  --color-on-ink-3: #a9bccd;
+  --color-ink-raised: #1b3550;
+  --color-ink-line: #2a4157;
+
+  /* Accents */
+  --color-action: #c4421c;
+  --color-action-hover: #a83714;
+  --color-action-soft: #fbede6;
+  --color-on-action: #fff8f2;
+  --color-action-bright: #f08a66;
+  --color-ok: #23745a;
+  --color-ok-strong: #1d5e49;
+  --color-ok-soft: #e3f1ea;
+  --color-warn: #8a5a10;
+  --color-warn-dot: #b7791f;
+  --color-warn-soft: #f5ecd9;
+  --color-danger: #9a3412;
+  --color-danger-strong: #8a2f10;
+  --color-water: #1f5f8b;
+  --color-water-soft: #dce7ec;
+  --color-water-light: #7fb3d5;
+  --color-skeleton: #ece5d6;
+  --color-skeleton-shine: #f6f1e6;
+  --color-selection: #f4c9b8;
+  --color-scrim: rgb(16 37 58 / 0.42);
+
+  /*
+   * Type: one family, Hanken Grotesk, for every role. Headings get weight and tight tracking,
+   * numbers and codes get its tabular figures (no monospace costume).
+   */
+  --font-body: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono: var(--font-body);
+
+  /* Five steps; 13 px is the floor, even in dense staff tables. */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+  --text-xl: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem);
+  --text-2xl: clamp(2.125rem, 1.6rem + 2vw, 2.75rem);
+  --text-timer: clamp(2.5rem, 2rem + 2vw, 3.25rem);
+
+  /* Space: tight inside groups, generous between them */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-section: clamp(1.5rem, 1rem + 2vw, 2.25rem);
+
+  /* Shape: continuous corners where the browser supports them */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-sheet: 28px;
+  --radius-pill: 999px;
+
+  /* Depth: offset, soft blur, tinted with the ink */
+  --shadow-raise: 0 1px 3px rgb(16 37 58 / 0.12);
+  --shadow-card: 0 8px 24px rgb(16 37 58 / 0.12);
+  --shadow-pop: 0 24px 60px rgb(16 37 58 / 0.32), 0 2px 6px rgb(16 37 58 / 0.12);
+  --shadow-action: 0 2px 8px rgb(196 66 28 / 0.28);
+  --shadow-sheet: 0 -10px 30px rgb(16 37 58 / 0.16);
+
+  /* Motion */
+  --duration-fast: 140ms;
+  --duration-normal: 260ms;
+  --duration-slow: 420ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Hit area and safe areas */
+  --hit: 44px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --shell-max: 1280px;
+  --guest-max: 34rem;
+}
