@@ -82,6 +82,23 @@ jobs:
             e2e/test-results/
           retention-days: 14
 
+      # On main only, as for the other reports (QA Manual 2.3): a run on a branch is evidence for
+      # its pull request, not for the iteration. Failed runs are imported too, so a failing test
+      # shows as failing in Xray. Each test carries its story in a "requirements" property.
+      - name: Import the results into Xray
+        if: always() && github.ref == 'refs/heads/main' && hashFiles('e2e/test-results/junit.xml') != ''
+        uses: mikepenz/xray-action@93fcac936537e41c08c7191229e6106ae511f0da # v4.2.0
+        with:
+          username: ${{ secrets.XRAY_CLIENT_ID }}
+          password: ${{ secrets.XRAY_CLIENT_SECRET }}
+          xrayCloud: "true"
+          testFormat: junit
+          testPaths: "e2e/test-results/junit.xml"
+          combineInSingleTestExec: "true"
+          projectKey: RIA
+          testPlanKey: ${{ vars.XRAY_TEST_PLAN_KEY }}
+          failOnImportError: "true"
+
       - name: Show the logs of the stack
         if: failure()
         run: docker compose -f infra/compose.yaml --profile app logs --no-color --tail 200
