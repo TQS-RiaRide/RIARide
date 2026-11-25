@@ -91,7 +91,7 @@ describe('openTicket', () => {
   it.each([
     [404, 'notFound'],
     [409, 'retired'],
-    [401, 'forbidden'],
+    [401, 'sessionExpired'],
     [403, 'forbidden'],
     [500, 'unexpected'],
   ] as const)('maps status %i to a %s error', async (status, kind) => {

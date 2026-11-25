@@ -111,6 +111,9 @@ describe('OpenTicketForm', () => {
       'Describe the fault in up to 500 characters.',
     );
     expect(screen.getByLabelText('Fault')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Fault')).toHaveAccessibleDescription(
+      'Describe the fault in up to 500 characters.',
+    );
     expect(screen.getByLabelText('Bike code')).not.toHaveAttribute('aria-invalid');
   });
 
@@ -118,6 +121,7 @@ describe('OpenTicketForm', () => {
     ['notFound', 'No bike has this code.'],
     ['retired', 'This bike is retired, so it cannot get a ticket.'],
     ['forbidden', 'Your account cannot open tickets.'],
+    ['sessionExpired', 'Your session has ended. Log in again to open the ticket.'],
     ['unexpected', 'The ticket could not be opened. Try again.'],
   ] as const)('explains a %s error and keeps what was typed', async (kind, message) => {
     renderForm(vi.fn().mockRejectedValue(new TicketError(kind)));
