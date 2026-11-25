@@ -29,7 +29,8 @@ import org.springframework.test.context.DynamicPropertySource;
 // Testcontainers) as a faulty simulator could send it, goes through the MQTT adapter and the fleet
 // listener without changing the bike's battery, and the subscriber keeps processing what follows.
 // A valid reading for another bike, published afterwards on the same broker, marks the point by
-// which the unusable message was processed: no sleeps.
+// which the unusable message was processed: no sleeps. This relies on each publish returning once
+// the broker has acknowledged it (QoS 1) and on the subscriber handling messages one at a time.
 @SpringBootTest
 @Import({TestcontainersConfiguration.class, FixedClockConfiguration.class})
 class UnusableTelemetryIT {
@@ -112,8 +113,8 @@ class UnusableTelemetryIT {
 
     await().atMost(TELEMETRY_LAG).until(() -> battery("EB-802") == 42);
     assertThat(
-            jdbc.queryForObject("select count(*) from vehicle where hub_id = ?", Long.class, HUB))
-        .isEqualTo(2);
+            jdbc.queryForObject("select count(*) from vehicle where code = 'EB-999'", Long.class))
+        .isZero();
     assertThat(battery("EB-801")).isEqualTo(80);
   }
 
