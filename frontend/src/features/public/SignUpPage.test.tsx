@@ -54,6 +54,11 @@ describe('SignUpPage', () => {
 
   it.each([
     [{ email: 'not-an-email' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'ana@example' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'ana@.pt' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'ana@example.' }, 'Email', 'Enter a valid email address.'],
+    [{ email: '@example.pt' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'ana silva@example.pt' }, 'Email', 'Enter a valid email address.'],
     [{ password: 'seven77' }, 'Password', 'The password needs at least 8 characters.'],
     [{ code: '   ' }, 'Stay code', 'Enter the stay code from the front desk.'],
   ])('refuses %o before sending anything', async (values, field, message) => {
