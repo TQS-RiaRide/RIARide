@@ -116,11 +116,40 @@ describe('SignUpPage', () => {
     await submit();
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'This stay code is not valid, or the stay has ended. Check it with the front desk.',
+      'This stay code is not valid. Check it with the front desk.',
     );
     expect(screen.getByLabelText('Stay code')).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('button', { name: 'Create account' })).toBeEnabled();
     expect(client.login).not.toHaveBeenCalled();
+  });
+
+  // RIA-51: a code of a stay that has ended is refused with a message of its own.
+  it('says the stay has ended when the code belongs to a past stay', async () => {
+    await renderApp({
+      path: '/sign-up',
+      backend: refusing(
+        new ProblemError(422, 'Stay already ended', 'The stay of this code has ended.', []),
+      ),
+    });
+    fill({});
+
+    await submit();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'This stay has already ended, so its code no longer works. Ask the front desk.',
+    );
+  });
+
+  it('asks to check the fields when Keycloak rejects the account details', async () => {
+    await renderApp({
+      path: '/sign-up',
+      backend: refusing(new ProblemError(422, 'Account details rejected', null, [])),
+    });
+    fill({});
+
+    await submit();
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Check the fields and try again.');
   });
 
   it('says an account already exists for a taken email', async () => {
