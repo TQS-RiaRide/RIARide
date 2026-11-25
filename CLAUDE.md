@@ -60,6 +60,16 @@ Run from `frontend/`, with Node.js 22.22.2 or later in the 22 line, or 24.15.0 o
 | Type check and production build (`dist/`) | `npm run build` |
 | Docker image | `docker build -t riaride-frontend .` |
 
+### End-to-end tests
+
+Run from `e2e/` against the Compose stack started with the `app` profile, after `infra/keycloak/create-dev-users.sh`, with `DEV_USER_PASSWORD` from `infra/.env` in the environment. Details in [`e2e/README.md`](e2e/README.md).
+
+| Task | Command |
+|---|---|
+| Install | `npm ci` then `npx playwright install chromium` |
+| Run (Playwright and axe) | `npm test` |
+| On demand in CI, on a branch | `gh workflow run e2e.yml --ref <branch>` |
+
 ### Simulator commands
 
 Run from `simulator/`, with Python 3.12 or later, after `pip install -r requirements-dev.txt` in a virtual environment. Details in [`simulator/README.md`](simulator/README.md).
