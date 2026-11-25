@@ -1,0 +1,28 @@
+{
+  "label": "Command menu",
+  "placeholder": "Find a bike or a hub, or type a command…",
+  "empty": "No matches",
+  "goTo": "Go to",
+  "noHub": "On a trip",
+  "occupancy": "{{docked}}/{{capacity}} bikes",
+  "switchLanguage": "Switch to {{language}}",
+  "logOut": "Log out",
+  "groups": {
+    "actions": "On this page",
+    "navigate": "Go to",
+    "bikes": "Bikes",
+    "hubs": "Hubs",
+    "preferences": "Preferences"
+  },
+  "hints": {
+    "shortcuts": "shortcuts"
+  },
+  "help": {
+    "title": "Keyboard shortcuts",
+    "description": "Single letters work when you are not typing in a field.",
+    "everywhere": "Everywhere",
+    "palette": "Open the command menu",
+    "thisList": "Show this list",
+    "thisPage": "On this page"
+  }
+}

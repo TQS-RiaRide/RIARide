@@ -1,0 +1,28 @@
+{
+  "label": "Menu de comandos",
+  "placeholder": "Procure uma bicicleta ou um hub, ou escreva um comando…",
+  "empty": "Sem resultados",
+  "goTo": "Ir para",
+  "noHub": "Numa viagem",
+  "occupancy": "{{docked}}/{{capacity}} bicicletas",
+  "switchLanguage": "Mudar para {{language}}",
+  "logOut": "Sair",
+  "groups": {
+    "actions": "Nesta página",
+    "navigate": "Ir para",
+    "bikes": "Bicicletas",
+    "hubs": "Hubs",
+    "preferences": "Preferências"
+  },
+  "hints": {
+    "shortcuts": "atalhos"
+  },
+  "help": {
+    "title": "Atalhos de teclado",
+    "description": "As letras isoladas funcionam quando não está a escrever num campo.",
+    "everywhere": "Em todo o lado",
+    "palette": "Abrir o menu de comandos",
+    "thisList": "Mostrar esta lista",
+    "thisPage": "Nesta página"
+  }
+}

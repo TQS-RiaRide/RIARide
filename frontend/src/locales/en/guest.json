@@ -1,0 +1,147 @@
+{
+  "passTypes": {
+    "ONE_DAY": {
+      "name": "1-day pass",
+      "rule": "24 hours from your first trip."
+    },
+    "THREE_DAY": {
+      "name": "3-day pass",
+      "rule": "72 hours from your first trip."
+    },
+    "STAY": {
+      "name": "Stay pass",
+      "rule": "Until your check-out."
+    }
+  },
+  "pass": {
+    "label": "Your pass",
+    "noneTitle": "No pass yet",
+    "noneBody": "It starts on your first ride.",
+    "buyFrom": "Buy a pass from {{price}}",
+    "buy": "Buy a pass",
+    "deposit": "Deposit, refunded at the end",
+    "status": {
+      "PENDING": {
+        "title": "Almost ready",
+        "body": "Confirming payment…"
+      },
+      "INACTIVE": {
+        "title": "Not started",
+        "body": "It starts on your first trip. {{rule}}"
+      },
+      "ACTIVE": {
+        "title": "Active",
+        "body": "{{rule}}"
+      },
+      "CLOSED": {
+        "title": "Pass ended"
+      }
+    }
+  },
+  "buy": {
+    "title": "Choose your pass",
+    "choose": "Pass type",
+    "deposit": "Deposit",
+    "today": "Charged today",
+    "pay": "Pay and get the pass",
+    "paying": "Paying…",
+    "activation": "Refunded when the pass ends.",
+    "card": "Test card",
+    "cards": {
+      "pm_card_visa": "Visa ending 4242",
+      "pm_card_mastercard": "Mastercard ending 4444",
+      "pm_card_chargeDeclined": "Card that is declined"
+    },
+    "bought": "{{pass}} bought.",
+    "errors": {
+      "declined": "The card was declined and nothing was charged. Try another card.",
+      "noStay": "Your stay is not active, so you cannot buy a pass. Check with the front desk.",
+      "alreadyOpen": "You already have a pass that has not ended.",
+      "inProgress": "This purchase is still being processed. Wait a moment and try again.",
+      "retry": "The payment could not be completed. Try again: you will not be charged twice."
+    }
+  },
+  "home": {
+    "hello_morning": "Good morning, {{name}}.",
+    "hello_afternoon": "Good afternoon, {{name}}.",
+    "hello_evening": "Good evening, {{name}}.",
+    "helloAnon": "Where to today?",
+    "activeTrip": "Trip in progress on",
+    "bikes": "Bikes",
+    "haveCode": "Use a bike code",
+    "hubs": "Hubs"
+  },
+  "start": {
+    "errors": {
+      "noPass": "Buy a pass before your first trip.",
+      "noStay": "Your stay is not active, so you cannot ride.",
+      "notFound": "No bike has this code. Check the code on the frame.",
+      "oneAtATime": "You already have a bike. End that trip first.",
+      "reservedElsewhere": "You have a booking for another bike.",
+      "unavailable": "This bike cannot be used right now. Pick another one."
+    }
+  },
+  "bikes": {
+    "range": "~ {{km}} km",
+    "unlock": "Unlock",
+    "unlockBike": "Unlock {{code}}",
+    "unavailable_one": "+{{count}} unavailable",
+    "unavailable_other": "+{{count}} unavailable",
+    "loadError": "We could not load the bikes. Showing the last list we had.",
+    "emptyTitle": "No bikes here right now",
+    "emptyBody": "Try another hub. Bikes come back all day.",
+    "noHubsTitle": "No hubs to show yet",
+    "noHubsBody": "Standing next to a bike? Start with the code on its frame."
+  },
+  "code": {
+    "title": "Start with a bike code",
+    "description": "The code is painted on the frame, under the seat.",
+    "label": "Bike code",
+    "placeholder": "e.g. EB-401",
+    "submit": "Unlock"
+  },
+  "trip": {
+    "backToBikes": "Back to bikes",
+    "notFound": "We could not find this trip",
+    "notFoundBody": "It may belong to another account.",
+    "status": {
+      "STARTING": "Unlocking",
+      "IN_USE": "Riding",
+      "FAILED": "Did not unlock",
+      "ENDED": "Ended"
+    },
+    "unlocking": "Unlocking…",
+    "failed": "The bike didn't unlock. Your pass wasn't used; {{code}} is held for you for 15 minutes.",
+    "elapsedLabel": "Time on the bike: {{time}}",
+    "included": "{{time}} left of the {{total}} included.",
+    "overtime": "Overtime: {{time}}, charged every 15 minutes.",
+    "endedAt": "Returned at {{hub}} at {{time}}.",
+    "aHub": "a hub",
+    "end": "End trip",
+    "endedToast": "Trip ended at {{hub}}."
+  },
+  "end": {
+    "title": "End trip",
+    "description": "Dock the bike in a free slot, then confirm here.",
+    "pick": "Choose a hub",
+    "submitAt": "End at {{hub}}",
+    "full": "Full right now",
+    "free_one": "{{count}} free slot",
+    "free_other": "{{count}} free slots",
+    "noHubs": "No hubs to choose from.",
+    "errors": {
+      "full": "That hub filled up a moment ago. Choose one with a free slot.",
+      "notRunning": "This trip is no longer running.",
+      "unknownHub": "We could not find that hub. Choose another."
+    }
+  },
+  "trips": {
+    "title": "Your trips",
+    "trips": "Trips",
+    "emptyTitle": "No trips yet",
+    "emptyBody": "Your trips show here once you ride.",
+    "charges": "Charges",
+    "depositHeld": "Held",
+    "noChargesTitle": "No charges"
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "title": "Fleet",
+  "loading": "Loading the fleet…",
+  "refreshing": "Updating…",
+  "updated": "Updated {{when}}",
+  "actions": {
+    "registerHub": "Register hub",
+    "registerBike": "Register bike",
+    "search": "Search bikes",
+    "lowBattery": "Show bikes with low battery"
+  },
+  "hubs": {
+    "title": "Hub occupancy",
+    "countLabel": "{{docked}} of {{capacity}} slots taken",
+    "level": {
+      "full": "Full",
+      "low": "Almost empty"
+    },
+    "suggestion_one": "Move {{count}} bike from {{from}} to {{to}}.",
+    "suggestion_other": "Move {{count}} bikes from {{from}} to {{to}}.",
+    "emptyTitle": "No hubs yet",
+    "emptyBody": "Register the first hub to start placing bikes."
+  },
+  "tickets": {
+    "title": "Tickets by SLA deadline",
+    "all": "All tickets"
+  },
+  "table": {
+    "title": "Bikes",
+    "search": "Code or hub",
+    "filters": "Filter bikes",
+    "filter": {
+      "ALL": "All",
+      "AVAILABLE": "Available",
+      "RESERVED": "Reserved",
+      "IN_USE": "In use",
+      "MAINTENANCE": "Maintenance",
+      "RETIRED": "Retired",
+      "LOW_BATTERY": "Low battery"
+    },
+    "clearHub": "Show every hub",
+    "bike": "Bike",
+    "hub": "Hub",
+    "status": "Status",
+    "battery": "Battery",
+    "actions": "Actions",
+    "onTrip": "On a trip",
+    "actionsFor": "Actions for {{code}}",
+    "changeStatus": "Change status",
+    "openTicket": "Open a ticket",
+    "emptyTitle": "No bikes yet",
+    "emptyBody": "Register bikes at a hub to see them here.",
+    "noMatchTitle": "No bike matches",
+    "noMatchBody": "Clear the search or pick another filter."
+  },
+  "status": {
+    "changed": "{{code}} is now {{status}}.",
+    "restored": "{{code}} is back as it was.",
+    "undo": "Undo",
+    "refused": "{{code}} cannot change to that status now.",
+    "notFound": "{{code}} no longer exists."
+  },
+  "registerHub": {
+    "title": "Register a hub",
+    "name": "Name",
+    "kind": "Kind",
+    "kinds": {
+      "HOTEL": "Hotel",
+      "TOURIST_SPOT": "Tourist spot"
+    },
+    "hotel": "Hotel",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "capacity": "Slots",
+    "submit": "Register hub",
+    "done_one": "{{name}} registered with {{count}} slot.",
+    "done_other": "{{name}} registered with {{count}} slots.",
+    "errors": {
+      "name": "Give the hub a name.",
+      "hotel": "Choose the hotel of this hub.",
+      "latitude": "Enter the latitude as a number, for example 40.6405.",
+      "longitude": "Enter the longitude as a number, for example -8.6538.",
+      "capacity": "The hub needs at least 1 slot.",
+      "taken": "Another hub already has this name.",
+      "invalid": "Check the fields of the hub."
+    }
+  },
+  "registerBike": {
+    "title": "Register a bike",
+    "hub": "Hub",
+    "hubOption_one": "{{name}} · {{count}} free slot",
+    "hubOption_other": "{{name}} · {{count}} free slots",
+    "noRoom": "Every hub is full. Free a slot or register a hub first.",
+    "code": "Bike code",
+    "codeHint": "e.g. EB-701",
+    "another": "Add another",
+    "submit": "Register bike",
+    "done": "{{code}} registered.",
+    "errors": {
+      "full": "This hub has no free slot. Choose another hub.",
+      "taken": "Another bike already has this code.",
+      "invalid": "Use letters, digits and hyphens, for example EB-701."
+    }
+  }
+}

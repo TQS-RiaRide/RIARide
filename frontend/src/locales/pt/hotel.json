@@ -1,0 +1,49 @@
+{
+  "title": "Backoffice do hotel",
+  "stay": {
+    "title": "Registar uma estadia",
+    "guestName": "Nome do hóspede",
+    "hotel": "Hotel",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "submit": "Registar estadia",
+    "codeFor": "Código de estadia de {{name}}",
+    "copy": "Copiar código",
+    "copied": "Código copiado.",
+    "copyFailed": "Não foi possível copiar o código. Selecione-o e copie-o à mão.",
+    "errors": {
+      "guestName": "Indique o nome do hóspede.",
+      "checkOut": "O check-out tem de ser depois do check-in.",
+      "otherHotel": "Só pode registar estadias no hotel que gere.",
+      "hotel": "Este hotel não pertence ao grupo.",
+      "invalid": "Verifique os campos da estadia."
+    }
+  },
+  "stays": {
+    "title": "Estadias",
+    "emptyTitle": "Ainda sem estadias"
+  },
+  "kpis": {
+    "title": "Indicadores do serviço",
+    "availability": "Disponibilidade contra o SLA",
+    "tripsPerDay": "Viagens por dia",
+    "average": "média {{count}}",
+    "tripsLabel": "Viagens por dia nos últimos {{days}} dias, entre {{min}} e {{max}}.",
+    "utilization": "Utilização",
+    "repair": "Tempo a reparar",
+    "hours_one": "{{count}} h",
+    "hours_other": "{{count}} h",
+    "passes": "Passes vendidos",
+    "apiP95": "Latência da API, p95",
+    "errors": "Taxa de erros",
+    "telemetryLag": "Atraso da telemetria",
+    "seconds": "{{value}} s",
+    "unavailableTitle": "Os indicadores ainda não estão disponíveis",
+    "unavailableBody": "Aparecem aqui quando a plataforma os calcular.",
+    "belowSla": "Abaixo do SLA"
+  },
+  "prices": {
+    "title": "Preço base dos passes",
+    "deposit": "Caução (reembolsável)"
+  }
+}

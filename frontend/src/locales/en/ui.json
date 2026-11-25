@@ -1,0 +1,29 @@
+{
+  "close": "Close",
+  "vehicleStatus": {
+    "AVAILABLE": "Available",
+    "RESERVED": "Reserved",
+    "IN_USE": "In use",
+    "MAINTENANCE": "Maintenance",
+    "RETIRED": "Retired"
+  },
+  "battery": {
+    "unknown": "No reading",
+    "value": "{{pct}} %"
+  },
+  "errors": {
+    "network": "We could not reach RiaRide. Check your connection and try again.",
+    "sessionExpired": "Your session has ended. Log in again to continue.",
+    "forbidden": "Your account cannot do this.",
+    "notFound": "We could not find it. It may have been removed.",
+    "unavailable": "The service is busy right now. Try again in a moment.",
+    "unexpected": "Something went wrong. Try again."
+  },
+  "pagination": {
+    "label": "{{what}}, pages",
+    "range": "{{from}}–{{to}} of {{total}}",
+    "previous": "Previous page",
+    "next": "Next page",
+    "page": "Page {{page}}"
+  }
+}

@@ -2,23 +2,18 @@
   "menuLabel": "Áreas",
   "none": "A sua conta ainda não tem perfil. Peça a um administrador que lhe atribua um.",
   "GUEST_DASHBOARD": {
-    "title": "As minhas viagens",
-    "description": "O seu passe, as viagens ativas e anteriores, e os seus pagamentos."
+    "title": "As minhas viagens"
   },
   "OPERATOR_DASHBOARD": {
-    "title": "Painel do operador",
-    "description": "A frota em cada hub e os pedidos de manutenção em aberto."
+    "title": "Frota"
   },
   "MAINTENANCE_TICKETS": {
-    "title": "Pedidos de manutenção",
-    "description": "Pedidos com o prazo do SLA e o técnico atribuído a cada um."
+    "title": "Pedidos de manutenção"
   },
   "HOTEL_BACKOFFICE": {
-    "title": "Backoffice do hotel",
-    "description": "Regras de utilização, capacidade dos hubs, KPIs do negócio e métricas técnicas."
+    "title": "Backoffice do hotel"
   },
   "ACCOUNT_ADMINISTRATION": {
-    "title": "Contas e perfis",
-    "description": "As contas dos utilizadores e os perfis que decidem o que cada um pode usar."
+    "title": "Contas e perfis"
   }
 }

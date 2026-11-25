@@ -1,15 +1,14 @@
 {
   "openTicket": {
     "heading": "Open a ticket",
-    "intro": "Report a fault on a bike. It leaves service so that no guest can book it, and the ticket must be resolved within 24 hours.",
+    "intro": "The bike leaves service. Repair within 24 h.",
     "vehicleCode": "Bike code",
-    "vehicleCodeHint": "As written on the bike, for example EB-701.",
+    "vehicleCodeHint": "e.g. EB-701",
     "description": "Fault",
     "submit": "Open ticket",
     "sending": "Opening…",
     "opened": "Ticket opened for {{code}}.",
     "inMaintenance": "The bike is in maintenance until it is repaired.",
-    "pending": "The bike is on a trip: it moves to maintenance when the trip ends.",
     "deadline": "Repair deadline: {{deadline}}.",
     "errors": {
       "vehicleCode": "Enter the code of the bike.",
@@ -21,5 +20,13 @@
       "sessionExpired": "Your session has ended. Log in again to open the ticket.",
       "unexpected": "The ticket could not be opened. Try again."
     }
-  }
+  },
+  "list": {
+    "title": "Open tickets",
+    "emptyTitle": "No open tickets",
+    "emptyBody": "Every bike is in service.",
+    "overdue": "{{time}} late",
+    "left": "{{time}} left"
+  },
+  "pending": "The bike is on a trip: it moves to maintenance when the trip ends."
 }

@@ -1,0 +1,57 @@
+{
+  "title": "Vila Ria, ao seu ritmo.",
+  "lead": "Bicicletas elétricas para os hóspedes dos hotéis Marés. Levante numa estação, entregue noutra e pague só o seu passe.",
+  "signUp": "Criar conta",
+  "haveAccount": "Já tenho conta",
+  "fine": "Precisa do código de estadia que a receção lhe dá no check-in.",
+  "factsLabel": "Como funciona",
+  "facts": {
+    "code": {
+      "title": "Crie conta com o código da estadia"
+    },
+    "pass": {
+      "title": "Passes desde {{price}}",
+      "body": "Um dia, três dias ou toda a estadia."
+    },
+    "hubs": {
+      "title": "Entregue em qualquer estação",
+      "body": "Hotéis, centro histórico, salinas: termine onde houver um lugar livre."
+    }
+  },
+  "staff": "Equipa RodaLeve ou do Grupo Marés?",
+  "staffLink": "Entrar no backoffice",
+  "redirecting": "A levá-lo para a página de entrada…",
+  "demo": {
+    "title": "Entrar como",
+    "lead": "Demonstração: escolha um perfil.",
+    "personas": {
+      "guest": "Hóspede no Marés Praia",
+      "operator": "Operador da frota, RodaLeve",
+      "technician": "Técnico, RodaLeve",
+      "manager": "Gestora de hotel, Grupo Marés",
+      "admin": "Administradora"
+    }
+  },
+  "signUpForm": {
+    "title": "Crie a sua conta",
+    "stayCode": "Código da estadia",
+    "stayCodeHint": "No cartão do quarto, ex.: PRAIA-7K4Q",
+    "email": "Email",
+    "password": "Palavra-passe",
+    "passwordHint_one": "Pelo menos {{count}} carácter.",
+    "passwordHint_other": "Pelo menos {{count}} caracteres.",
+    "submit": "Criar conta",
+    "sending": "A criar…",
+    "created": "Bem-vindo ao RiaRide.",
+    "haveAccount": "Já tem conta?",
+    "logIn": "Entrar",
+    "errors": {
+      "email": "Indique um endereço de email válido.",
+      "password": "A palavra-passe precisa de pelo menos 8 caracteres.",
+      "stayCode": "Indique o código de estadia da receção.",
+      "stayCodeUnknown": "Este código de estadia não é válido, ou a estadia terminou. Confirme-o na receção.",
+      "taken": "Já existe uma conta com este email. Entre com ela.",
+      "invalid": "Verifique os campos e tente novamente."
+    }
+  }
+}

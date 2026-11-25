@@ -29,7 +29,7 @@ src/i18n/
 
 ## Add a feature namespace
 
-1. Create `src/locales/en/<feature>.json` and `src/locales/pt/<feature>.json`.
+1. Create `src/locales/en/<feature>.json` and `src/locales/pt/<feature>.json` (`login` belongs to `src/keycloak-theme`, Keycloak's login pages).
 2. Add `'<feature>'` to `NAMESPACES` in `config.ts`.
 3. Import both files in `resources.ts`.
 

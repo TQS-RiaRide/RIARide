@@ -1,0 +1,47 @@
+{
+  "documentTitle": "{{title}} · {{realm}}",
+  "home": "RiaRide home",
+  "logIn": {
+    "title": "Log in",
+    "username": "Email or username",
+    "email": "Email",
+    "password": "Password",
+    "forgot": "Forgot password?",
+    "rememberMe": "Keep me logged in",
+    "submit": "Log in",
+    "sending": "Logging in…",
+    "newGuest": "Staying at a Marés hotel?",
+    "signUp": "Sign up with your stay code"
+  },
+  "notYou": "Not you?",
+  "restart": "Use another account",
+  "resetPassword": {
+    "title": "Reset your password",
+    "lead": "Enter the email or username of your account. We send a link to choose a new password.",
+    "submit": "Send link"
+  },
+  "updatePassword": {
+    "title": "Choose a new password",
+    "password": "New password",
+    "confirm": "Repeat the password",
+    "logoutOthers": "Log out on my other devices",
+    "submit": "Save password",
+    "cancel": "Cancel"
+  },
+  "backToLogIn": "Back to log in",
+  "backToApp": "Back to RiaRide",
+  "continue": "Continue",
+  "error": {
+    "title": "Something went wrong"
+  },
+  "logoutConfirm": {
+    "title": "Log out?",
+    "lead": "You leave RiaRide on this device.",
+    "submit": "Log out"
+  },
+  "expired": {
+    "title": "This page expired",
+    "lead": "You took a while, so the page timed out. Continue where you were or start again.",
+    "restart": "Start again"
+  }
+}

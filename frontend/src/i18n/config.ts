@@ -15,7 +15,21 @@ export const LANGUAGE_NAMES: Record<Language, string> = {
 
 // One namespace per area of the UI: shared texts in "common", and one per
 // feature, named after its folder in src/features.
-export const NAMESPACES = ['common', 'health', 'auth', 'workspaces', 'maintenance'] as const;
+export const NAMESPACES = [
+  'common',
+  'health',
+  'auth',
+  'workspaces',
+  'maintenance',
+  'ui',
+  'shell',
+  'command',
+  'landing',
+  'login',
+  'guest',
+  'fleet',
+  'hotel',
+] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
 export const DEFAULT_NAMESPACE: Namespace = 'common';

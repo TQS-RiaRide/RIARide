@@ -1,15 +1,14 @@
 {
   "openTicket": {
     "heading": "Abrir um pedido",
-    "intro": "Registe uma avaria numa bicicleta. Ela sai de serviço para que nenhum hóspede a possa reservar, e o pedido tem de ser resolvido em 24 horas.",
+    "intro": "A bicicleta sai de serviço. Reparar em 24 h.",
     "vehicleCode": "Código da bicicleta",
-    "vehicleCodeHint": "Como está escrito na bicicleta, por exemplo EB-701.",
+    "vehicleCodeHint": "p. ex. EB-701",
     "description": "Avaria",
     "submit": "Abrir pedido",
     "sending": "A abrir…",
     "opened": "Pedido aberto para {{code}}.",
     "inMaintenance": "A bicicleta fica em manutenção até ser reparada.",
-    "pending": "A bicicleta está numa viagem: passa a manutenção quando a viagem terminar.",
     "deadline": "Prazo de reparação: {{deadline}}.",
     "errors": {
       "vehicleCode": "Indique o código da bicicleta.",
@@ -21,5 +20,13 @@
       "sessionExpired": "A sua sessão terminou. Inicie sessão novamente para abrir o pedido.",
       "unexpected": "Não foi possível abrir o pedido. Tente novamente."
     }
-  }
+  },
+  "list": {
+    "title": "Pedidos em aberto",
+    "emptyTitle": "Sem pedidos em aberto",
+    "emptyBody": "Todas as bicicletas estão em serviço.",
+    "overdue": "{{time}} em atraso",
+    "left": "faltam {{time}}"
+  },
+  "pending": "A bicicleta está numa viagem: passa a manutenção quando a viagem terminar."
 }

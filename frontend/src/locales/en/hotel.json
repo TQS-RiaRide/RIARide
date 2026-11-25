@@ -1,0 +1,49 @@
+{
+  "title": "Hotel backoffice",
+  "stay": {
+    "title": "Register a stay",
+    "guestName": "Guest name",
+    "hotel": "Hotel",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "submit": "Register stay",
+    "codeFor": "Stay code for {{name}}",
+    "copy": "Copy code",
+    "copied": "Code copied.",
+    "copyFailed": "The code could not be copied. Select it and copy it by hand.",
+    "errors": {
+      "guestName": "Enter the guest's name.",
+      "checkOut": "The check-out must be after the check-in.",
+      "otherHotel": "You can only register stays at the hotel you manage.",
+      "hotel": "This hotel is not part of the group.",
+      "invalid": "Check the fields of the stay."
+    }
+  },
+  "stays": {
+    "title": "Stays",
+    "emptyTitle": "No stays yet"
+  },
+  "kpis": {
+    "title": "Service indicators",
+    "availability": "Availability against the SLA",
+    "tripsPerDay": "Trips per day",
+    "average": "average {{count}}",
+    "tripsLabel": "Trips per day over the last {{days}} days, between {{min}} and {{max}}.",
+    "utilization": "Utilization",
+    "repair": "Time to repair",
+    "hours_one": "{{count}} h",
+    "hours_other": "{{count}} h",
+    "passes": "Passes sold",
+    "apiP95": "API latency, p95",
+    "errors": "Error rate",
+    "telemetryLag": "Telemetry lag",
+    "seconds": "{{value}} s",
+    "unavailableTitle": "The indicators are not available yet",
+    "unavailableBody": "They appear here once the platform computes them.",
+    "belowSla": "Below the SLA"
+  },
+  "prices": {
+    "title": "Base prices of the passes",
+    "deposit": "Deposit (refundable)"
+  }
+}
