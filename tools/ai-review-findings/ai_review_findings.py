@@ -90,3 +90,19 @@ def extract_findings(body: str | None) -> list[Finding]:
         decision = cells[1] if len(cells) > 1 else ""
         findings.append(Finding(parse_severity(text), parse_decision(decision), text))
     return findings
+
+
+def ai_label(pull_request: dict) -> str:
+    raise NotImplementedError
+
+
+def tally(pull_requests: list[dict]) -> dict:
+    raise NotImplementedError
+
+
+def fetch_pull_requests(state: str, base: str | None, limit: int, run=None) -> list[dict]:
+    raise NotImplementedError
+
+
+def main(argv=None, run=None, out=None) -> int:
+    raise NotImplementedError
