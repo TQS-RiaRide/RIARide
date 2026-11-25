@@ -71,6 +71,8 @@ export default function SignUpPage() {
       setError(
         errorText(failure, {
           '422:Invalid stay code': 'landing:signUpForm.errors.stayCodeUnknown',
+          '422:Stay already ended': 'landing:signUpForm.errors.stayEnded',
+          '422:Account details rejected': 'landing:signUpForm.errors.invalid',
           '409': 'landing:signUpForm.errors.taken',
           '422': 'landing:signUpForm.errors.stayCodeUnknown',
           '400': refused[0]

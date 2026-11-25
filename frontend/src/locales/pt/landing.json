@@ -49,7 +49,8 @@
       "email": "Indique um endereço de email válido.",
       "password": "A palavra-passe precisa de pelo menos 8 caracteres.",
       "stayCode": "Indique o código de estadia da receção.",
-      "stayCodeUnknown": "Este código de estadia não é válido, ou a estadia terminou. Confirme-o na receção.",
+      "stayCodeUnknown": "Este código de estadia não é válido. Confirme-o na receção.",
+      "stayEnded": "Esta estadia já terminou, por isso o código deixou de funcionar. Fale com a receção.",
       "taken": "Já existe uma conta com este email. Entre com ela.",
       "invalid": "Verifique os campos e tente novamente."
     }

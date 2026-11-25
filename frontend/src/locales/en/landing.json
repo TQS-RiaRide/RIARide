@@ -49,7 +49,8 @@
       "email": "Enter a valid email address.",
       "password": "The password needs at least 8 characters.",
       "stayCode": "Enter the stay code from the front desk.",
-      "stayCodeUnknown": "This stay code is not valid, or the stay has ended. Check it with the front desk.",
+      "stayCodeUnknown": "This stay code is not valid. Check it with the front desk.",
+      "stayEnded": "This stay has already ended, so its code no longer works. Ask the front desk.",
       "taken": "There is already an account with this email. Log in instead.",
       "invalid": "Check the fields and try again."
     }
