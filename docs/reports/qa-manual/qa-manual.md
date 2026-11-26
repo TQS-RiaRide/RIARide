@@ -51,7 +51,7 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | AI4 | Specification-driven generation (≥ 2 stories) | E | Partial | Section 6.5. Story 1, RIA-56 Register a hub ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), generated from its approved Gherkin scenarios through the agent flow of section 6.3; story 2 is planned for I3 from an OpenSpec proposal |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.7; data collected from every PR from now on |
 | AI6 | Coordination of several agents | V | Done | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), first used for RIA-56 ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), and the `Agent boundaries` CI check enforces their roles |
-| AI7 | Agents in the CI pipeline | V | Decided (I3) | Section 6.6: PR summary and failure triage. The AI review job counts as AI3, not here |
+| AI7 | Agents in the CI pipeline | V | Partial | Section 6.6: [`ai-pr-summary.yml`](../../../.github/workflows/ai-pr-summary.yml) and [`ai-failure-triage.yml`](../../../.github/workflows/ai-failure-triage.yml), called by the `AI failure triage` job of [`ci.yml`](../../../.github/workflows/ci.yml) (RIA-140). Evidence of a summary and of a triage comment to be linked once they run on a pull request. The AI review job counts as AI3, not here |
 
 ## 2. Project management
 
@@ -464,8 +464,10 @@ For each, this section will link the specification, the agent's pull request and
 ### 6.6 Agents in the CI pipeline
 
 - **AI review (AI3):** [`ai-review.yml`](../../../.github/workflows/ai-review.yml) reviews non-draft pull requests from this repository when they are opened, reopened or marked ready for review. It skips Dependabot and fork pull requests, and it does not run on each push; a new review is requested by re-running the job.
-- **PR summary (AI7):** a comment summarizing the change and its risk, posted when a pull request is opened.
-- **Failure triage (AI7):** when CI fails on a pull request, an agent reads the logs and posts a comment with the likely cause and a suggested fix.
+- **PR summary (AI7):** [`ai-pr-summary.yml`](../../../.github/workflows/ai-pr-summary.yml) posts one comment, headed *AI PR summary*, when a non-draft pull request from this repository is opened or marked ready for review: what changes by module, the risk (Low, Medium or High, raised for migrations, security configuration, concurrency, public API or MQTT contract changes, payments and CI files), where to look first, and the tests added. It describes and does not review: findings are the AI review's.
+- **Failure triage (AI7):** when a job of a pull request's CI run fails, the `AI failure triage` job of [`ci.yml`](../../../.github/workflows/ci.yml) calls [`ai-failure-triage.yml`](../../../.github/workflows/ai-failure-triage.yml). The agent reads the failed jobs' logs and the diff and posts one comment, headed *AI CI failure triage*: the failed job and step, the likely cause with the key log lines, whether it is the code, the tests or the infrastructure, a suggested fix and its confidence. The job is not one of the `CI result` needs, so it never decides whether CI passes. It is a reusable workflow called from CI, not a `workflow_run` trigger, because `workflow_run` only runs the version on `main` and could not be tried on pull requests to `dev`.
+
+Both skip pull requests from forks and Dependabot, which have no access to the secret, and the summary also skips drafts. They use the same `CLAUDE_CODE_OAUTH_TOKEN` and the same restriction as the AI review (`docs/ai-review.md`): `--allowedTools` allows only read-only tools, `gh` commands on the current pull request and, for the triage, `gh run view`. The prompts treat the pull request text, the diff and the logs as data, never as instructions.
 
 All agent jobs have permission only to read the code and comment on pull requests. They cannot approve, request changes, push or merge, and branch protection requires a human approval.
 
