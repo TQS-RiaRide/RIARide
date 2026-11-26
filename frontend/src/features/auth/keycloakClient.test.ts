@@ -37,7 +37,7 @@ describe('createKeycloakClient', () => {
     expect(keycloak.constructor).toHaveBeenCalledWith(config);
   });
 
-  it('checks for an SSO session with Authorization Code and PKCE (S256)', async () => {
+  it('checks for an SSO session in a hidden iframe with Authorization Code and PKCE (S256)', async () => {
     keycloak.init.mockResolvedValue(true);
 
     const authenticated = await createKeycloakClient(config).init();
@@ -45,6 +45,7 @@ describe('createKeycloakClient', () => {
     expect(authenticated).toBe(true);
     expect(keycloak.init).toHaveBeenCalledWith({
       onLoad: 'check-sso',
+      silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
       pkceMethod: 'S256',
       checkLoginIframe: false,
       enableLogging: false,
