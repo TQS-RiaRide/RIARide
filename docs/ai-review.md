@@ -31,11 +31,23 @@ The PR author fills the **AI review findings** table in the PR template for each
 
 | Column | Content |
 |---|---|
-| Finding | Short quote or link to the comment, with its severity |
-| Accepted / Rejected | Decision |
+| Finding | Starts with the severity and a colon (`CRITICAL:`, `HIGH:`, `MEDIUM:` or `LOW:`), then a short quote or link to the comment |
+| Accepted / Rejected | `Accepted`, `Accepted in part`, `Rejected` or `Deferred`; a note may follow in parentheses |
 | Reason | Why. For rejected findings, say why the AI was wrong or why it does not apply |
 
+For example: `| HIGH: lost update on vehicle.status | Accepted | @Version and an IT first |`. Findings from other AI reviewers (a local agent, Copilot) go in the same table. A row with neither a severity nor a decision, such as `No AI review findings | Not applicable`, is a note and is not counted.
+
 The reviewing human checks the table before approving. These tables are the evidence for the QA Manual compliance row and the critical AI analysis report.
+
+## Counting findings
+
+[`tools/ai-review-findings`](../tools/ai-review-findings/README.md) reads the tables of every pull request with the GitHub CLI and counts the findings by severity and decision, in total and per `ai:*` label:
+
+```bash
+python tools/ai-review-findings/ai_review_findings.py --state merged --base dev
+```
+
+Rows written before the severity convention are counted as `UNRATED`.
 
 ## Limits
 
