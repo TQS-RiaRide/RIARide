@@ -8,6 +8,9 @@ public enum UnlockOutcome {
   ALREADY_STARTED,
   // The trip failed, or the unlock came at or after the timeout: the bike must be locked again.
   TOO_LATE,
+  // The trip already ended (RIA-55): a reading sent while the bike was ridden arrived late. The
+  // LOCK sent at the end answers it, so nothing changes.
+  ALREADY_ENDED,
   // The reading was emitted before the trip was requested (a redelivered QoS 1 message): ignored.
   STALE
 }

@@ -35,4 +35,10 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
   Optional<Trip> findByIdForUpdate(@Param("id") UUID id);
 
   Optional<Trip> findByIdAndGuestId(UUID id, UUID guestId);
+
+  // The guest's trip as a projection, read before the trip is locked (EndTripService, RIA-55).
+  @Query(
+      "select t.status as status, t.vehicleId as vehicleId from Trip t"
+          + " where t.id = :id and t.guestId = :guestId")
+  Optional<TripState> findStateByIdAndGuestId(@Param("id") UUID id, @Param("guestId") UUID guestId);
 }
