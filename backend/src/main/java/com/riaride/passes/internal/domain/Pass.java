@@ -17,7 +17,8 @@ import org.springframework.data.domain.Persistable;
 
 // A guest's pass. It copies the price and deposit at purchase, so later price changes do not alter
 // it (architecture, section 7). It is reserved as PENDING before the card is charged, becomes
-// INACTIVE once paid, and stays inactive until the first trip (BR4).
+// INACTIVE once paid, and stays inactive until the first trip (BR4). It also keeps the end of the
+// guest's stay, which no pass outlasts (RIA-87).
 @Entity
 @Table(name = "pass")
 public class Pass implements Persistable<UUID> {
@@ -51,6 +52,9 @@ public class Pass implements Persistable<UUID> {
   @Column(name = "expires_at")
   private Instant expiresAt;
 
+  @Column(name = "stay_ends_at", nullable = false, updatable = false)
+  private Instant stayEndsAt;
+
   // The id is assigned in the domain, so JPA cannot tell a new pass from an existing one.
   @Transient private boolean isNew;
 
@@ -58,7 +62,7 @@ public class Pass implements Persistable<UUID> {
     // for JPA
   }
 
-  private Pass(UUID guestId, PassPrice price, String purchaseKey) {
+  private Pass(UUID guestId, PassPrice price, String purchaseKey, Instant stayEndsAt) {
     // Derived from the guest-scoped idempotency key: a retry builds the same pass, so the
     // payment provider receives the same reference and returns its cached result.
     this.id = UUID.nameUUIDFromBytes(purchaseKey.getBytes(StandardCharsets.UTF_8));
@@ -68,14 +72,21 @@ public class Pass implements Persistable<UUID> {
     this.priceCents = price.getPriceCents();
     this.depositCents = price.getDepositCents();
     this.depositStatus = DepositStatus.HELD;
+    this.stayEndsAt = stayEndsAt;
     this.isNew = true;
   }
 
-  public static Pass purchase(UUID guestId, PassPrice price, String purchaseKey) {
-    if (guestId == null || price == null || purchaseKey == null || purchaseKey.isBlank()) {
-      throw new IllegalArgumentException("A pass needs a guest, a base price and a purchase key");
+  public static Pass purchase(
+      UUID guestId, PassPrice price, String purchaseKey, Instant stayEndsAt) {
+    if (guestId == null
+        || price == null
+        || purchaseKey == null
+        || purchaseKey.isBlank()
+        || stayEndsAt == null) {
+      throw new IllegalArgumentException(
+          "A pass needs a guest, a base price, a purchase key and the end of the stay");
     }
-    return new Pass(guestId, price, purchaseKey);
+    return new Pass(guestId, price, purchaseKey, stayEndsAt);
   }
 
   // The payment went through: the pass exists, not active until the first trip (BR4).
@@ -86,8 +97,9 @@ public class Pass implements Persistable<UUID> {
     this.status = PassStatus.INACTIVE;
   }
 
-  // BR4: the first trip activates the pass; later trips keep the first activation time. Setting
-  // expiresAt per pass type belongs to the pass-expiry story.
+  // BR4: the first trip activates the pass; later trips keep the first activation and expiry
+  // times. BR2: the pass then lasts for its type's duration, but never past the end of the stay
+  // (Product Owner decision, RIA-87), so a stay pass ends exactly then.
   public void activate(Instant at) {
     if (status == PassStatus.ACTIVE) {
       return;
@@ -97,13 +109,19 @@ public class Pass implements Persistable<UUID> {
     }
     this.status = PassStatus.ACTIVE;
     this.activatedAt = at;
+    this.expiresAt =
+        passType
+            .duration()
+            .map(at::plus)
+            .filter(end -> end.isBefore(stayEndsAt))
+            .orElse(stayEndsAt);
   }
 
-  // A pass can be used for a trip once paid and until it ends. expiresAt is not set yet: setting it
-  // per pass type (BR2) belongs to the pass-expiry story, so an active pass has no end until then.
+  // A pass can be used for a trip once paid and until it ends: an unused pass until the end of the
+  // stay (BR1), an active one until it expires.
   public boolean isUsableAt(Instant now) {
-    return status == PassStatus.INACTIVE
-        || status == PassStatus.ACTIVE && (expiresAt == null || expiresAt.isAfter(now));
+    return status == PassStatus.INACTIVE && stayEndsAt.isAfter(now)
+        || status == PassStatus.ACTIVE && expiresAt.isAfter(now);
   }
 
   // BR3 and BR5: the price and the deposit are charged together at purchase.
@@ -157,5 +175,9 @@ public class Pass implements Persistable<UUID> {
 
   public Instant getExpiresAt() {
     return expiresAt;
+  }
+
+  public Instant getStayEndsAt() {
+    return stayEndsAt;
   }
 }
