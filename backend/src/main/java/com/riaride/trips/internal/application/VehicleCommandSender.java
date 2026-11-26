@@ -9,7 +9,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 // Sends the trips module's commands to the bike only after the transaction that decided them
 // commits. The simulator answers UNLOCK with telemetry at once, so the trip must already be stored
-// when that answer arrives; and a rolled-back start must never unlock a bike.
+// when that answer arrives; and a rolled-back start must never unlock a bike. An ended trip
+// (RIA-55) locks the bike at the hub it was returned to.
 @Component
 class VehicleCommandSender {
 
@@ -32,6 +33,14 @@ class VehicleCommandSender {
         "LOCK",
         failed.vehicleCode(),
         () -> commands.lock(failed.vehicleCode(), Objects.toString(failed.hubId(), null)));
+  }
+
+  @TransactionalEventListener
+  void on(TripEnded ended) {
+    send(
+        "LOCK",
+        ended.vehicleCode(),
+        () -> commands.lock(ended.vehicleCode(), ended.hubId().toString()));
   }
 
   // The trip is already stored: a command that fails here must not turn the guest's 202 into a 500,

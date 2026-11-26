@@ -1,5 +1,7 @@
 package com.riaride.trips.internal.web;
 
+import com.riaride.trips.internal.application.EndTripCommand;
+import com.riaride.trips.internal.application.EndTripService;
 import com.riaride.trips.internal.application.StartTripCommand;
 import com.riaride.trips.internal.application.StartTripService;
 import com.riaride.trips.internal.application.TripQueryService;
@@ -17,16 +19,19 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 // Starting a trip now (RIA-54). The answer is 202 Accepted: the trip is STARTING until telemetry
-// confirms the unlock, so the client follows it at the Location it is given.
+// confirms the unlock, so the client follows it at the Location it is given. Ending it at a hub
+// (RIA-55) answers 200 with the ended trip, or 409 with the nearest hubs that have a free slot.
 @RestController
 @RequestMapping("/api/v1/trips")
 class TripController {
 
   private final StartTripService startTrip;
+  private final EndTripService endTrip;
   private final TripQueryService trips;
 
-  TripController(StartTripService startTrip, TripQueryService trips) {
+  TripController(StartTripService startTrip, EndTripService endTrip, TripQueryService trips) {
     this.startTrip = startTrip;
+    this.endTrip = endTrip;
     this.trips = trips;
   }
 
@@ -43,6 +48,18 @@ class TripController {
             .buildAndExpand(trip.getId())
             .toUri();
     return ResponseEntity.accepted().location(location).body(TripResponse.from(trip));
+  }
+
+  @PostMapping("/{id}/end")
+  @PreAuthorize("hasRole('GUEST')")
+  TripResponse end(
+      @PathVariable UUID id,
+      @Valid @RequestBody EndTripRequest request,
+      JwtAuthenticationToken authentication) {
+    return endTrip
+        .end(new EndTripCommand(authentication.getName(), id, request.hubId()))
+        .map(TripResponse::from)
+        .orElseThrow(TripNotFoundException::new);
   }
 
   @GetMapping("/{id}")
