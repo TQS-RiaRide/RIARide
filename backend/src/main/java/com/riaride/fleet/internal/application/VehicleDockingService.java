@@ -6,7 +6,9 @@ import com.riaride.fleet.HubWithoutFreeSlotException;
 import com.riaride.fleet.NearbyHub;
 import com.riaride.fleet.UnknownHubException;
 import com.riaride.fleet.VehicleDocking;
+import com.riaride.fleet.VehicleNotInUseException;
 import com.riaride.fleet.internal.domain.Hub;
+import com.riaride.fleet.internal.domain.VehicleStatus;
 import com.riaride.fleet.internal.persistence.HubOccupancy;
 import com.riaride.fleet.internal.persistence.HubRepository;
 import com.riaride.fleet.internal.persistence.VehicleRepository;
@@ -19,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 // Docks the bike of a trip that ends (RIA-55, BR10). MANDATORY: the bike is docked in the trips
 // module's transaction, with the trip ended, or not at all. The vehicle row is locked first and the
-// hub row second (see VehicleDocking), then the hub's docked vehicles are counted.
+// hub row second (see VehicleDocking), then the hub's docked vehicles are counted. The bike is
+// checked under its lock: of two ends of the same trip at once, the second finds it docked.
 //
 // A full hub suggests the nearest hubs with a free slot, by straight-line distance from it
 // (architecture, section 7). The suggestions are read without locks: they are advice, and the
@@ -45,6 +48,9 @@ class VehicleDockingService implements VehicleDocking {
         vehicles
             .findByIdForUpdate(vehicleId)
             .orElseThrow(() -> new IllegalStateException("The trip's bike does not exist"));
+    if (vehicle.getStatus() != VehicleStatus.IN_USE) {
+      throw new VehicleNotInUseException();
+    }
     var hub = hubs.findByIdForUpdate(hubId).orElseThrow(UnknownHubException::new);
     if (vehicles.countByHubId(hub.getId()) >= hub.getCapacity()) {
       throw new HubWithoutFreeSlotException(nearestWithFreeSlot(hub));

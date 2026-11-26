@@ -2,12 +2,14 @@ package com.riaride.fleet.internal.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.fleet.HubWithoutFreeSlotException;
 import com.riaride.fleet.NearbyHub;
 import com.riaride.fleet.UnknownHubException;
+import com.riaride.fleet.VehicleNotInUseException;
 import com.riaride.fleet.internal.domain.BatteryLevel;
 import com.riaride.fleet.internal.domain.BookingBatteryPolicy;
 import com.riaride.fleet.internal.domain.Hub;
@@ -157,6 +159,21 @@ class VehicleDockingServiceTest {
         .isInstanceOfSatisfying(
             HubWithoutFreeSlotException.class,
             refused -> assertThat(refused.nearbyHubs()).isEmpty());
+  }
+
+  // Two ends of the same trip at once: the second locks the bike after the first docked it.
+  @Requirement("RIA-55")
+  @Test
+  void shouldRefuseABikeThatIsNoLongerInUseWithoutLookingAtTheHub() {
+    var praia = hub("Praia", 40.6405, -8.7538, 10);
+    bike.endRide(praia.getId());
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+
+    assertThatThrownBy(() -> service.dock(bike.getId(), praia.getId()))
+        .isInstanceOf(VehicleNotInUseException.class);
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    assertThat(bike.getHubId()).isEqualTo(praia.getId());
+    verifyNoInteractions(hubs);
   }
 
   @Requirement("RIA-55")

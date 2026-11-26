@@ -2,6 +2,7 @@ package com.riaride.trips.internal.application;
 
 import com.riaride.accounts.GuestDirectory;
 import com.riaride.fleet.VehicleDocking;
+import com.riaride.fleet.VehicleNotInUseException;
 import com.riaride.trips.internal.domain.Trip;
 import com.riaride.trips.internal.domain.TripStatus;
 import com.riaride.trips.internal.persistence.TripRepository;
@@ -19,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 // be returned (BR9). Locks are taken in the same order as telemetry: the vehicle row
 // (fleet), then the trip row, so a reading of the same bike never deadlocks with the end. The trip
 // is first read as a projection, which does not load it, so the locked read returns its current
-// state; under the lock it is checked again, since a concurrent end may have won.
+// state. A concurrent end of the same trip that won is seen under the vehicle lock (the bike is no
+// longer in use) or under the trip lock, and either way answers 409 Trip not in progress.
 @Service
 public class EndTripService {
 
@@ -55,8 +57,14 @@ public class EndTripService {
     if (trip.get().getStatus() != TripStatus.IN_USE) {
       throw new TripNotInProgressException();
     }
-    docking.dock(trip.get().getVehicleId(), command.hubId());
-    var locked = trips.findByIdForUpdate(command.tripId()).orElseThrow();
+    try {
+      docking.dock(trip.get().getVehicleId(), command.hubId());
+    } catch (VehicleNotInUseException alreadyDocked) {
+      // A concurrent end of this trip docked the bike first and committed.
+      throw new TripNotInProgressException();
+    }
+    var locked =
+        trips.findByIdForUpdate(command.tripId()).orElseThrow(TripNotInProgressException::new);
     if (locked.getStatus() != TripStatus.IN_USE) {
       throw new TripNotInProgressException();
     }

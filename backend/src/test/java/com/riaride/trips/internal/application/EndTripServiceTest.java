@@ -16,6 +16,7 @@ import com.riaride.accounts.GuestDirectory;
 import com.riaride.fleet.HubWithoutFreeSlotException;
 import com.riaride.fleet.ReservedVehicle;
 import com.riaride.fleet.VehicleDocking;
+import com.riaride.fleet.VehicleNotInUseException;
 import com.riaride.trips.internal.domain.Reservation;
 import com.riaride.trips.internal.domain.Trip;
 import com.riaride.trips.internal.domain.TripStatus;
@@ -158,8 +159,20 @@ class EndTripServiceTest {
     verifyNoInteractions(events);
   }
 
-  // Two ends of the same trip at once: the second finds it ended under the lock. Throwing rolls
-  // back its docking, so the bike is docked once.
+  // Two ends of the same trip at once: the second waits for the bike's lock and finds it docked.
+  @Requirement("RIA-55")
+  @Test
+  void shouldRefuseWhenAConcurrentEndDockedTheBikeFirst() {
+    givenTheGuestsTripIs(TripStatus.IN_USE);
+    doThrow(new VehicleNotInUseException()).when(docking).dock(VEHICLE, END_HUB);
+
+    assertThatThrownBy(this::end).isInstanceOf(TripNotInProgressException.class);
+    verify(trips, never()).findByIdForUpdate(any());
+    verifyNoInteractions(events);
+  }
+
+  // The same race, seen under the trip lock instead. Throwing rolls back this request's docking,
+  // so the bike is docked once.
   @Requirement("RIA-55")
   @Test
   void shouldRefuseWhenAConcurrentEndAlreadyEndedTheTrip() {
