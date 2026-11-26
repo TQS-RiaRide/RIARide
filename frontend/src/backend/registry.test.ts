@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { REGISTRY_KEY, createRegistryStore, upsertBy, type Registry } from './registry';
-import type { Pass } from './types';
+import {
+  REGISTRY_KEY,
+  clearRegistries,
+  createRegistryStore,
+  upsertBy,
+  type Registry,
+} from './registry';
+import type { Pass, Stay } from './types';
 
 const PASS: Pass = {
   id: 'p-1',
@@ -11,7 +17,18 @@ const PASS: Pass = {
   currency: 'EUR',
 };
 
+const STAY: Stay = {
+  id: 's-1',
+  hotelId: 'h-1',
+  guestName: 'Synthetic Guest',
+  stayCode: 'MC-7Q2K',
+  checkIn: '2026-11-20',
+  checkOut: '2026-11-23',
+  status: 'ACTIVE',
+};
+
 const withPass = (current: Registry): Registry => ({ ...current, pass: PASS });
+const withStay = (current: Registry): Registry => ({ ...current, stays: [STAY] });
 
 afterEach(() => {
   window.localStorage.clear();
@@ -78,12 +95,55 @@ describe('createRegistryStore', () => {
     expect(store.read().pass).toEqual(PASS);
   });
 
+  it('never writes stay codes or guest names to storage', () => {
+    const store = createRegistryStore(() => 'manager-a');
+
+    store.update(withStay);
+
+    const stored = window.localStorage.getItem(`${REGISTRY_KEY}:manager-a`) ?? '';
+    expect(stored).not.toContain(STAY.stayCode);
+    expect(stored).not.toContain(STAY.guestName);
+    expect(store.read().stays).toEqual([STAY]);
+  });
+
+  it('forgets stays when the page reloads', () => {
+    createRegistryStore(() => 'manager-a').update(withStay);
+
+    expect(createRegistryStore(() => 'manager-a').read().stays).toEqual([]);
+  });
+
+  it('ignores stays an older version left in storage', () => {
+    window.localStorage.setItem(`${REGISTRY_KEY}:manager-a`, JSON.stringify({ stays: [STAY] }));
+
+    expect(createRegistryStore(() => 'manager-a').read().stays).toEqual([]);
+  });
+
   it('works with no storage at all', () => {
     const store = createRegistryStore(() => 'guest-a', undefined);
 
     store.update(withPass);
 
     expect(store.read().pass).toEqual(PASS);
+  });
+});
+
+describe('clearRegistries', () => {
+  it('removes the registry of every user and keeps other keys', () => {
+    createRegistryStore(() => 'guest-a').update(withPass);
+    createRegistryStore(() => 'guest-b').update(withPass);
+    window.localStorage.setItem('riaride.language', 'pt');
+
+    clearRegistries();
+
+    expect(window.localStorage.getItem(`${REGISTRY_KEY}:guest-a`)).toBeNull();
+    expect(window.localStorage.getItem(`${REGISTRY_KEY}:guest-b`)).toBeNull();
+    expect(window.localStorage.getItem('riaride.language')).toBe('pt');
+  });
+
+  it('does nothing when there is no storage', () => {
+    expect(() => {
+      clearRegistries(undefined);
+    }).not.toThrow();
   });
 });
 
