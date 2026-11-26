@@ -143,9 +143,9 @@ class OvertimeRetryJobTest {
   @Requirement("RIA-88")
   @Test
   void shouldNotGiveUpAChargeWithAttemptsLeft() {
-    var ended = tripEnded();
+    var withAttemptsLeft = failed(tripEnded(), MAX_ATTEMPTS - 1);
     when(registry.findFailedPublications(any(FailedCriteria.class)))
-        .thenReturn(List.of(failed(ended, MAX_ATTEMPTS - 1)));
+        .thenReturn(List.of(withAttemptsLeft));
 
     job.retryFailedCharges();
 
@@ -157,8 +157,8 @@ class OvertimeRetryJobTest {
   @Requirement("RIA-88")
   @Test
   void shouldLeaveOtherExhaustedPublicationsAlone() {
-    when(registry.findFailedPublications(any(FailedCriteria.class)))
-        .thenReturn(List.of(failed("another event", MAX_ATTEMPTS)));
+    var other = failed("another event", MAX_ATTEMPTS);
+    when(registry.findFailedPublications(any(FailedCriteria.class))).thenReturn(List.of(other));
 
     job.retryFailedCharges();
 
