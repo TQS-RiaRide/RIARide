@@ -136,7 +136,7 @@ Only the module's top-level package (its API, events and DTOs) is public. Event 
 | `VehicleTelemetryReceived` | `telemetry` | `fleet` | Updates latest vehicle state |
 | `VehicleFaultDetected` | `telemetry` | `maintenance`, `fleet`, `trips` | Opens a ticket with an SLA deadline; takes the vehicle out of service; cancels its reservation or links its trip to the ticket |
 | `VehicleUnlocked` | `telemetry` | `trips` | Confirms the trip start; for a trip already `FAILED`, sends `LOCK` again |
-| `TripEnded` | `trips` | `trips` | Sends `LOCK`; charges overtime through `payments`, or takes it from the deposit if the charge fails permanently |
+| `TripEnded` | `trips` | `trips` | Sends `LOCK` at the hub the trip ended at (RIA-55); charges overtime through `payments`, or takes it from the deposit if the charge fails permanently (story 2.3) |
 | `TicketResolved` | `maintenance` | `passes` | Carries the linked pass, if any, and whether the damage was attributed to the guest. Withholds the deposit, or lets the pass close |
 
 `passes` cannot depend on `trips`, because `trips` depends on `passes`. So `trips` tells `passes` when a trip starts and when it is settled, through the `passes` public API, and `passes` keeps an `in_trip` flag. A trip is settled once it has ended and its overtime, if any, is paid or taken from the deposit (section 7), so the deposit cannot be refunded while an overtime charge is still pending. A pass that ends (expiry or check-out) is closed, and its deposit refunded, only when the flag is cleared **and** `maintenance` reports no open ticket linked to the pass. Until then the deposit is `HELD`. Each settled trip and each `TicketResolved` for the pass make `passes` check again.
@@ -202,6 +202,14 @@ Starting immediately creates a reservation first, so there is one code path. A s
 ![End trip](diagrams/07-seq-end-trip-overtime.drawio.svg)
 
 A hub without a free slot rejects the end of the trip. The response lists the nearest hubs that have a free slot, ordered by straight-line distance from the hub's `position`, and the trip continues.
+
+*Implemented so far (RIA-55):* `POST /api/v1/trips/{id}/end` with a `hubId` ends the guest's trip in use and answers `200` with the trip `ENDED`, its `endedAt` and its `endHubId`. The rules it settles:
+
+- **Free slot (BR10).** The hub takes the bike while its docked bikes are fewer than its capacity. A full hub answers `409 Hub full`, the trip stays `IN_USE` and the bike stays in use. The problem detail's `nearbyHubs` member lists at most three other hubs with a free slot, nearest first by great-circle (haversine) distance from the full hub, each with its `hubId`, `name`, `freeSlots` and `distanceMeters`. Those suggestions are read without locks; the guest's next request checks the chosen hub again.
+- **Locks.** `fleet` locks the vehicle row and then the hub row, and `trips` then locks the trip row. Telemetry locks the vehicle before the trip too, so a reading of the same bike never deadlocks with the end, and two ends at a hub with one free slot take it one after the other: one gets `200`, the other `409`.
+- **Who and when.** Only the guest's own trip is found (`404 Trip not found` otherwise), and only a trip `IN_USE` ends (`409 Trip not in progress` for one starting, failed or already ended). The guest can end it after the stay has ended, since a bike still out at check-out has to come back (BR9).
+- **`LOCK` after commit.** The bike is docked `AVAILABLE` at the hub in the same transaction, and `LOCK` with that `hubId` is sent once it commits. An `UNLOCKED` reading sent during the ride and handled after the end changes nothing.
+- **Not yet.** Overtime (story 2.3), the end of the pass during a trip (story 2.5) and telling `passes` that the trip is settled come with those stories.
 
 Overtime is the time beyond the earliest of three limits: maximum trip duration, pass expiry, and check-out. It is rounded up to 15-minute blocks after the grace period. Charging happens after commit, so a Stripe outage does not block the guest from ending a trip.
 
