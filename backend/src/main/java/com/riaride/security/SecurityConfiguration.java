@@ -63,6 +63,9 @@ class SecurityConfiguration {
                 .hasRole("GUEST")
                 .requestMatchers(HttpMethod.GET, "/api/v1/trips/*")
                 .hasRole("GUEST")
+                // Ending a trip at a hub (RIA-55): guests only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/trips/*/end")
+                .hasRole("GUEST")
                 .anyRequest()
                 .authenticated())
         .oauth2ResourceServer(resourceServer ->

@@ -25,6 +25,13 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
   // The vehicles docked at a hub, which take its slots (BR10). A ridden vehicle has no hub.
   long countByHubId(UUID hubId);
 
+  // The docked vehicles of every hub that has any, so a full hub can suggest hubs with a free slot
+  // in one query (RIA-55). A hub with no vehicle is not listed: all its slots are free.
+  @Query(
+      "select v.hubId as hubId, count(v) as docked from Vehicle v where v.hubId is not null"
+          + " group by v.hubId")
+  List<HubOccupancy> countDockedByHub();
+
   // Locks the vehicle row until the transaction ends (SELECT ... FOR UPDATE), so two trips that
   // ask for the same bike reserve it one after the other, and only the first gets it (RIA-54).
   // The code is compared as V6 indexes it, so the guest may type it in any case.
