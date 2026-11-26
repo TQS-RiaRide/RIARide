@@ -6,6 +6,7 @@ import com.riaride.fleet.VehicleNotBookableException;
 import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.trips.internal.application.NoActiveStayException;
 import com.riaride.trips.internal.application.NoUsablePassException;
+import com.riaride.trips.internal.application.ReservationAlreadyHeldException;
 import com.riaride.trips.internal.application.ReservationHeldForAnotherBikeException;
 import com.riaride.trips.internal.application.TripAlreadyInProgressException;
 import com.riaride.trips.internal.application.TripNotInProgressException;
@@ -20,12 +21,12 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-// Maps the refusals of starting a trip (RIA-54) and of ending it (RIA-55) to RFC 9457 problem
-// details. When two starts run at the same time, a unique index refuses the second one; it gets
-// the same answer as the check that refuses it in the usual case. A full hub lists the nearest
-// hubs with a free slot in the nearbyHubs extension member (BR10). Details never repeat the SQL
-// message, which holds ids and values.
-@RestControllerAdvice(assignableTypes = TripController.class)
+// Maps the refusals of starting a trip (RIA-54), ending it (RIA-55) and booking a bike (RIA-90)
+// to RFC 9457 problem details. When two starts run at the same time, a unique index refuses the
+// second one; it gets the same answer as the check that refuses it in the usual case. A full hub
+// lists the nearest hubs with a free slot in the nearbyHubs extension member (BR10). Details never
+// repeat the SQL message, which holds ids and values.
+@RestControllerAdvice(assignableTypes = {TripController.class, ReservationController.class})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class TripProblemHandler {
 
@@ -82,6 +83,16 @@ class TripProblemHandler {
   @ExceptionHandler(UnknownHubException.class)
   ProblemDetail hubNotFound(UnknownHubException exception) {
     return problem(HttpStatus.NOT_FOUND, "Hub not found", exception.getMessage());
+  }
+
+  @ExceptionHandler(ReservationAlreadyHeldException.class)
+  ProblemDetail reservationAlreadyHeld(ReservationAlreadyHeldException exception) {
+    return problem(HttpStatus.CONFLICT, "Booking already held", exception.getMessage());
+  }
+
+  @ExceptionHandler(ReservationNotFoundException.class)
+  ProblemDetail reservationNotFound(ReservationNotFoundException exception) {
+    return problem(HttpStatus.NOT_FOUND, "Booking not found", exception.getMessage());
   }
 
   @ExceptionHandler(TripNotFoundException.class)

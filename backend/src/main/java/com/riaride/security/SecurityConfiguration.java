@@ -52,6 +52,9 @@ class SecurityConfiguration {
                 // Ending a trip at a hub (RIA-55): guests only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/trips/*/end")
                 .hasRole("GUEST")
+                // Booking a bike in advance (RIA-90): guests only.
+                .requestMatchers(HttpMethod.POST, "/api/v1/reservations")
+                .hasRole("GUEST")
                 .anyRequest()
                 .authenticated())
         .oauth2ResourceServer(resourceServer ->

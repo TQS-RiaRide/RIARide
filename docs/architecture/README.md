@@ -197,6 +197,14 @@ Starting immediately creates a reservation first, so there is one code path. A s
 - **Telemetry from before the request is ignored.** An `UNLOCKED` reading emitted more than one minute (the allowed clock skew) before the trip was requested, such as a redelivered QoS 1 message, does not confirm it. A repeated `UNLOCKED` for a trip in use changes nothing, so the pass is activated once (BR4).
 - **Concurrent starts.** The database allows one active reservation per bike and per pass and one trip in progress per pass (partial unique indexes), and the vehicle row is locked while it is reserved, so of two parallel starts exactly one succeeds and the other gets a `409` problem detail. Telemetry locks the vehicle row too, so a battery reading cannot write back a status that a start has just changed.
 
+*Implemented so far (RIA-90):* `POST /api/v1/reservations` with a `vehicleCode` books an available bike in advance and answers `201` with the booking's `Location`; `GET /api/v1/reservations/{id}` lets the guest follow it from `ACTIVE` to `USED` or `EXPIRED`. The rules it settles:
+
+- **The 15-minute hold (BR11).** The bike becomes `RESERVED` and the booking expires at `expiresAt`, 15 minutes later (`riaride.trips.reservation-hold`). Booking does not activate the pass (BR4). `ReservationExpiryJob` expires an unused booking and the bike is `AVAILABLE` again; a guest's next booking or start does it at once.
+- **Using the booking.** `POST /api/v1/trips` with the booked bike starts the trip from the booking, with no second reservation; another bike is refused (`409 Reservation held for another bike`) while it is held.
+- **One bike per pass (BR6).** A pass with a trip in progress (`409 Trip already in progress`) or a booking still held (`409 Booking already held`) cannot book. Two bookings of the same bike are settled by the vehicle row lock; two bookings for the same pass at once by `uq_reservation_active_per_pass`, whose violation gets the same `409 Booking already held`.
+- **Battery (BR12).** A bike below 20 % is refused with `409 Bike not available`, like a start.
+- **Not yet.** A guest cannot cancel a booking before it expires; that would need a `CANCELLED` status.
+
 ### Ending a trip
 
 ![End trip](diagrams/07-seq-end-trip-overtime.drawio.svg)
