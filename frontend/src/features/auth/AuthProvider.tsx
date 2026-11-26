@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { clearRegistries } from '../../backend/registry';
 import { fetchCurrentUser, type CurrentUser } from './api';
 import type { AuthClient } from './authClient';
 import { AuthContext, type AuthState } from './authContext';
@@ -10,6 +11,8 @@ function hasPersonas(client: AuthClient): client is AuthClient & { signInAs(id: 
 interface AuthProviderProps {
   client: AuthClient;
   loadUser?: (token: string) => Promise<CurrentUser>;
+  /** Clears what this browser kept for the user, before the session ends. */
+  forgetLocalData?: () => void;
   children: ReactNode;
 }
 
@@ -18,6 +21,7 @@ interface AuthProviderProps {
 export default function AuthProvider({
   client,
   loadUser = fetchCurrentUser,
+  forgetLocalData = clearRegistries,
   children,
 }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
@@ -51,11 +55,14 @@ export default function AuthProvider({
     () => ({
       state,
       login: () => void client.login(),
-      logout: () => void client.logout(),
+      logout: () => {
+        forgetLocalData();
+        void client.logout();
+      },
       getToken: () => client.getToken(),
       signInAs: hasPersonas(client) ? (id: string) => client.signInAs(id) : undefined,
     }),
-    [client, state],
+    [client, state, forgetLocalData],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
