@@ -7,4 +7,4 @@ pytest-cov==7.1.0
 jsonschema==4.26.0
 ruff==0.17.6
 pip-audit==2.9.0
-testcontainers==4.10.0
+testcontainers==4.15.0
