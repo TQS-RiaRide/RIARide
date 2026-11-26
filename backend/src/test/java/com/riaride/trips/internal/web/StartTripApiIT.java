@@ -15,6 +15,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestcontainersConfiguration;
 import com.riaride.telemetry.VehicleCommands;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -346,6 +347,24 @@ class StartTripApiIT {
         .andExpect(status().isNotFound())
         .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
         .andExpect(jsonPath("$.title").value("Bike not found"));
+  }
+
+  // RIA-87: a pass that was never used cannot take a first trip once the stay has ended. The
+  // fixed clock is on the guest's check-out day; this pass's stay ends at that very instant.
+  @Requirement("RIA-87")
+  @Test
+  void shouldRefuseANeverUsedPassOnceItsStayHasEnded() throws Exception {
+    jdbc.update(
+        "update pass set stay_ends_at = ? where guest_id = (select id from guest where keycloak_id = ?)",
+        Timestamp.from(FixedClockConfiguration.NOW),
+        RITA_SUBJECT);
+
+    start(RITA, "EB-201")
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+        .andExpect(jsonPath("$.title").value("No valid pass"));
+
+    assertThat(bikeStatus("EB-201")).isEqualTo("AVAILABLE");
   }
 
   @Requirement("RIA-54")

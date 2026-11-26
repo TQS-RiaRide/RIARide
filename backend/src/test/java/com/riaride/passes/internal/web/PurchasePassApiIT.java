@@ -24,6 +24,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestcontainersConfiguration;
 import com.riaride.payments.PaymentLedger;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -249,9 +250,7 @@ class PurchasePassApiIT {
     // RIA-87: check-out on 2 December, so the pass can last until midnight in Vila Ria.
     assertThat(
             jdbc.queryForObject(
-                    "select stay_ends_at from pass where id = ?::uuid",
-                    java.sql.Timestamp.class,
-                    id)
+                    "select stay_ends_at from pass where id = ?::uuid", Timestamp.class, id)
                 .toInstant())
         .isEqualTo(Instant.parse("2026-12-03T00:00:00Z"));
     var payment =

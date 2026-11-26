@@ -177,9 +177,9 @@ public class TripSteps {
   @Then("the guest's pass expires {int} hours after the unlock was confirmed")
   public void theGuestsPassExpiresHoursAfterTheUnlock(int hours) {
     var pass = passOfTheTrip();
-    var activatedAt = ((java.sql.Timestamp) pass.get("activated_at")).toInstant();
+    var activatedAt = ((Timestamp) pass.get("activated_at")).toInstant();
     assertThat(activatedAt).isEqualTo(clock.instant());
-    assertThat(((java.sql.Timestamp) pass.get("expires_at")).toInstant())
+    assertThat(((Timestamp) pass.get("expires_at")).toInstant())
         .isEqualTo(activatedAt.plus(Duration.ofHours(hours)));
   }
 
