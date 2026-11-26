@@ -51,6 +51,11 @@
 			<groupId>org.springframework.modulith</groupId>
 			<artifactId>spring-modulith-starter-core</artifactId>
 		</dependency>
+		<!-- Event publication registry (architecture, section 5): keeps an overtime charge until it succeeds. -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-jdbc</artifactId>
+		</dependency>
 		<!-- OAuth2 resource server: validates Keycloak JWTs against the realm's JWKS. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

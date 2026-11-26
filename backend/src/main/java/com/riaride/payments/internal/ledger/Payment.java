@@ -18,11 +18,14 @@ import org.springframework.data.domain.Persistable;
 class Payment implements Persistable<UUID> {
 
   enum Kind {
-    PURCHASE
+    PURCHASE,
+    OVERTIME
   }
 
   enum Status {
-    SUCCEEDED
+    SUCCEEDED,
+    // Refused for good by the provider: there is no payment to refer to.
+    FAILED
   }
 
   @Id private UUID id;
@@ -41,7 +44,7 @@ class Payment implements Persistable<UUID> {
   @Column(nullable = false)
   private Status status;
 
-  @Column(name = "provider_ref", nullable = false)
+  @Column(name = "provider_ref")
   private String providerRef;
 
   @Column(name = "idempotency_key", nullable = false, updatable = false)
@@ -66,12 +69,13 @@ class Payment implements Persistable<UUID> {
       String providerRef,
       String idempotencyKey,
       String customerRef,
-      String paymentMethodRef) {
+      String paymentMethodRef,
+      Status status) {
     this.id = UUID.randomUUID();
     this.passId = passId;
     this.kind = kind;
     this.amountCents = amountCents;
-    this.status = Status.SUCCEEDED;
+    this.status = status;
     this.providerRef = providerRef;
     this.idempotencyKey = idempotencyKey;
     this.customerRef = customerRef;
@@ -93,7 +97,28 @@ class Payment implements Persistable<UUID> {
         providerRef,
         idempotencyKey,
         customerRef,
-        paymentMethodRef);
+        paymentMethodRef,
+        Status.SUCCEEDED);
+  }
+
+  // An overtime charge made off-session with the purchase's saved card (RIA-88).
+  static Payment overtime(
+      UUID passId, long amountCents, String providerRef, String idempotencyKey) {
+    return new Payment(
+        passId,
+        Kind.OVERTIME,
+        amountCents,
+        providerRef,
+        idempotencyKey,
+        null,
+        null,
+        Status.SUCCEEDED);
+  }
+
+  // An overtime charge the provider refused for good; it is not tried again (RIA-88).
+  static Payment failedOvertime(UUID passId, long amountCents, String idempotencyKey) {
+    return new Payment(
+        passId, Kind.OVERTIME, amountCents, null, idempotencyKey, null, null, Status.FAILED);
   }
 
   @Override
@@ -122,5 +147,21 @@ class Payment implements Persistable<UUID> {
 
   String getProviderRef() {
     return providerRef;
+  }
+
+  Status getStatus() {
+    return status;
+  }
+
+  long getAmountCents() {
+    return amountCents;
+  }
+
+  String getCustomerRef() {
+    return customerRef;
+  }
+
+  String getPaymentMethodRef() {
+    return paymentMethodRef;
   }
 }

@@ -19,4 +19,7 @@ public interface PassUsage {
   // BR4: the first confirmed trip activates the pass; later trips keep the first activation time.
   // Joins the caller's transaction.
   void activateOnFirstTrip(UUID passId, Instant at);
+
+  // The limits of an ended trip's overtime (RIA-88): when the pass expires and the stay ends.
+  PassLimits limitsOf(UUID passId);
 }

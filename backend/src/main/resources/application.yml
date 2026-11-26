@@ -11,6 +11,15 @@ spring:
       ddl-auto: validate # Flyway owns the schema
   flyway:
     locations: classpath:db/migration
+  modulith:
+    events:
+      # Only @ApplicationModuleListener listeners (the overtime charge, RIA-88) are kept in the event
+      # publication registry; the bike commands stay plain after-commit listeners and are never
+      # resent.
+      registry-trigger-annotation: org.springframework.modulith.events.ApplicationModuleListener
+      jdbc:
+        schema-initialization:
+          enabled: false # Flyway owns event_publication (V12)
   jackson:
     deserialization:
       # A fractional number for a whole-number field, such as a hub capacity of 1.5, is a 400,
@@ -62,6 +71,17 @@ riaride:
     unlock-timeout-check-interval: 5s
     # How often ReservationExpiryJob looks for holds that ended unused (BR11).
     reservation-expiry-check-interval: 30s
+    overtime:
+      # BR7: overtime starts after 3 h, per started 15-minute block, at 2.00 EUR per block and with
+      # no grace period (Product Owner decisions, RIA-88).
+      max-trip-duration: 3h
+      grace: 0m
+      price-per-block-cents: 200
+      # A charge that failed for now is retried after 1 min, then 2, 4 and 8 min, then left to the
+      # deposit (RIA-114).
+      retry-first-delay: 1m
+      retry-max-attempts: 5
+      retry-check-interval: 1m
 
 management:
   endpoints:
