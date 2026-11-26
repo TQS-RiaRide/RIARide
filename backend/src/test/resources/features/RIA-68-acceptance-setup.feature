@@ -1,4 +1,4 @@
-@RIA-68
+@smoke
 Feature: Acceptance test setup
   Checks that Cucumber reaches the running application through REST Assured.
   It is the only scenario without @wip until the I2 stories implement their steps.
