@@ -76,6 +76,15 @@ Run from `simulator/`, with Python 3.12 or later, after `pip install -r requirem
 | Run with a local Mosquitto (from the repository root) | `docker compose -f simulator/compose.yaml up --build` |
 | Docker image | `docker build -t riaride-simulator .` |
 
+### AI review findings
+
+The script in `tools/ai-review-findings/` (Python 3.12 or later, standard library and the GitHub CLI) counts the findings recorded in pull request bodies by severity and decision (QA Manual 6.7). Each row of a PR's *AI review findings* table starts with the severity, for example `| HIGH: ... | Accepted | reason |`. Details in [`docs/ai-review.md`](docs/ai-review.md).
+
+| Task | Command |
+|---|---|
+| Count findings (from the repository root, `gh` logged in) | `python tools/ai-review-findings/ai_review_findings.py --state merged --base dev` (`--format csv` or `json` for the analysis) |
+| Lint and tests (from `tools/ai-review-findings/`, after `pip install -r requirements-dev.txt`) | `ruff check . && ruff format --check . && python -m pytest --cov` |
+
 All repository content is written in English: code, documentation, reports, pull requests and commits.
 
 Product definitions and backlog:
@@ -170,7 +179,7 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 | Load        | k6 on book-and-start: p95 < 500 ms and errors < 1 % at 50 virtual users; stress and soak before the final tag                                                         |
 | Pairwise    | PICT models in the repo feed JUnit parameterized tests where inputs interact                                                                                          |
 
-Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement("RIA-n")`), and CI imports results from `main` there.
+Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement("RIA-n")`, Vitest `requirement('RIA-n')`), and CI imports results from `main` there. Link tests to stories only: Xray rejects the whole report if a key names a task or epic.
 
 ### Quality and CI
 

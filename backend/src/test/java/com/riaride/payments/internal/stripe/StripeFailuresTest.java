@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 // or permanent ones, which are final (ADR 0008).
 class StripeFailuresTest {
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyDeclinedCardAsPermanentWithItsCode() {
     var declined =
@@ -38,7 +38,7 @@ class StripeFailuresTest {
     assertThat(failure.reason()).isEqualTo("card_declined");
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyAuthenticationRequiredAsPermanent() {
     var authenticationRequired =
@@ -58,7 +58,7 @@ class StripeFailuresTest {
     assertThat(failure.reason()).isEqualTo("authentication_required");
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyRateLimitAsTransient() {
     var rateLimited =
@@ -67,7 +67,7 @@ class StripeFailuresTest {
     assertThat(StripeFailures.classify(rateLimited)).isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyNetworkErrorAsTransient() {
     var network = new ApiConnectionException("Connection reset");
@@ -75,7 +75,7 @@ class StripeFailuresTest {
     assertThat(StripeFailures.classify(network)).isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyStripeServerErrorAsTransient() {
     var serverError = new ApiException("Internal error", "req_4", null, 500, null);
@@ -83,7 +83,7 @@ class StripeFailuresTest {
     assertThat(StripeFailures.classify(serverError)).isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyInvalidRequestAsPermanent() {
     var invalid =
@@ -94,7 +94,7 @@ class StripeFailuresTest {
   }
 
   // A wrong or missing API key is a configuration error; retrying does not fix it.
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyInvalidApiKeyAsPermanent() {
     var badKey = new AuthenticationException("Invalid API Key provided", "req_6", null, 401);
@@ -102,7 +102,7 @@ class StripeFailuresTest {
     assertThat(StripeFailures.classify(badKey)).isInstanceOf(PermanentPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyReusedIdempotencyKeyAsPermanent() {
     // Same key, different parameters: a programming error that a retry repeats.
@@ -118,7 +118,7 @@ class StripeFailuresTest {
 
   // Stripe returns 409 while a request with the same key is still in flight; retrying with the
   // same key is safe and returns the original result.
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldClassifyIdempotencyKeyInUseAsTransient() {
     var inFlight =
@@ -133,7 +133,7 @@ class StripeFailuresTest {
 
   // Stripe's own message can repeat the API key, so the Stripe exception is not kept as the cause:
   // a logged stack trace would show it.
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldNotKeepTheStripeErrorWhoseMessageMayRepeatTheKey() {
     var badKey =
