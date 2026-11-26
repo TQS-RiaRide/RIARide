@@ -11,8 +11,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 // Unit test (Surefire): the trips module's commands to the bike (RIA-54). A requested start sends
-// UNLOCK; a failed start sends LOCK at the hub the bike was reserved at. That they are only sent
-// after the transaction commits is checked in StartTripApiIT.
+// UNLOCK; a failed start sends LOCK at the hub the bike was reserved at, and an ended trip (RIA-55)
+// at the hub it ended at. That they are only sent after the transaction commits is checked in
+// StartTripApiIT and EndTripApiIT.
 class VehicleCommandSenderTest {
 
   private final VehicleCommands commands = mock(VehicleCommands.class);
@@ -40,6 +41,18 @@ class VehicleCommandSenderTest {
     sender.on(new TripFailed("EB-201", null));
 
     verify(commands).lock("EB-201", null);
+  }
+
+  @Requirement("RIA-55")
+  @Test
+  void shouldLockTheBikeAtTheHubWhereTheTripEnded() {
+    sender.on(
+        new TripEnded(
+            UUID.fromString("5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d"),
+            "EB-301",
+            UUID.fromString("ded64655-0ca3-5c5c-9dd8-c641407a63c5")));
+
+    verify(commands).lock("EB-301", "ded64655-0ca3-5c5c-9dd8-c641407a63c5");
   }
 
   // The command is sent after the trip is stored: a failure there must not turn the guest's 202
