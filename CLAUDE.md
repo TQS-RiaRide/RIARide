@@ -179,7 +179,7 @@ Pending team review. Full rationale, diagrams and ADRs are in [`docs/architectur
 | Load        | k6 on book-and-start: p95 < 500 ms and errors < 1 % at 50 virtual users; stress and soak before the final tag                                                         |
 | Pairwise    | PICT models in the repo feed JUnit parameterized tests where inputs interact                                                                                          |
 
-Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement("RIA-n")`), and CI imports results from `main` there.
+Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement("RIA-n")`, Vitest `requirement('RIA-n')`), and CI imports results from `main` there. Link tests to stories only: Xray rejects the whole report if a key names a task or epic.
 
 ### Quality and CI
 
