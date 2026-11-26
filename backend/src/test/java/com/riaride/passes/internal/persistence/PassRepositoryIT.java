@@ -11,6 +11,9 @@ import com.riaride.passes.internal.domain.Pass;
 import com.riaride.passes.internal.domain.PassPrice;
 import com.riaride.passes.internal.domain.PassStatus;
 import com.riaride.passes.internal.domain.PassType;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,8 +30,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-// Integration test (Failsafe): the pass and pass_price tables (Flyway V4), their constraints and
-// the pass row lock on PostgreSQL in Testcontainers.
+// Integration test (Failsafe): the pass and pass_price tables (Flyway V4 and V9), their
+// constraints,
+// the end of the stay and the activation and expiry times of the first trip (RIA-87), and the pass
+// row lock on PostgreSQL in Testcontainers.
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(TestcontainersConfiguration.class)
@@ -37,6 +43,8 @@ class PassRepositoryIT {
   private static final String STAY_CODE =
       "P" + UUID.randomUUID().toString().substring(0, 7).toUpperCase();
   private static final String LOCK_PASS = "select id from pass where id = ? for update nowait";
+  private static final Instant FIRST_TRIP = Instant.parse("2026-11-30T10:00:10Z");
+  private static final Instant STAY_ENDS = Instant.parse("2026-12-03T00:00:00Z");
 
   @Autowired private PassRepository passes;
 
@@ -48,11 +56,19 @@ class PassRepositoryIT {
 
   @Autowired private PlatformTransactionManager transactionManager;
 
+  @Autowired private TestEntityManager entityManager;
+
   private UUID guestId;
 
   @BeforeEach
   void guest() {
     guestId = TestRows.guest(jdbc, STAY_CODE, "rita.almeida@example.test");
+  }
+
+  private Instant column(UUID passId, String name) {
+    var value =
+        jdbc.queryForObject("select " + name + " from pass where id = ?", Timestamp.class, passId);
+    return value == null ? null : value.toInstant();
   }
 
   // BR3: one base price per pass type for the whole group, seeded by V4. Other tests change the
@@ -124,7 +140,7 @@ class PassRepositoryIT {
     TestRows.pass(jdbc, guestId, "CLOSED");
     var price = prices.findById(PassType.ONE_DAY).orElseThrow();
 
-    var saved = passes.saveAndFlush(Pass.purchase(guestId, price, "purchase-key-1"));
+    var saved = passes.saveAndFlush(Pass.purchase(guestId, price, "purchase-key-1", STAY_ENDS));
 
     assertThat(passes.findById(saved.getId()))
         .get()
@@ -134,6 +150,29 @@ class PassRepositoryIT {
           assertThat(pass.amountToCharge().cents())
               .isEqualTo((long) price.getPriceCents() + price.getDepositCents());
         });
+  }
+
+  @Requirement("RIA-87")
+  @Test
+  void shouldStoreTheEndOfTheStayAndTheExpiryOfTheFirstTrip() {
+    var pass =
+        Pass.purchase(
+            guestId, new PassPrice(PassType.ONE_DAY, 1000, 5000), guestId + ":p1", STAY_ENDS);
+    pass.confirmPayment();
+    passes.saveAndFlush(pass);
+    assertThat(column(pass.getId(), "stay_ends_at")).isEqualTo(STAY_ENDS);
+    assertThat(column(pass.getId(), "expires_at")).isNull();
+
+    var stored = passes.findById(pass.getId()).orElseThrow();
+    stored.activate(FIRST_TRIP);
+    passes.saveAndFlush(stored);
+    entityManager.clear();
+
+    assertThat(column(pass.getId(), "activated_at")).isEqualTo(FIRST_TRIP);
+    assertThat(column(pass.getId(), "expires_at")).isEqualTo(FIRST_TRIP.plus(Duration.ofHours(24)));
+    var reloaded = passes.findById(pass.getId()).orElseThrow();
+    assertThat(reloaded.getStayEndsAt()).isEqualTo(STAY_ENDS);
+    assertThat(reloaded.getExpiresAt()).isEqualTo(FIRST_TRIP.plus(Duration.ofHours(24)));
   }
 
   @Requirement("RIA-52")

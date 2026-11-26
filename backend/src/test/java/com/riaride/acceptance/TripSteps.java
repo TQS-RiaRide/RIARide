@@ -27,9 +27,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 // Steps for RIA-54 (start a trip now) and RIA-55 (end a trip at a hub), against the API, the MQTT
-// broker and the database. The
-// simulator is played by the steps: they listen on the command topics and publish its telemetry.
-// Time moves only when a step moves the TestClock, so the 30-second timeout needs no sleep.
+// broker and the database. The simulator is played by the steps: they listen on the command topics
+// and publish its telemetry. Time moves only when a step moves the TestClock, so the 30-second
+// timeout needs no sleep.
 public class TripSteps {
 
   // The telemetry lag bound of RIA-58.
@@ -173,6 +173,16 @@ public class TripSteps {
     assertThat(pass.get("activated_at")).isNotNull();
   }
 
+  // RIA-87: the time runs from the confirmed unlock, which the TestClock fixes.
+  @Then("the guest's pass expires {int} hours after the unlock was confirmed")
+  public void theGuestsPassExpiresHoursAfterTheUnlock(int hours) {
+    var pass = passOfTheTrip();
+    var activatedAt = ((java.sql.Timestamp) pass.get("activated_at")).toInstant();
+    assertThat(activatedAt).isEqualTo(clock.instant());
+    assertThat(((java.sql.Timestamp) pass.get("expires_at")).toInstant())
+        .isEqualTo(activatedAt.plus(Duration.ofHours(hours)));
+  }
+
   @Then("the guest's pass is not active")
   public void theGuestsPassIsNotActive() {
     var pass = passOfTheTrip();
@@ -259,7 +269,7 @@ public class TripSteps {
   private Map<String, Object> passOfTheTrip() {
     return jdbc.queryForMap(
         """
-        select p.status, p.activated_at from pass p join trip t on t.pass_id = p.id where t.id = ?::uuid
+        select p.status, p.activated_at, p.expires_at from pass p join trip t on t.pass_id = p.id where t.id = ?::uuid
         """,
         tripId());
   }

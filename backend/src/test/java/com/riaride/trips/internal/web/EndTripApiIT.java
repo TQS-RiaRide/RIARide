@@ -160,8 +160,9 @@ class EndTripApiIT {
     jdbc.update(
         """
         insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents,
-                          deposit_status, activated_at)
-        values (?, ?, 'STAY', 'ACTIVE', 4000, 5000, 'HELD', timestamptz '2026-11-30T09:20:00Z')
+                          deposit_status, activated_at, expires_at, stay_ends_at)
+        values (?, ?, 'STAY', 'ACTIVE', 4000, 5000, 'HELD', timestamptz '2026-11-30T09:20:00Z',
+                timestamptz '2026-12-03T00:00:00Z', timestamptz '2026-12-03T00:00:00Z')
         """,
         passId,
         guestId);
@@ -276,22 +277,7 @@ class EndTripApiIT {
   void onlyOneOfTwoParallelEndsTakesTheLastFreeSlot() throws Exception {
     givenDockedBikes(praia, 1);
 
-    var go = new CountDownLatch(1);
-    List<Integer> statuses;
-    try (var threads = Executors.newFixedThreadPool(2)) {
-      var rita =
-          threads.submit(() -> {
-            go.await();
-            return end(RITA, ritasTrip, praia).andReturn().getResponse().getStatus();
-          });
-      var tomas =
-          threads.submit(() -> {
-            go.await();
-            return end(TOMAS, tomasTrip, praia).andReturn().getResponse().getStatus();
-          });
-      go.countDown();
-      statuses = List.of(rita.get(), tomas.get());
-    }
+    var statuses = endTogether(RITA, ritasTrip, TOMAS, tomasTrip, praia);
 
     assertThat(statuses).containsExactlyInAnyOrder(200, 409);
     assertThat(
@@ -300,6 +286,39 @@ class EndTripApiIT {
         .isEqualTo(2);
     assertThat(List.of(tripStatus(ritasTrip), tripStatus(tomasTrip)))
         .containsExactlyInAnyOrder("ENDED", "IN_USE");
+  }
+
+  // The same trip ended twice at the same moment (a double tap): the vehicle row lock lets one
+  // request dock the bike; the other finds it no longer in use and is a 409, not a 500.
+  @Requirement("RIA-55")
+  @Test
+  void onlyOneOfTwoParallelEndsOfTheSameTripSucceeds() throws Exception {
+    var statuses = endTogether(RITA, ritasTrip, RITA, ritasTrip, praia);
+
+    assertThat(statuses).containsExactlyInAnyOrder(200, 409);
+    assertThat(tripStatus(ritasTrip)).isEqualTo("ENDED");
+    assertThat(bike("EB-301")).containsEntry("status", "AVAILABLE").containsEntry("hub_id", praia);
+    verify(vehicleCommands).lock("EB-301", praia.toString());
+  }
+
+  private List<Integer> endTogether(
+      String firstToken, UUID firstTrip, String secondToken, UUID secondTrip, UUID hubId)
+      throws Exception {
+    var go = new CountDownLatch(1);
+    try (var threads = Executors.newFixedThreadPool(2)) {
+      var first =
+          threads.submit(() -> {
+            go.await();
+            return end(firstToken, firstTrip, hubId).andReturn().getResponse().getStatus();
+          });
+      var second =
+          threads.submit(() -> {
+            go.await();
+            return end(secondToken, secondTrip, hubId).andReturn().getResponse().getStatus();
+          });
+      go.countDown();
+      return List.of(first.get(), second.get());
+    }
   }
 
   @Requirement("RIA-55")
