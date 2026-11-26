@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import i18n from '../../i18n';
 import Workspaces from './Workspaces';
+import { requirement } from '../../test/xray';
+
+requirement('RIA-86');
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');

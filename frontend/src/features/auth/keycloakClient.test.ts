@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createKeycloakClient } from './keycloakClient';
+import { requirement } from '../../test/xray';
+
+requirement('RIA-86');
 
 const keycloak = vi.hoisted(() => ({
   constructor: vi.fn(),

@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fetchCurrentUser } from './api';
+import { requirement } from '../../test/xray';
+
+requirement('RIA-86');
 
 function respond(status: number, body: unknown) {
   return vi
