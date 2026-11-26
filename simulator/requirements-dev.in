@@ -3,7 +3,7 @@
 #   pip-compile --generate-hashes --allow-unsafe -o requirements-dev.txt requirements-dev.in
 -r requirements.in
 pytest==9.1.1
-pytest-cov==7.0.0
+pytest-cov==7.1.0
 jsonschema==4.26.0
 ruff==0.16.9
 pip-audit==2.9.0
