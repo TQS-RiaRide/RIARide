@@ -1,11 +1,11 @@
 package com.riaride;
 
+import com.networknt.schema.Error;
 import com.networknt.schema.InputFormat;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SchemaValidatorsConfig;
-import com.networknt.schema.SpecVersion;
-import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.Schema;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SchemaRegistryConfig;
+import com.networknt.schema.SpecificationVersion;
 import java.io.IOException;
 import java.util.List;
 
@@ -20,11 +20,11 @@ public final class MqttContracts {
   // The reasons a command payload breaks command.schema.json; empty when it follows it.
   public static List<String> commandViolations(String payload) {
     return load(COMMAND_SCHEMA).validate(payload, InputFormat.JSON).stream()
-        .map(ValidationMessage::getMessage)
+        .map(Error::getMessage)
         .toList();
   }
 
-  private static JsonSchema load(String resource) {
+  private static Schema load(String resource) {
     try (var schema = MqttContracts.class.getResourceAsStream(resource)) {
       if (schema == null) {
         throw new IllegalStateException(
@@ -32,9 +32,10 @@ public final class MqttContracts {
                 + " is not on the test classpath: it comes from "
                 + "contracts/mqtt in the repository (RIA-60)");
       }
-      var config = SchemaValidatorsConfig.builder().formatAssertionsEnabled(true).build();
-      return JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
-          .getSchema(schema, config);
+      var config = SchemaRegistryConfig.builder().formatAssertionsEnabled(true).build();
+      return SchemaRegistry.withDefaultDialect(
+              SpecificationVersion.DRAFT_2020_12, registry -> registry.schemaRegistryConfig(config))
+          .getSchema(schema);
     } catch (IOException unreadable) {
       throw new IllegalStateException("Could not read " + resource, unreadable);
     }
