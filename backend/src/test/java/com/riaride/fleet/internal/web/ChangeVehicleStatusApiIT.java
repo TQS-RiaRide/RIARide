@@ -255,8 +255,12 @@ class ChangeVehicleStatusApiIT {
   void shouldForbidEveryOtherRole(String role) throws Exception {
     var id = bike("RIA91-1", "AVAILABLE");
 
-    changeStatus(role, id, toStatus("RETIRED")).andExpect(status().isForbidden());
-    changeStatus(role, id, "not json").andExpect(status().isForbidden());
+    changeStatus(role, id, toStatus("RETIRED"))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
+    changeStatus(role, id, "not json")
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
 
     assertThat(stored(id)).containsEntry("status", "AVAILABLE");
   }
@@ -266,7 +270,9 @@ class ChangeVehicleStatusApiIT {
   void shouldRequireAToken() throws Exception {
     var id = bike("RIA91-1", "AVAILABLE");
 
-    changeStatus(null, id, toStatus("RETIRED")).andExpect(status().isUnauthorized());
+    changeStatus(null, id, toStatus("RETIRED"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON));
 
     assertThat(stored(id)).containsEntry("status", "AVAILABLE");
   }

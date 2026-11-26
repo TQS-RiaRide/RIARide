@@ -1,0 +1,29 @@
+[project]
+name = "ai-review-findings"
+version = "0.1.0"
+description = "Counts the AI review findings recorded in pull request bodies, by severity and decision (QA Manual 6.7)."
+requires-python = ">=3.12"
+# No runtime dependencies: the script uses the standard library and the gh CLI.
+# Development dependencies are pinned in requirements-dev.in; requirements-dev.txt is generated
+# from it with hashes (pip-compile).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+source = ["ai_review_findings"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = [".", "tests"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pep8-naming, pyupgrade, bugbear, simplify
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM"]

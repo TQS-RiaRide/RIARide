@@ -3,6 +3,7 @@ package com.riaride.acceptance;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.restassured.http.ContentType;
@@ -21,6 +22,13 @@ public class ChangeVehicleStatusSteps {
   public ChangeVehicleStatusSteps(ScenarioContext context, JdbcTemplate jdbc) {
     this.context = context;
     this.jdbc = jdbc;
+  }
+
+  // A bike an operator has already retired: out of service and off its hub, as
+  // Vehicle.changeStatusAsOperator leaves it.
+  @Given("bike {string} was retired")
+  public void bikeWasRetired(String code) {
+    jdbc.update("update vehicle set status = 'RETIRED', hub_id = null where code = ?", code);
   }
 
   @When("the operator retires bike {string}")
