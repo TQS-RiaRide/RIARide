@@ -4,19 +4,23 @@ Feature: End a trip at a hub
   so that I can return the bike where it suits me.
 
   Background:
-    Given a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
+    Given a hub "Marés Centro" with an available bike "EB-301" with 80 % battery
+    And a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
+    And the guest has a valid "stay" pass
     And the guest has a trip in progress with bike "EB-301"
 
-  @TEST_RIA-152 @BR10 @wip
+  @TEST_RIA-152 @BR10
   Scenario: The guest ends the trip at a hub with a free slot
     Given a hub "Marés Praia" with capacity 10 and 9 bikes docked
     When the guest ends the trip at hub "Marés Praia"
     Then the response status is 200
     And the trip is "ended"
+    And bike "EB-301" is "available"
     And bike "EB-301" is docked at hub "Marés Praia"
+    And a lock command for bike "EB-301" at hub "Marés Praia" is sent to the simulator
 
   # Nearest is the straight-line distance from the full hub's position (architecture, section 7).
-  @BR10 @wip
+  @BR10
   Scenario: The guest cannot end the trip at a full hub and nearby hubs are suggested
     Given these hubs:
       | name          | latitude | longitude | capacity | docked |
