@@ -15,7 +15,7 @@ class PaymentRequestsTest {
 
   private static final Money AMOUNT = Money.cents(7500);
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   @ValueSource(strings = {"   "})
@@ -24,7 +24,7 @@ class PaymentRequestsTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   void shouldRejectPurchaseWithoutPaymentMethod(String paymentMethod) {
@@ -33,7 +33,7 @@ class PaymentRequestsTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   void shouldRejectPurchaseWithoutReference(String reference) {
@@ -41,14 +41,14 @@ class PaymentRequestsTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldRejectPurchaseWithoutAmount() {
     assertThatThrownBy(() -> new PurchaseRequest(null, "pm_card_visa", "pass-7f3c2a", "purchase-1"))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   @ValueSource(strings = {"   "})
@@ -58,7 +58,7 @@ class PaymentRequestsTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   void shouldRejectOffSessionChargeWithoutCustomer(String customerRef) {
@@ -67,7 +67,7 @@ class PaymentRequestsTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   void shouldRejectOffSessionChargeWithoutPaymentMethod(String paymentMethodRef) {
@@ -76,7 +76,7 @@ class PaymentRequestsTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   @ValueSource(strings = {"   "})
@@ -85,7 +85,7 @@ class PaymentRequestsTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @ParameterizedTest
   @NullAndEmptySource
   void shouldRejectRefundWithoutPayment(String paymentRef) {

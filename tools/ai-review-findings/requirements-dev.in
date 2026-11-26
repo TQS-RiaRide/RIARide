@@ -1,0 +1,6 @@
+# Development dependencies. requirements-dev.txt is generated from this file, with hashes:
+#   pip-compile --generate-hashes --allow-unsafe -o requirements-dev.txt requirements-dev.in
+# Same versions as simulator/requirements-dev.in.
+pytest==9.1.1
+pytest-cov==7.0.0
+ruff==0.16.9
