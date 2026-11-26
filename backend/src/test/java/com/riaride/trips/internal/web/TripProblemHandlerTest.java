@@ -3,13 +3,20 @@ package com.riaride.trips.internal.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import com.riaride.fleet.HubWithoutFreeSlotException;
+import com.riaride.fleet.NearbyHub;
+import com.riaride.fleet.UnknownHubException;
 import com.riaride.fleet.VehicleNotBookableException;
 import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.trips.internal.application.NoActiveStayException;
 import com.riaride.trips.internal.application.NoUsablePassException;
 import com.riaride.trips.internal.application.ReservationHeldForAnotherBikeException;
 import com.riaride.trips.internal.application.TripAlreadyInProgressException;
+import com.riaride.trips.internal.application.TripNotInProgressException;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -124,6 +131,32 @@ class TripProblemHandlerTest {
   @Test
   void shouldAnswerTripNotFound() {
     assertProblem(handler.tripNotFound(new TripNotFoundException()), 404, "Trip not found");
+  }
+
+  @Requirement("RIA-55")
+  @Test
+  void shouldAnswerTripNotInProgress() {
+    assertProblem(
+        handler.tripNotInProgress(new TripNotInProgressException()), 409, "Trip not in progress");
+  }
+
+  @Requirement("RIA-55")
+  @Test
+  void shouldAnswerHubNotFound() {
+    assertProblem(handler.hubNotFound(new UnknownHubException()), 404, "Hub not found");
+  }
+
+  // BR10: the refusal carries the suggested hubs, nearest first, as the nearbyHubs member.
+  @Requirement("RIA-55")
+  @Test
+  void shouldAnswerAFullHubWithTheNearbyHubs() {
+    var salinas = new NearbyHub(UUID.randomUUID(), "Marés Salinas", 5, 6169);
+    var centro = new NearbyHub(UUID.randomUUID(), "Marés Centro", 6, 9147);
+
+    var problem = handler.hubFull(new HubWithoutFreeSlotException(List.of(salinas, centro)));
+
+    assertProblem(problem, 409, "Hub full");
+    assertThat(problem.getProperties()).isEqualTo(Map.of("nearbyHubs", List.of(salinas, centro)));
   }
 
   private static void assertProblem(ProblemDetail problem, int status, String title) {

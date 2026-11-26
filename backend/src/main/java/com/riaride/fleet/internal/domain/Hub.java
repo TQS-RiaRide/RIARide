@@ -23,6 +23,8 @@ public class Hub implements Persistable<UUID> {
   static final int MIN_CAPACITY = 1;
   static final double MAX_LATITUDE = 90.0;
   static final double MAX_LONGITUDE = 180.0;
+  // The mean radius of the Earth, which the haversine formula assumes is a sphere.
+  static final double EARTH_RADIUS_METERS = 6_371_000;
 
   // No invisible character belongs in a name: no C0 or C1 control character (Unicode category
   // Cc, which includes the NUL that PostgreSQL rejects) and no format character (category Cf, such
@@ -125,6 +127,22 @@ public class Hub implements Persistable<UUID> {
     if (!(longitude >= -MAX_LONGITUDE && longitude <= MAX_LONGITUDE)) {
       throw new InvalidHubException("longitude", "The longitude must be from -180 to 180 degrees.");
     }
+  }
+
+  // The straight-line (great-circle) distance to another hub, by the haversine formula. A full hub
+  // uses it to suggest the nearest ones (RIA-55, architecture section 7). At the scale of a city
+  // the sphere is accurate to well under 1 %.
+  public double metersTo(Hub other) {
+    var fromLatitude = Math.toRadians(latitude);
+    var toLatitude = Math.toRadians(other.latitude);
+    var latitudeDelta = toLatitude - fromLatitude;
+    var longitudeDelta = Math.toRadians(other.longitude - longitude);
+    var haversine =
+        Math.pow(Math.sin(latitudeDelta / 2), 2)
+            + Math.cos(fromLatitude)
+                * Math.cos(toLatitude)
+                * Math.pow(Math.sin(longitudeDelta / 2), 2);
+    return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(haversine));
   }
 
   @Override

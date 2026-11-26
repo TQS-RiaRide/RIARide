@@ -18,7 +18,7 @@ import org.springframework.data.domain.Persistable;
 // A guest's trip on the bike their pass holds (Reservation). It is STARTING from the request until
 // telemetry confirms the unlock; it becomes IN_USE only if that happens before the unlock timeout,
 // and FAILED otherwise (RIA-54, BR13). The timeout is passed in, so the rule does not depend on
-// configuration.
+// configuration. A trip in use is ENDED at a hub with a free slot (RIA-55, BR10).
 @Entity
 @Table(name = "trip")
 public class Trip implements Persistable<UUID> {
@@ -61,6 +61,13 @@ public class Trip implements Persistable<UUID> {
 
   @Column(name = "failed_at")
   private Instant failedAt;
+
+  @Column(name = "ended_at")
+  private Instant endedAt;
+
+  // The hub the bike was docked at when the trip ended.
+  @Column(name = "end_hub_id")
+  private UUID endHubId;
 
   // The unlock confirmation and the timeout job may update the same trip at once.
   @Version private long version;
@@ -109,6 +116,9 @@ public class Trip implements Persistable<UUID> {
     if (status == TripStatus.IN_USE) {
       return UnlockOutcome.ALREADY_STARTED;
     }
+    if (status == TripStatus.ENDED) {
+      return UnlockOutcome.ALREADY_ENDED;
+    }
     if (status == TripStatus.FAILED) {
       return UnlockOutcome.TOO_LATE;
     }
@@ -129,6 +139,20 @@ public class Trip implements Persistable<UUID> {
     this.status = TripStatus.FAILED;
     this.startedAt = null;
     this.failedAt = now;
+  }
+
+  // The guest returned the bike at a hub with a free slot (RIA-55, BR10). Only a trip in use ends;
+  // the hub's free slot is checked by the fleet module, in the same transaction.
+  public void end(UUID hubId, Instant now) {
+    if (hubId == null || now == null) {
+      throw new IllegalArgumentException("A trip ends at a hub and at a time");
+    }
+    if (status != TripStatus.IN_USE) {
+      throw new IllegalStateException("Only a trip in use can end");
+    }
+    this.status = TripStatus.ENDED;
+    this.endedAt = now;
+    this.endHubId = hubId;
   }
 
   // Returns true only when this call fails the trip.
@@ -195,5 +219,13 @@ public class Trip implements Persistable<UUID> {
 
   public Instant getFailedAt() {
     return failedAt;
+  }
+
+  public Instant getEndedAt() {
+    return endedAt;
+  }
+
+  public UUID getEndHubId() {
+    return endHubId;
   }
 }
