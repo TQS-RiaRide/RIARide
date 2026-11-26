@@ -12,3 +12,4 @@ Implemented so far, on `dev`:
 | `POST /api/v1/hubs` | Operator, admin | Registers a hub with its capacity | 6.1 (RIA-56) |
 | `POST /api/v1/hubs/{hubId}/vehicles` | Operator, admin | Registers a bike at a hub with a free slot | 6.2 (RIA-57) |
 | `GET /api/v1/hubs/{hubId}/vehicles?type=` | Guest, operator, admin | Lists the vehicles at a hub, optionally of one type, each marked bookable | 3.1 and 9.2 (RIA-53, RIA-59) |
+| `PUT /api/v1/vehicles/{id}/status` | Operator, admin | Activates (`AVAILABLE`), deactivates (`MAINTENANCE`) or retires (`RETIRED`) a bike; a retired bike leaves its hub, and a change the lifecycle does not allow, such as retiring a bike in use, is a 409 | 6.3 (RIA-91) |
