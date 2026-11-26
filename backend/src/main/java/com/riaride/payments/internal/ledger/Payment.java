@@ -149,6 +149,10 @@ class Payment implements Persistable<UUID> {
     return providerRef;
   }
 
+  String getIdempotencyKey() {
+    return idempotencyKey;
+  }
+
   Status getStatus() {
     return status;
   }

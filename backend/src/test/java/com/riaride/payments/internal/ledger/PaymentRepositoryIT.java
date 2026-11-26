@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 // Integration test (Failsafe): the payment table on PostgreSQL in Testcontainers takes overtime
-// charges, succeeded or refused for good (Flyway V11), next to the purchase whose saved card they
+// charges, succeeded or refused for good (Flyway V12), next to the purchase whose saved card they
 // use (RIA-88).
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

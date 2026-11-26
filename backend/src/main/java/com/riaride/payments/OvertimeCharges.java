@@ -11,4 +11,9 @@ public interface OvertimeCharges {
   // deposit fallback is RIA-114. A TransientPaymentException is thrown with nothing recorded, so
   // the caller retries with the same key.
   OvertimeChargeResult charge(UUID passId, Money amount, String idempotencyKey);
+
+  // Records overtime whose last charge attempt failed for now too as FAILED, so the deposit
+  // fallback (RIA-114) and the operator dashboard find it. A key already recorded is left as it
+  // is.
+  void recordUnpaid(UUID passId, Money amount, String idempotencyKey);
 }

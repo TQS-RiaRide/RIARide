@@ -17,9 +17,18 @@ spring:
       # publication registry; the bike commands stay plain after-commit listeners and are never
       # resent.
       registry-trigger-annotation: org.springframework.modulith.events.ApplicationModuleListener
+      # A publication is deleted once its listener succeeds, so the table holds only what is left
+      # to do.
+      completion-mode: delete
+      # A publication left published, processing or resubmitted by a crash or restart is marked
+      # failed after this long, so OvertimeRetryJob retries it. Longer than a Stripe call.
+      staleness:
+        published: 5m
+        processing: 5m
+        resubmitted: 5m
       jdbc:
         schema-initialization:
-          enabled: false # Flyway owns event_publication (V12)
+          enabled: false # Flyway owns event_publication (V13)
   jackson:
     deserialization:
       # A fractional number for a whole-number field, such as a hub capacity of 1.5, is a 400,
