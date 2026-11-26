@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import com.riaride.passes.PassLimits;
 import com.riaride.passes.UsablePass;
 import com.riaride.passes.internal.domain.Pass;
 import com.riaride.passes.internal.domain.PassPrice;
@@ -178,5 +179,27 @@ class PassUsageServiceTest {
     when(passes.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
 
     assertThat(service.canStartTrip(unknown, NOW)).isFalse();
+  }
+
+  // The limits of an ended trip's overtime (RIA-88): when the pass expires and the stay ends.
+  @Requirement("RIA-88")
+  @Test
+  void shouldGiveTheExpiryOfAnActivePassAndTheEndOfTheStay() {
+    var pass = paidPass();
+    pass.activate(NOW);
+    when(passes.findById(pass.getId())).thenReturn(Optional.of(pass));
+
+    var limits = service.limitsOf(pass.getId());
+
+    assertThat(limits).isEqualTo(new PassLimits(pass.getExpiresAt(), STAY_ENDS));
+  }
+
+  @Requirement("RIA-88")
+  @Test
+  void shouldRefuseTheLimitsOfAnUnknownPass() {
+    var unknown = UUID.randomUUID();
+    when(passes.findById(unknown)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.limitsOf(unknown)).isInstanceOf(IllegalStateException.class);
   }
 }

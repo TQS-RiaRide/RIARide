@@ -10,6 +10,9 @@ riaride:
     # tests that need them call UnlockTimeoutJob and ReservationExpiryJob on their own clock.
     unlock-timeout-check-interval: 1d
     reservation-expiry-check-interval: 1d
+    overtime:
+      # The tests that need OvertimeRetryJob run it themselves (RIA-88).
+      retry-check-interval: 1d
   telemetry:
     mqtt:
       # No broker by default; the tests that need one start Mosquitto and turn this on.
