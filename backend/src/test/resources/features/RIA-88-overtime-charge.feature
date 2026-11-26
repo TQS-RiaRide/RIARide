@@ -30,3 +30,13 @@ Feature: Overtime charge
     And no overtime has been charged yet
     When the payment sandbox is back and the overtime charge is retried
     Then the guest is charged 2 blocks of 15 minutes of overtime, 4.00 EUR, off-session
+
+  # After the last attempt the overtime is left to the deposit (RIA-114), recorded as unpaid.
+  @BR7
+  Scenario: The overtime is recorded as unpaid when every attempt fails
+    Given the payment sandbox is down
+    And the trip has lasted 3 h 20 min
+    When the guest ends the trip at hub "Marés Praia"
+    And the overtime charge is retried until its last attempt fails
+    Then the overtime of 4.00 EUR is recorded as unpaid
+    And no overtime charge is left to retry

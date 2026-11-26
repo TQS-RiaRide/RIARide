@@ -2,6 +2,7 @@ package com.riaride.acceptance;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -44,6 +45,33 @@ public class OvertimeSteps {
 
   private String passId() {
     return jdbc.queryForObject("select id::text from pass", String.class);
+  }
+
+  // The key each charge of this trip's overtime carries to the payment sandbox.
+  private String overtimeKey() {
+    return "trip-" + jdbc.queryForObject("select id::text from trip", String.class) + ":overtime";
+  }
+
+  private int overtimeChargeRequests() {
+    return CucumberSpringConfiguration.STRIPE
+        .findAll(
+            postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS))
+                .withHeader("Idempotency-Key", equalTo(overtimeKey())))
+        .size();
+  }
+
+  // The listener runs after the commit, on another thread: wait until its attempt has failed.
+  private void awaitFailedAttempts(int attempts) {
+    await()
+        .atMost(Duration.ofSeconds(5))
+        .untilAsserted(() -> {
+          assertThat(overtimeChargeRequests()).isEqualTo(attempts);
+          assertThat(
+                  jdbc.queryForObject(
+                      "select count(*) from event_publication where status = 'FAILED'",
+                      Integer.class))
+              .isEqualTo(1);
+        });
   }
 
   @Given("the guest's pass was bought with a card saved for off-session charges")
@@ -91,6 +119,7 @@ public class OvertimeSteps {
 
   @Then("no overtime has been charged yet")
   public void noOvertimeHasBeenChargedYet() {
+    awaitFailedAttempts(1);
     assertThat(
             jdbc.queryForObject(
                 "select count(*) from payment where kind = 'OVERTIME'", Integer.class))
@@ -105,10 +134,47 @@ public class OvertimeSteps {
   // The retry job runs on the TestClock, so the backoff passes without a sleep.
   @When("the payment sandbox is back and the overtime charge is retried")
   public void thePaymentSandboxIsBackAndTheChargeIsRetried() {
-    CucumberSpringConfiguration.STRIPE.resetAll();
+    // The mappings only: the request journal keeps the failed attempt for the check below.
+    CucumberSpringConfiguration.STRIPE.resetMappings();
     thePaymentSandboxAcceptsOffSessionCharges();
     clock.advance(Duration.ofMinutes(5));
     retryJob.retryFailedCharges();
+    // The retry went to the sandbox with the same key as the failed attempt, so it cannot charge
+    // twice.
+    await()
+        .atMost(Duration.ofSeconds(5))
+        .untilAsserted(() -> assertThat(overtimeChargeRequests()).isEqualTo(2));
+  }
+
+  // The job waits 1, 2, 4 and 8 minutes between attempts; the TestClock passes them at once.
+  @When("the overtime charge is retried until its last attempt fails")
+  public void theOvertimeChargeIsRetriedUntilItsLastAttemptFails() {
+    awaitFailedAttempts(1);
+    for (var attempt = 2; attempt <= 5; attempt++) {
+      clock.advance(Duration.ofMinutes(10));
+      retryJob.retryFailedCharges();
+      awaitFailedAttempts(attempt);
+    }
+    clock.advance(Duration.ofMinutes(20));
+    retryJob.retryFailedCharges();
+  }
+
+  @Then("the overtime of {word} EUR is recorded as unpaid")
+  public void theOvertimeIsRecordedAsUnpaid(String euros) {
+    var cents = new BigDecimal(euros).movePointRight(2).longValueExact();
+    assertThat(
+            jdbc.queryForList(
+                "select amount_cents from payment where kind = 'OVERTIME' and status = 'FAILED' and idempotency_key = ?",
+                Long.class,
+                overtimeKey()))
+        .containsExactly(cents);
+    assertThat(overtimeChargeRequests()).isEqualTo(5);
+  }
+
+  @Then("no overtime charge is left to retry")
+  public void noOvertimeChargeIsLeftToRetry() {
+    assertThat(jdbc.queryForObject("select count(*) from event_publication", Integer.class))
+        .isZero();
   }
 
   @Then("the guest is charged {int} blocks of 15 minutes of overtime, {word} EUR, off-session")
@@ -125,6 +191,7 @@ public class OvertimeSteps {
                 .containsExactly((long) cents));
     CucumberSpringConfiguration.STRIPE.verify(
         postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS))
+            .withHeader("Idempotency-Key", equalTo(overtimeKey()))
             .withRequestBody(containing("amount=" + cents))
             .withRequestBody(containing("customer=cus_guest"))
             .withRequestBody(containing("payment_method=pm_saved_card"))

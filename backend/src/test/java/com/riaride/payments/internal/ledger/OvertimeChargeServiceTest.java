@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 // Unit test (Surefire): overtime is charged off-session to the card saved when the pass was bought
 // (RIA-88, ADR 0008), once per idempotency key. A charge refused for good is recorded as FAILED and
@@ -143,5 +144,48 @@ class OvertimeChargeServiceTest {
     assertThatThrownBy(() -> service.charge(PASS, OVERTIME, KEY))
         .isInstanceOf(IllegalStateException.class);
     verifyNoInteractions(gateway);
+  }
+
+  // The Stripe call runs outside any transaction, so two attempts with one key may both get the
+  // provider's (cached) charge; the unique key lets only one record it, and the other is done too.
+  @Requirement("RIA-88")
+  @Test
+  void shouldTreatAChargeRecordedConcurrentlyWithTheSameKeyAsCharged() {
+    givenThePassWasBoughtWithASavedCard();
+    when(gateway.chargeOffSession(any())).thenReturn("pi_overtime");
+    when(payments.save(any(Payment.class)))
+        .thenThrow(new DataIntegrityViolationException("uq_payment_idempotency_key"));
+
+    var result = service.charge(PASS, OVERTIME, KEY);
+
+    assertThat(result).isEqualTo(OvertimeChargeResult.CHARGED);
+  }
+
+  // The last attempt failed for now too (OvertimeRetryJob): the overtime is recorded as unpaid, so
+  // the deposit fallback (RIA-114) and the operator dashboard find it.
+  @Requirement("RIA-88")
+  @Test
+  void shouldRecordAnOvertimeGivenUpAsUnpaid() {
+    when(payments.findByIdempotencyKey(KEY)).thenReturn(Optional.empty());
+
+    service.recordUnpaid(PASS, OVERTIME, KEY);
+
+    var payment = saved();
+    assertThat(payment.getKind()).isEqualTo(Payment.Kind.OVERTIME);
+    assertThat(payment.getStatus()).isEqualTo(Payment.Status.FAILED);
+    assertThat(payment.getAmountCents()).isEqualTo(400);
+    verifyNoInteractions(gateway);
+  }
+
+  // A charge that went through, or was already given up, is not overwritten.
+  @Requirement("RIA-88")
+  @Test
+  void shouldNotRecordAsUnpaidAKeyAlreadyRecorded() {
+    when(payments.findByIdempotencyKey(KEY))
+        .thenReturn(Optional.of(Payment.overtime(PASS, 400, "pi_overtime", KEY)));
+
+    service.recordUnpaid(PASS, OVERTIME, KEY);
+
+    verify(payments, never()).save(any());
   }
 }

@@ -125,4 +125,26 @@ class OvertimeChargeListenerTest {
 
     assertThatThrownBy(this::tripEnded).isSameAs(unreachable);
   }
+
+  // After the last attempt (OvertimeRetryJob) the overtime is recorded as unpaid, for the deposit
+  // fallback (RIA-114), with the same key as the charge.
+  @Requirement("RIA-88")
+  @Test
+  void shouldRecordTheOvertimeAsUnpaidWhenGivingUp() {
+    givenTheTripEndedAfter(Duration.ofMinutes(200), new PassLimits(FAR, FAR));
+
+    listener.giveUp(new TripEnded(trip.getId(), "EB-301", END_HUB));
+
+    verify(charges).recordUnpaid(PASS, Money.cents(400), overtimeKey());
+  }
+
+  @Requirement("RIA-88")
+  @Test
+  void shouldRecordNothingWhenGivingUpOnATripWithoutOvertime() {
+    givenTheTripEndedAfter(Duration.ofHours(3), new PassLimits(FAR, FAR));
+
+    listener.giveUp(new TripEnded(trip.getId(), "EB-301", END_HUB));
+
+    verifyNoInteractions(charges);
+  }
 }
