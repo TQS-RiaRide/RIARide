@@ -11,7 +11,7 @@ Feature: Overtime charge
     And the guest has a trip in progress with bike "EB-301"
     And a hub "Marés Praia" with capacity 10 and 9 bikes docked
 
-  @BR7
+  @TEST_RIA-181 @BR7
   Scenario: A trip of 3 h 20 min is charged 2 blocks of overtime
     Given the payment sandbox accepts off-session charges
     And the trip has lasted 3 h 20 min
