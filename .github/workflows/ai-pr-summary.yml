@@ -4,6 +4,10 @@ name: AI PR summary
 # for review, an agent posts one comment that summarizes the change and its
 # risk, so the human reviewer knows where to look first. It never reviews line
 # by line (that is the AI review, AI3), approves, requests changes or merges.
+#
+# claude-code-action only runs when this file is identical to the version on
+# the default branch (main), so it posts nothing until it has been released to
+# main, and it skips itself on a pull request that edits this file.
 
 on:
   pull_request:
@@ -20,10 +24,12 @@ jobs:
     name: AI PR summary
     # Secrets are not available to PRs from forks or Dependabot, and drafts
     # are not ready.
+    # The author, not github.actor: a person who re-runs the job on a Dependabot
+    # PR is the actor, and the job would then fail without the secret.
     if: >-
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]'
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -51,7 +57,7 @@ jobs:
             First run `gh pr view ${{ github.event.pull_request.number }} --comments`. If a
             comment starting with "## AI PR summary" already exists, stop without posting.
 
-            Otherwise post exactly one comment with `gh pr comment`, in English, at most
+            Otherwise post exactly one comment with `gh pr comment ${{ github.event.pull_request.number }} --body`, in English, at most
             about 250 words, in this format:
 
             ## AI PR summary
@@ -75,4 +81,4 @@ jobs:
             - Do not invent content. If the diff is too large to read in full, say which
               parts the summary covers.
           claude_args: |
-            --allowedTools "Bash(gh pr comment ${{ github.event.pull_request.number }}:*),Bash(gh pr diff ${{ github.event.pull_request.number }}:*),Bash(gh pr view ${{ github.event.pull_request.number }}:*),Read,Grep,Glob"
+            --allowedTools "Bash(gh pr comment ${{ github.event.pull_request.number }} --body:*),Bash(gh pr diff ${{ github.event.pull_request.number }}:*),Bash(gh pr view ${{ github.event.pull_request.number }}:*),Read,Grep,Glob"
