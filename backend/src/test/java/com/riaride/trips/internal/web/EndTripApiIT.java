@@ -160,8 +160,9 @@ class EndTripApiIT {
     jdbc.update(
         """
         insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents,
-                          deposit_status, activated_at)
-        values (?, ?, 'STAY', 'ACTIVE', 4000, 5000, 'HELD', timestamptz '2026-11-30T09:20:00Z')
+                          deposit_status, activated_at, expires_at, stay_ends_at)
+        values (?, ?, 'STAY', 'ACTIVE', 4000, 5000, 'HELD', timestamptz '2026-11-30T09:20:00Z',
+                timestamptz '2026-12-03T00:00:00Z', timestamptz '2026-12-03T00:00:00Z')
         """,
         passId,
         guestId);
