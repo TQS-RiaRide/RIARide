@@ -1,11 +1,14 @@
 package com.riaride.trips.internal.web;
 
+import com.riaride.fleet.HubWithoutFreeSlotException;
+import com.riaride.fleet.UnknownHubException;
 import com.riaride.fleet.VehicleNotBookableException;
 import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.trips.internal.application.NoActiveStayException;
 import com.riaride.trips.internal.application.NoUsablePassException;
 import com.riaride.trips.internal.application.ReservationHeldForAnotherBikeException;
 import com.riaride.trips.internal.application.TripAlreadyInProgressException;
+import com.riaride.trips.internal.application.TripNotInProgressException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +20,11 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-// Maps the refusals of starting a trip to RFC 9457 problem details (RIA-54). When two starts run at
-// the same time, a unique index refuses the second one; it gets the same answer as the check that
-// refuses it in the usual case. Details never repeat the SQL message, which holds ids and values.
+// Maps the refusals of starting a trip (RIA-54) and of ending it (RIA-55) to RFC 9457 problem
+// details. When two starts run at the same time, a unique index refuses the second one; it gets
+// the same answer as the check that refuses it in the usual case. A full hub lists the nearest
+// hubs with a free slot in the nearbyHubs extension member (BR10). Details never repeat the SQL
+// message, which holds ids and values.
 @RestControllerAdvice(assignableTypes = TripController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class TripProblemHandler {
@@ -59,6 +64,24 @@ class TripProblemHandler {
   @ExceptionHandler(NoActiveStayException.class)
   ProblemDetail noActiveStay(NoActiveStayException exception) {
     return problem(HttpStatus.FORBIDDEN, "No active stay", exception.getMessage());
+  }
+
+  @ExceptionHandler(TripNotInProgressException.class)
+  ProblemDetail tripNotInProgress(TripNotInProgressException exception) {
+    return problem(HttpStatus.CONFLICT, "Trip not in progress", exception.getMessage());
+  }
+
+  // BR10: the trip continues, and the guest is told where the nearest free slots are.
+  @ExceptionHandler(HubWithoutFreeSlotException.class)
+  ProblemDetail hubFull(HubWithoutFreeSlotException exception) {
+    var problem = problem(HttpStatus.CONFLICT, "Hub full", exception.getMessage());
+    problem.setProperty("nearbyHubs", exception.nearbyHubs());
+    return problem;
+  }
+
+  @ExceptionHandler(UnknownHubException.class)
+  ProblemDetail hubNotFound(UnknownHubException exception) {
+    return problem(HttpStatus.NOT_FOUND, "Hub not found", exception.getMessage());
   }
 
   @ExceptionHandler(TripNotFoundException.class)

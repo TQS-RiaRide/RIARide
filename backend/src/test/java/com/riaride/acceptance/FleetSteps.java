@@ -18,7 +18,8 @@ import java.util.Objects;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// Steps for the fleet's vehicles and their telemetry (RIA-59, RIA-53), reusable by RIA-58.
+// Steps for the fleet's vehicles and their telemetry (RIA-59, RIA-53), reusable by RIA-58, and for
+// hubs with a given position, capacity and occupancy (RIA-55).
 public class FleetSteps {
 
   // The telemetry lag bound of RIA-58.
@@ -57,6 +58,48 @@ public class FleetSteps {
       var status = bike.get("status").trim().toUpperCase(Locale.ROOT).replace(' ', '_');
       var dockedAt = "IN_USE".equals(status) ? null : hubId;
       insertBike(bike.get("code"), status, Integer.valueOf(bike.get("battery")), dockedAt);
+    }
+  }
+
+  // Hubs at the hotels of the same name. Columns: name, latitude, longitude, capacity and docked
+  // (available bikes docked there). A hub the scenario already has takes the table's position and
+  // capacity, and keeps the bikes it has, so docked counts them too.
+  @Given("these hubs:")
+  public void theseHubs(DataTable hubs) {
+    for (var hub : hubs.asMaps()) {
+      var hubId =
+          aHotelHubAt(
+              hub.get("name"),
+              Double.parseDouble(hub.get("latitude")),
+              Double.parseDouble(hub.get("longitude")),
+              Integer.parseInt(hub.get("capacity")));
+      dockBikes(hubId, Integer.parseInt(hub.get("docked")));
+    }
+  }
+
+  private UUID aHotelHubAt(String hubName, double latitude, double longitude, int capacity) {
+    jdbc.update(
+        """
+        insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
+        select ?, name, 'HOTEL', id, ?, ?, ? from hotel where name = ?
+        on conflict (name) do update
+        set latitude = excluded.latitude, longitude = excluded.longitude, capacity = excluded.capacity
+        """,
+        UUID.randomUUID(),
+        latitude,
+        longitude,
+        capacity,
+        hubName);
+    return jdbc.queryForObject("select id from hub where name = ?", UUID.class, hubName);
+  }
+
+  // Tops the hub up to that many docked bikes, with codes no scenario uses.
+  private void dockBikes(UUID hubId, int docked) {
+    var already =
+        jdbc.queryForObject("select count(*) from vehicle where hub_id = ?", Integer.class, hubId);
+    assertThat(already).as("bikes already docked at the hub").isLessThanOrEqualTo(docked);
+    for (var i = already; i < docked; i++) {
+      insertBike("DK-" + UUID.randomUUID().toString().substring(0, 8), "AVAILABLE", 80, hubId);
     }
   }
 

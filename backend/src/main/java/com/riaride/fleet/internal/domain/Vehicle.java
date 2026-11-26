@@ -161,6 +161,20 @@ public class Vehicle implements Persistable<UUID> {
     this.hubId = null;
   }
 
+  // The trip ended at a hub with a free slot (RIA-55, BR10): the vehicle is docked there and can be
+  // booked again. Whether the hub has a free slot needs the other vehicles, so
+  // VehicleDockingService checks it.
+  public void endRide(UUID hubId) {
+    if (hubId == null) {
+      throw new IllegalArgumentException("A ride ends at a hub");
+    }
+    if (status != VehicleStatus.IN_USE) {
+      throw new IllegalStateException("Only a vehicle in use can end a ride");
+    }
+    this.status = VehicleStatus.AVAILABLE;
+    this.hubId = hubId;
+  }
+
   // A reading older than the last one is ignored: with QoS 1, a redelivered or late message must
   // never make a low-battery bike bookable again (BR12). A reading stamped more than
   // MAX_CLOCK_AHEAD after the server's now is ignored too: the timestamp comes from the
