@@ -67,7 +67,7 @@ Requests enter through the REST controllers, protected by Spring Security, and r
 
 ## 4.4 Module interactions
 
-A module calls another module's public API for queries and for commands whose result it needs now. For side effects elsewhere, it publishes an event, handled after commit. Spring Modulith stores each event in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge. A pass closes, and its deposit is refunded, only when no trip is in progress or waiting for its overtime and no maintenance ticket linked to it is open.
+A module calls another module's public API for queries and for commands whose result it needs now. For side effects elsewhere, it publishes an event, handled after commit. Spring Modulith stores each event in PostgreSQL until its listener succeeds, so a crash does not lose a refund or an overtime charge. A pass that ends during a trip closes only when that trip ends. Its deposit is refunded only when no trip is waiting for its overtime and no maintenance ticket linked to it is open.
 
 **Guest registration.** The backend checks the stay code, creates the user through the Keycloak Admin API, and deletes that user if the local insert fails.
 
