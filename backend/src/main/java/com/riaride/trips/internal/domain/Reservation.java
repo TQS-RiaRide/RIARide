@@ -15,7 +15,8 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
-// A bike held for a pass (BR11). Starting a trip reserves the bike first; if the unlock is not
+// A bike held for a pass (BR11), booked in advance (RIA-90) or reserved by a trip that starts now
+// (RIA-54). Starting a trip reserves the bike first, or uses the booking; if the unlock is not
 // confirmed in time the trip fails but the reservation stays, so the bike is still held and the
 // guest can try it again until the reservation expires (BR13). An unused hold expires at expiresAt
 // (ReservationExpiryJob, or the guest's next start), and its bike is released.

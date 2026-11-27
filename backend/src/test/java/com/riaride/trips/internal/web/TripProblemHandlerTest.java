@@ -10,6 +10,7 @@ import com.riaride.fleet.VehicleNotBookableException;
 import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.trips.internal.application.NoActiveStayException;
 import com.riaride.trips.internal.application.NoUsablePassException;
+import com.riaride.trips.internal.application.ReservationAlreadyHeldException;
 import com.riaride.trips.internal.application.ReservationHeldForAnotherBikeException;
 import com.riaride.trips.internal.application.TripAlreadyInProgressException;
 import com.riaride.trips.internal.application.TripNotInProgressException;
@@ -125,6 +126,22 @@ class TripProblemHandlerTest {
   @Test
   void shouldAnswerNoActiveStay() {
     assertProblem(handler.noActiveStay(new NoActiveStayException()), 403, "No active stay");
+  }
+
+  @Requirement("RIA-90")
+  @Test
+  void shouldAnswerBookingAlreadyHeld() {
+    assertProblem(
+        handler.reservationAlreadyHeld(new ReservationAlreadyHeldException()),
+        409,
+        "Booking already held");
+  }
+
+  @Requirement("RIA-90")
+  @Test
+  void shouldAnswerBookingNotFound() {
+    assertProblem(
+        handler.reservationNotFound(new ReservationNotFoundException()), 404, "Booking not found");
   }
 
   @Requirement("RIA-54")
