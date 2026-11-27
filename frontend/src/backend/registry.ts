@@ -42,10 +42,13 @@ export function createRegistryStore(
   storage: Pick<Storage, 'getItem' | 'setItem'> | undefined = safeStorage(),
 ): RegistryStore {
   let memory: Registry = EMPTY;
+  // Set when a write failed: what storage holds is then older than memory.
+  let storageIsStale = false;
   const key = () => `${REGISTRY_KEY}:${userKey()}`;
 
   const read = (): Registry => {
     try {
+      if (storageIsStale) return memory;
       const raw = storage?.getItem(key());
       if (!raw) return memory;
       const parsed = JSON.parse(raw) as Partial<Registry>;
@@ -62,8 +65,10 @@ export function createRegistryStore(
       memory = next;
       try {
         storage?.setItem(key(), JSON.stringify({ ...next, stays: [] }));
+        storageIsStale = false;
       } catch {
-        // Not remembering is acceptable: the next read falls back to memory.
+        // Not remembering is acceptable: reads use memory until a write succeeds again.
+        storageIsStale = true;
       }
       return next;
     },
