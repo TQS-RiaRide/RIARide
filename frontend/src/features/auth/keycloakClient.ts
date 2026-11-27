@@ -20,8 +20,11 @@ export function createKeycloakClient(config: KeycloakConfig): AuthClient {
   return {
     init() {
       // check-sso: a page reload keeps the Keycloak session instead of asking to log in again.
+      // The check runs in a hidden iframe that loads silent-check-sso.html, so the page does
+      // not redirect to Keycloak and back on every load.
       initialized ??= keycloak.init({
         onLoad: 'check-sso',
+        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
         pkceMethod: 'S256',
         checkLoginIframe: false,
         enableLogging: false,

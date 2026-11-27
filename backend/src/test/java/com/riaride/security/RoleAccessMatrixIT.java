@@ -108,6 +108,11 @@ class RoleAccessMatrixIT {
               "/api/v1/hubs/" + ANY_ID + "/vehicles",
               Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
           new Endpoint("POST", "/api/v1/passes", "/api/v1/passes", Set.of(Role.GUEST)),
+          new Endpoint(
+              "PUT",
+              "/api/v1/vehicles/{id}/status",
+              "/api/v1/vehicles/" + ANY_ID + "/status",
+              Set.of(Role.OPERATOR, Role.ADMIN)),
           new Endpoint("POST", "/api/v1/trips", "/api/v1/trips", Set.of(Role.GUEST)),
           new Endpoint("GET", "/api/v1/trips/{id}", "/api/v1/trips/" + ANY_ID, Set.of(Role.GUEST)),
           new Endpoint(
@@ -115,11 +120,6 @@ class RoleAccessMatrixIT {
               "/api/v1/trips/{id}/end",
               "/api/v1/trips/" + ANY_ID + "/end",
               Set.of(Role.GUEST)),
-          new Endpoint(
-              "PUT",
-              "/api/v1/vehicles/{id}/status",
-              "/api/v1/vehicles/" + ANY_ID + "/status",
-              Set.of(Role.OPERATOR, Role.ADMIN)),
           new Endpoint(
               "POST", "/api/v1/tickets", "/api/v1/tickets", Set.of(Role.OPERATOR, Role.ADMIN)));
 
@@ -138,12 +138,15 @@ class RoleAccessMatrixIT {
               Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
           new Endpoint("GET", "/api/v1/trips/{id}", "/api/v1/trips/not-a-uuid", Set.of(Role.GUEST)),
           new Endpoint(
-              "POST", "/api/v1/trips/{id}/end", "/api/v1/trips/not-a-uuid/end", Set.of(Role.GUEST)),
-          new Endpoint(
               "PUT",
               "/api/v1/vehicles/{id}/status",
               "/api/v1/vehicles/not-a-uuid/status",
-              Set.of(Role.OPERATOR, Role.ADMIN)));
+              Set.of(Role.OPERATOR, Role.ADMIN)),
+          new Endpoint(
+              "POST",
+              "/api/v1/trips/{id}/end",
+              "/api/v1/trips/not-a-uuid/end",
+              Set.of(Role.GUEST)));
 
   // Open to everyone, with or without a token.
   private static final List<Endpoint> PUBLIC_ENDPOINTS =

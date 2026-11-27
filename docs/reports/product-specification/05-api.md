@@ -16,6 +16,7 @@ Implemented so far, on `dev`:
 | `POST /api/v1/tickets` | Operator, admin | Opens a maintenance ticket for a bike, given its code and the fault, due 24 hours later. An available or reserved bike moves to maintenance (its reservation is cancelled); a bike in use stays in use, flagged `maintenancePending`, and moves to maintenance when its trip ends. Unknown bike 404, retired bike 409 | 7.1 (RIA-92) |
 | `POST /api/v1/trips` | Guest | Starts a trip on a bike now; the trip starts when telemetry confirms the unlock | 3.2 (RIA-54) |
 | `GET /api/v1/trips/{id}` | Guest | Reads one of the guest's own trips | 3.2 (RIA-54) |
+| `POST /api/v1/trips/{id}/end` | Guest | Ends the guest's trip at a hub with a free slot | 3.4 (RIA-55) |
 | `GET /api/v1/me` | Any logged-in user | Returns the user, their roles and the workspaces of the web app their roles may open | 1.3 (RIA-86) |
 
 Every endpoint except guest sign-up needs an access token from Keycloak. A request without a valid token gets 401, and a role that may not call an endpoint gets 403, before the request body is read; both are problem details. `RoleAccessMatrixIT` checks every endpoint against every role with real Keycloak tokens, and fails when a new endpoint is not in its matrix.

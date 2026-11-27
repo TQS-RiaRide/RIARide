@@ -55,15 +55,15 @@ class SecurityConfiguration {
                 // Vehicle registration at a hub (RIA-57): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs/*/vehicles")
                 .hasAnyRole("OPERATOR", "ADMIN")
-                // Activating, deactivating or retiring a bike (RIA-91): operators and admins only.
-                .requestMatchers(HttpMethod.PUT, "/api/v1/vehicles/*/status")
-                .hasAnyRole("OPERATOR", "ADMIN")
                 // Opening a maintenance ticket (RIA-92): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/tickets")
                 .hasAnyRole("OPERATOR", "ADMIN")
                 // Buying a pass (RIA-52): guests only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/passes")
                 .hasRole("GUEST")
+                // Activating, deactivating or retiring a bike (RIA-91): operators and admins only.
+                .requestMatchers(HttpMethod.PUT, "/api/v1/vehicles/*/status")
+                .hasAnyRole("OPERATOR", "ADMIN")
                 // Starting a trip and reading it (RIA-54): guests only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/trips")
                 .hasRole("GUEST")
