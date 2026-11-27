@@ -14,7 +14,10 @@ import './public.css';
 export default function Landing() {
   const { t, i18n } = useTranslation('landing');
   const { t: tAuth } = useTranslation('auth');
-  const { state, login } = useAuth();
+  const { state, login, logout } = useAuth();
+  // The Keycloak session exists but the account did not load: logging in again would only come
+  // back to the same error, so the way out is to end the session.
+  const stuck = state.status === 'error' && state.authenticated;
   const cheapest = cheapestPrice(BASE_PASS_PRICES);
 
   return (
@@ -23,8 +26,12 @@ export default function Landing() {
         <Wordmark />
         <div className="landing-top-actions">
           <LanguageSwitcher compact />
-          <button type="button" className="btn btn-ghost btn-md sq" onClick={login}>
-            {tAuth('logIn')}
+          <button
+            type="button"
+            className="btn btn-ghost btn-md sq"
+            onClick={stuck ? logout : login}
+          >
+            {tAuth(stuck ? 'logOut' : 'logIn')}
           </button>
         </div>
       </header>

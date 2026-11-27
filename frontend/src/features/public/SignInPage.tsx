@@ -12,7 +12,8 @@ import './public.css';
 export default function SignInPage() {
   const { t } = useTranslation('landing');
   const { t: tAuth } = useTranslation('auth');
-  const { state, login, signInAs } = useAuth();
+  const { state, login, logout, signInAs } = useAuth();
+  const stuck = state.status === 'error' && state.authenticated;
   const demo = signInAs !== undefined;
 
   useEffect(() => {
@@ -49,9 +50,15 @@ export default function SignInPage() {
           </>
         ) : (
           <>
-            <p className="auth-lead">{t('redirecting')}</p>
-            <Button variant="primary" size="lg" onClick={login}>
-              {tAuth('logIn')}
+            {stuck ? (
+              <p role="alert" className="form-error">
+                {tAuth('error')}
+              </p>
+            ) : (
+              <p className="auth-lead">{t('redirecting')}</p>
+            )}
+            <Button variant="primary" size="lg" onClick={stuck ? logout : login}>
+              {tAuth(stuck ? 'logOut' : 'logIn')}
             </Button>
           </>
         )}
