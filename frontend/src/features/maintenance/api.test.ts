@@ -89,6 +89,30 @@ describe('openTicket', () => {
   });
 
   it.each([
+    ['no body', null],
+    ['no list of invalid parameters', { status: 400, 'invalid-params': 'vehicleCode' }],
+    ['parameters that are not objects', { status: 400, 'invalid-params': [null, 'vehicleCode'] }],
+  ])('names no field for a 400 with %s', async (_case, problem) => {
+    const error = await errorOf(openTicket('access-token', request, respond(400, problem)));
+
+    expect(error.kind).toBe('invalid');
+    expect(error.fields).toEqual([]);
+  });
+
+  it('names no field for a 400 whose body is not JSON', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.reject(new SyntaxError('Unexpected token <')),
+    });
+
+    const error = await errorOf(openTicket('access-token', request, fetchImpl));
+
+    expect(error.kind).toBe('invalid');
+    expect(error.fields).toEqual([]);
+  });
+
+  it.each([
     [404, 'notFound'],
     [409, 'retired'],
     [401, 'sessionExpired'],
@@ -107,6 +131,12 @@ describe('openTicket', () => {
     const error = await errorOf(
       openTicket('access-token', request, respond(201, { id: 42, vehicleStatus: 'FLYING' })),
     );
+
+    expect(error.kind).toBe('unexpected');
+  });
+
+  it('treats a 201 without a body as unexpected', async () => {
+    const error = await errorOf(openTicket('access-token', request, respond(201, null)));
 
     expect(error.kind).toBe('unexpected');
   });
