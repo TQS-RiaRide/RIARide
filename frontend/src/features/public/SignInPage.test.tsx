@@ -5,7 +5,7 @@ import { createDemoBackend } from '../../backend/demoBackend';
 import i18n from '../../i18n';
 import { fakeAuthClient, renderApp } from '../../testing/renderApp';
 import AuthProvider from '../auth/AuthProvider';
-import type { DemoAuthClient } from '../auth/demoAuth';
+import { PERSONAS, type DemoAuthClient } from '../auth/demoAuth';
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');
@@ -16,9 +16,13 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-// renderApp's client has no personas; the demo client adds signInAs.
+// renderApp's client has no personas; the demo client adds them and signInAs.
 async function renderDemoSignIn(): Promise<DemoAuthClient> {
-  const client: DemoAuthClient = { ...fakeAuthClient(false), signInAs: vi.fn() };
+  const client: DemoAuthClient = {
+    ...fakeAuthClient(false),
+    personas: PERSONAS,
+    signInAs: vi.fn(),
+  };
   await act(async () => {
     render(
       <AuthProvider client={client} loadUser={() => Promise.reject(new Error('None'))}>

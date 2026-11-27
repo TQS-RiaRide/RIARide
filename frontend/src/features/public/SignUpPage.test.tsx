@@ -7,7 +7,7 @@ import { ProblemError } from '../../backend/problem';
 import i18n from '../../i18n';
 import { fakeAuthClient, renderApp } from '../../testing/renderApp';
 import AuthProvider from '../auth/AuthProvider';
-import type { DemoAuthClient } from '../auth/demoAuth';
+import { PERSONAS, type DemoAuthClient } from '../auth/demoAuth';
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');
@@ -97,7 +97,11 @@ describe('SignUpPage', () => {
   });
 
   it('signs a new demo guest in as the guest persona', async () => {
-    const client: DemoAuthClient = { ...fakeAuthClient(false), signInAs: vi.fn() };
+    const client: DemoAuthClient = {
+      ...fakeAuthClient(false),
+      personas: PERSONAS,
+      signInAs: vi.fn(),
+    };
     await act(async () => {
       render(
         <AuthProvider client={client} loadUser={() => Promise.reject(new Error('None'))}>

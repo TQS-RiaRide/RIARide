@@ -25,6 +25,13 @@ describe('dataMode', () => {
     expect(dataMode()).toBe('demo');
   });
 
+  it.each([
+    ['demo', 'demo'],
+    [undefined, 'demo'],
+  ])('is live in a production build, even when demo is asked for (%j, mode %j)', (value, mode) => {
+    expect(dataMode(value, mode, true)).toBe('live');
+  });
+
   it('is demo when Vite runs in demo mode and nothing else is set', () => {
     vi.stubEnv('VITE_DATA_MODE', undefined);
     vi.stubEnv('MODE', 'demo');
