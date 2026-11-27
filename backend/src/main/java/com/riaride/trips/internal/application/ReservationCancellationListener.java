@@ -14,9 +14,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 // transaction of its own, so the reservation row is never locked after the vehicle row (trips
 // locks the reservation first, see ReservationExpiryJob).
 //
-// If it fails, nothing is retried: the bike is already in maintenance, so no trip can start on it
-// (UnlockConfirmationListener refuses a bike that is no longer reserved), and ReservationExpiryJob
-// ends the hold when it expires; Vehicle.release leaves a bike in maintenance as it is.
+// If it fails, or has not run yet, nothing is retried: the bike is already in maintenance, so no
+// trip can start on it (StartTripService confirms through fleet that a reused hold's bike is still
+// reserved), and ReservationExpiryJob ends the hold when it expires; Vehicle.release leaves a bike
+// in maintenance as it is.
 @Component
 class ReservationCancellationListener {
 

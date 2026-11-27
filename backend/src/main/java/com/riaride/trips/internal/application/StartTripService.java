@@ -74,6 +74,8 @@ public class StartTripService {
         throw new ReservationHeldForAnotherBikeException();
       }
       reservation = held.get();
+      // A ticket may have taken the bike out of service before its reservation was cancelled.
+      vehicles.confirmReserved(reservation.getVehicleId());
     } else {
       var bike = vehicles.reserve(command.vehicleCode());
       reservation =
