@@ -73,8 +73,9 @@ class CancelReservationOnTicketIT {
     jdbc.update(
         """
         insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents,
-                          deposit_status, stay_ends_at)
-        values (?, ?, 'STAY', 'ACTIVE', 4000, 5000, 'HELD', timestamptz '2026-12-03 00:00:00+00')
+                          deposit_status, activated_at, expires_at, stay_ends_at)
+        values (?, ?, 'STAY', 'ACTIVE', 4000, 5000, 'HELD', timestamptz '2026-11-29T10:00:00Z',
+                timestamptz '2026-12-03 00:00:00+00', timestamptz '2026-12-03 00:00:00+00')
         """,
         passId,
         guestId);
