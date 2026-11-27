@@ -37,20 +37,48 @@ function redirectOrigin(clientData: string | null): string | null {
   }
 }
 
+type OriginStorage = Pick<Storage, 'getItem' | 'setItem'>;
+
+// Reading sessionStorage throws a SecurityError when the browser blocks site data for Keycloak's
+// host. These pages render while it is read, so a throw would leave a blank page.
+function sessionStore(): OriginStorage | undefined {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+function remember(storage: OriginStorage | undefined, origin: string): void {
+  try {
+    storage?.setItem(STORAGE_KEY, origin);
+  } catch {
+    // A full or blocked storage only means later pages cannot link back.
+  }
+}
+
+function remembered(storage: OriginStorage | undefined): string | null {
+  try {
+    return originOf(storage?.getItem(STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Origin of the RiaRide app that sent the user to Keycloak, or null when it is unknown.
  * `formAction` is the address the page's form posts to (kcContext.url.loginAction).
  */
 export function appOrigin(
   formAction: string | undefined,
-  storage: Storage = window.sessionStorage,
+  storage: OriginStorage | undefined = sessionStore(),
 ): string | null {
   const checked = redirectOrigin(clientDataOf(formAction));
   if (checked) {
-    storage.setItem(STORAGE_KEY, checked);
+    remember(storage, checked);
     return checked;
   }
-  return originOf(storage.getItem(STORAGE_KEY));
+  return remembered(storage);
 }
 
 /** Full-page navigation, in one place so tests can watch it. */
