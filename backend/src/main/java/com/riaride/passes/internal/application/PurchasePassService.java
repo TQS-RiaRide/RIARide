@@ -11,6 +11,9 @@ import com.riaride.payments.PaymentLedger;
 import com.riaride.payments.PurchaseRequest;
 import com.riaride.payments.PurchaseResult;
 import com.riaride.payments.RefundRequest;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +42,7 @@ public class PurchasePassService {
   private final PaymentGateway gateway;
   private final PaymentLedger ledger;
   private final PassBook book;
+  private final Clock clock;
 
   public PurchasePassService(
       GuestDirectory guests,
@@ -46,13 +50,15 @@ public class PurchasePassService {
       PassRepository passes,
       PaymentGateway gateway,
       PaymentLedger ledger,
-      PassBook book) {
+      PassBook book,
+      Clock clock) {
     this.guests = guests;
     this.prices = prices;
     this.passes = passes;
     this.gateway = gateway;
     this.ledger = ledger;
     this.book = book;
+    this.clock = clock;
   }
 
   public Pass purchase(PurchasePassCommand command) {
@@ -69,9 +75,10 @@ public class PurchasePassService {
       }
       return pass;
     }
-    guests.findActiveGuest(command.keycloakId()).orElseThrow(NoActiveStayException::new);
+    var guest =
+        guests.findActiveGuest(command.keycloakId()).orElseThrow(NoActiveStayException::new);
     var price = prices.findById(command.passType()).orElseThrow(PassPriceNotSetException::new);
-    var pass = Pass.purchase(guestId, price, key);
+    var pass = Pass.purchase(guestId, price, key, endOfStay(guest.checkOut()));
     var retryOfPendingPurchase =
         passes
             .findById(pass.getId())
@@ -99,6 +106,11 @@ public class PurchasePassService {
       throw notCreated;
     }
     return pass;
+  }
+
+  // The stay ends at the end of its check-out day in Vila Ria (Product Owner decision, RIA-87).
+  private Instant endOfStay(LocalDate checkOut) {
+    return checkOut.plusDays(1).atStartOfDay(clock.getZone()).toInstant();
   }
 
   private void reserve(Pass pass, UUID guestId) {

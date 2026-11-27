@@ -28,7 +28,10 @@ import com.riaride.payments.RecordedPurchase;
 import com.riaride.payments.RefundRequest;
 import com.riaride.payments.RefundResult;
 import com.riaride.payments.TransientPaymentException;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +52,10 @@ class PurchasePassServiceTest {
   private static final UUID GUEST = UUID.fromString("5b7f0c2e-0d1a-4a7e-9a55-3c2d1e0f4a11");
   private static final ActiveGuest ACTIVE_GUEST =
       new ActiveGuest(GUEST, UUID.randomUUID(), LocalDate.of(2026, 12, 2));
+  // Check-out on 2 December: the stay ends at midnight in Vila Ria, UTC+0 in winter (RIA-87).
+  private static final Instant STAY_ENDS = Instant.parse("2026-12-03T00:00:00Z");
+  private static final Clock CLOCK =
+      Clock.fixed(Instant.parse("2026-11-30T10:00:00Z"), ZoneId.of("Europe/Lisbon"));
   private static final String KEY = "purchase-7f3c2a";
   private static final String SCOPED_KEY = GUEST + ":" + KEY;
   private static final PurchaseResult PAID =
@@ -70,7 +77,7 @@ class PurchasePassServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new PurchasePassService(guests, prices, passes, gateway, ledger, book);
+    service = new PurchasePassService(guests, prices, passes, gateway, ledger, book, CLOCK);
   }
 
   private static PurchasePassCommand buy(PassType type) {
@@ -97,7 +104,8 @@ class PurchasePassServiceTest {
     doThrow(new IllegalStateException("Only a pending pass can be confirmed"))
         .when(book)
         .confirm(any(Pass.class), any(), any());
-    var confirmed = Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY);
+    var confirmed =
+        Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY, STAY_ENDS);
     when(ledger.findPurchase(SCOPED_KEY))
         .thenReturn(
             Optional.empty(), Optional.of(new RecordedPurchase(confirmed.getId(), "pi_purchase")));
@@ -115,7 +123,8 @@ class PurchasePassServiceTest {
   @Requirement("RIA-52")
   @Test
   void shouldNotReleaseAReservationThatAnotherRequestCreated() {
-    var reserved = Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY);
+    var reserved =
+        Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY, STAY_ENDS);
     when(guests.findGuestId(KEYCLOAK_ID)).thenReturn(Optional.of(GUEST));
     when(ledger.findPurchase(SCOPED_KEY)).thenReturn(Optional.empty());
     when(guests.findActiveGuest(KEYCLOAK_ID)).thenReturn(Optional.of(ACTIVE_GUEST));
@@ -149,6 +158,37 @@ class PurchasePassServiceTest {
     assertThat(request.getValue().paymentMethod()).isEqualTo("pm_card_visa");
     assertThat(request.getValue().idempotencyKey()).isEqualTo(SCOPED_KEY);
     assertThat(request.getValue().reference()).isEqualTo("pass-" + pass.getId());
+  }
+
+  // The pass keeps the end of the stay, so it never runs past check-out (RIA-87): the end of the
+  // check-out day in Vila Ria (Product Owner decision).
+  @Requirement("RIA-87")
+  @Test
+  void shouldEndThePassNoLaterThanTheEndOfTheCheckOutDayInVilaRia() {
+    givenGuestCanBuy(PassType.ONE_DAY, 1000, 5000);
+    when(gateway.purchase(any())).thenReturn(PAID);
+
+    var pass = service.purchase(buy(PassType.ONE_DAY));
+
+    assertThat(pass.getStayEndsAt()).isEqualTo(STAY_ENDS);
+  }
+
+  // In summer Vila Ria is UTC+1, so midnight after a 15 July check-out is 23:00 UTC that day.
+  @Requirement("RIA-87")
+  @Test
+  void shouldTakeSummerTimeIntoAccountForTheEndOfTheStay() {
+    var summerStay = new ActiveGuest(GUEST, UUID.randomUUID(), LocalDate.of(2027, 7, 15));
+    when(guests.findGuestId(KEYCLOAK_ID)).thenReturn(Optional.of(GUEST));
+    when(ledger.findPurchase(SCOPED_KEY)).thenReturn(Optional.empty());
+    when(guests.findActiveGuest(KEYCLOAK_ID)).thenReturn(Optional.of(summerStay));
+    when(prices.findById(PassType.STAY))
+        .thenReturn(Optional.of(new PassPrice(PassType.STAY, 4000, 5000)));
+    when(passes.existsByGuestIdAndStatusIn(GUEST, PassStatus.OPEN)).thenReturn(false);
+    when(gateway.purchase(any())).thenReturn(PAID);
+
+    var pass = service.purchase(buy(PassType.STAY));
+
+    assertThat(pass.getStayEndsAt()).isEqualTo(Instant.parse("2027-07-15T23:00:00Z"));
   }
 
   @Requirement("RIA-52")
@@ -298,7 +338,8 @@ class PurchasePassServiceTest {
   @Requirement("RIA-52")
   @Test
   void shouldReturnThePassAlreadyBoughtWithTheSameKeyWithoutChargingAgain() {
-    var existing = Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY);
+    var existing =
+        Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY, STAY_ENDS);
     when(guests.findGuestId(KEYCLOAK_ID)).thenReturn(Optional.of(GUEST));
     when(ledger.findPurchase(SCOPED_KEY))
         .thenReturn(Optional.of(new RecordedPurchase(existing.getId(), "pi_purchase")));
@@ -326,7 +367,8 @@ class PurchasePassServiceTest {
   @Requirement("RIA-52")
   @Test
   void shouldRefuseTheSameKeyForADifferentPassType() {
-    var existing = Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY);
+    var existing =
+        Pass.purchase(GUEST, new PassPrice(PassType.STAY, 2500, 5000), SCOPED_KEY, STAY_ENDS);
     when(guests.findGuestId(KEYCLOAK_ID)).thenReturn(Optional.of(GUEST));
     when(ledger.findPurchase(SCOPED_KEY))
         .thenReturn(Optional.of(new RecordedPurchase(existing.getId(), "pi_purchase")));
