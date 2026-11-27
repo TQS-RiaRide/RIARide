@@ -9,10 +9,10 @@ import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.fleet.ReservedVehicle;
 import com.riaride.passes.PassLimits;
 import com.riaride.passes.PassUsage;
+import com.riaride.passes.UsageRules;
 import com.riaride.payments.Money;
 import com.riaride.payments.OvertimeCharges;
 import com.riaride.payments.TransientPaymentException;
-import com.riaride.trips.internal.domain.OvertimePolicy;
 import com.riaride.trips.internal.domain.Reservation;
 import com.riaride.trips.internal.domain.Trip;
 import com.riaride.trips.internal.persistence.TripRepository;
@@ -30,7 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 // saved with the pass (RIA-88, BR7). Overtime counts from the earliest of 3 h, the pass expiry
 // (BR8) and the end of the stay. Each trip has its own idempotency key, so a retried charge never
 // charges twice. A transient failure is thrown, so the event publication stays incomplete and is
-// retried.
+// retried. The maximum trip duration is the rule of use in force when the trip started (RIA-96).
 @ExtendWith(MockitoExtension.class)
 class OvertimeChargeListenerTest {
 
@@ -41,8 +41,8 @@ class OvertimeChargeListenerTest {
   private static final UUID VEHICLE = UUID.fromString("00000000-0000-0000-0000-0000000e0301");
   private static final UUID START_HUB = UUID.fromString("00000000-0000-0000-0000-00000000a001");
   private static final UUID END_HUB = UUID.fromString("00000000-0000-0000-0000-00000000a002");
-  private static final OvertimePolicy POLICY =
-      new OvertimePolicy(Duration.ofHours(3), Duration.ZERO, 200);
+  private static final OvertimeProperties OVERTIME =
+      new OvertimeProperties(Duration.ZERO, 200, Duration.ofMinutes(1), 5);
 
   @Mock private TripRepository trips;
 
@@ -50,12 +50,14 @@ class OvertimeChargeListenerTest {
 
   @Mock private OvertimeCharges charges;
 
+  @Mock private UsageRules rules;
+
   private OvertimeChargeListener listener;
   private Trip trip;
 
   @BeforeEach
   void setUp() {
-    listener = new OvertimeChargeListener(trips, passes, charges, POLICY);
+    listener = new OvertimeChargeListener(trips, passes, charges, rules, OVERTIME);
     var requested = STARTED.minusSeconds(5);
     var reservation =
         Reservation.hold(
@@ -68,9 +70,15 @@ class OvertimeChargeListenerTest {
   }
 
   private void givenTheTripEndedAfter(Duration length, PassLimits limits) {
+    givenTheTripEndedAfter(length, limits, Duration.ofHours(3));
+  }
+
+  private void givenTheTripEndedAfter(
+      Duration length, PassLimits limits, Duration maxTripDurationAtStart) {
     trip.end(END_HUB, STARTED.plus(length));
     when(trips.findById(trip.getId())).thenReturn(Optional.of(trip));
     when(passes.limitsOf(PASS)).thenReturn(limits);
+    when(rules.maxTripDurationAt(STARTED)).thenReturn(maxTripDurationAtStart);
   }
 
   private void tripEnded() {
@@ -100,6 +108,18 @@ class OvertimeChargeListenerTest {
     tripEnded();
 
     verifyNoInteractions(charges);
+  }
+
+  // RIA-96: the hotel manager set 2 h before the trip started, so 2 h 20 min is 2 blocks. The rule
+  // is the one in force at the start (UsageRules is asked for STARTED), not at the end.
+  @Requirement("RIA-96")
+  @Test
+  void shouldCountFromTheMaximumDurationInForceWhenTheTripStarted() {
+    givenTheTripEndedAfter(Duration.ofMinutes(140), new PassLimits(FAR, FAR), Duration.ofHours(2));
+
+    tripEnded();
+
+    verify(charges).charge(PASS, Money.cents(400), overtimeKey());
   }
 
   // BR8: the pass expires 1 h into a 2 h trip, so the last hour is 4 blocks of overtime.
