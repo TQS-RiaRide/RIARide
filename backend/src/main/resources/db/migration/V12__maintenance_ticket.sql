@@ -1,6 +1,6 @@
 -- maintenance module: tickets for faulty bikes, each with an SLA deadline (RIA-92).
--- V9 is unused. #81 (RIA-87) and #82 (RIA-88) also add V11 to V13: whichever of them and this
--- story merges second renumbers its migrations to the next free versions.
+-- V12 to V14: this story is stacked on #81 (RIA-87), which adds V11, so the versions keep the
+-- merge order and Flyway never meets an older migration after a newer one (V9 is unused).
 -- technician_id, resolved_at, trip_id, pass_id and fault_message_id (architecture, data model)
 -- arrive with the stories that use them (RIA-93, RIA-94, RIA-97).
 
