@@ -163,7 +163,7 @@ The gate applies to new code only, so old code improves as it is changed and the
 
 | Excluded | Pattern |
 |---|---|
-| Entry points | `RiaRideApplication.java`, `frontend/src/main.tsx`, the simulator's `__main__.py` |
+| Entry points | `RiaRideApplication.java`, `frontend/src/main.tsx` (the simulator's `__main__.py` stays measured, because `run()` has logic; only `main()` and the `__main__` block carry `# pragma: no cover`) |
 | Spring configuration classes that only wire beans | Named one by one: `ClockConfiguration`, `AccountsConfiguration`, `KeycloakConfiguration`, `FleetConfiguration`, `TripsConfiguration`, `DisabledMqttConfiguration`, `TelemetryMqttConfiguration` |
 | Generated code | `*.gen.*` |
 | Test code | Left out of the analysis entirely (`sonar.exclusions`) |

@@ -22,8 +22,9 @@ junit_family = "xunit1"
 [tool.coverage.run]
 source = ["riaride_simulator"]
 branch = true
-# Coverage exclusions: QA Manual, section 3.3 (also sonar-project.properties)
-omit = ["*/__main__.py"]
+# No coverage exclusions: run() in __main__.py has logic and is covered by the
+# integration tests; only main() and the __main__ block carry "pragma: no cover"
+# (QA Manual, section 3.3).
 
 [tool.coverage.report]
 show_missing = true
