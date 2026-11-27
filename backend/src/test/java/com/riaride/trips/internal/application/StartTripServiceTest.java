@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -158,7 +159,7 @@ class StartTripServiceTest {
     verifyNoInteractions(passes, vehicles, reservations, events);
   }
 
-  // The failed start left the bike reserved for this pass: the fleet is not asked again.
+  // The failed start left the bike reserved for this pass: the fleet only confirms it still is.
   @Requirement("RIA-54")
   @Test
   void shouldReuseActiveReservationForSameBikeAfterFailedStart() {
@@ -173,6 +174,23 @@ class StartTripServiceTest {
     verify(vehicles, never()).reserve(anyString());
     verify(reservations, never()).saveAndFlush(any());
     verify(events).publishEvent(new TripStartRequested("EB-201"));
+  }
+
+  // A ticket took the held bike out of service and its reservation was not cancelled yet (the
+  // listener runs after the ticket commits, or failed): no trip is saved and no unlock is sent.
+  @Requirement("RIA-92")
+  @Test
+  void shouldRefuseToReuseHoldWhoseBikeIsNoLongerReserved() {
+    var held = Reservation.hold(PASS, EB_201, NOW.minusSeconds(120), Duration.ofMinutes(15));
+    when(reservations.findByPassIdAndStatus(PASS, ReservationStatus.ACTIVE))
+        .thenReturn(Optional.of(held));
+    doThrow(new VehicleNotBookableException()).when(vehicles).confirmReserved(VEHICLE);
+
+    assertThatThrownBy(() -> service.start(start("EB-201")))
+        .isInstanceOf(VehicleNotBookableException.class);
+
+    verify(trips, never()).saveAndFlush(any());
+    verifyNoInteractions(events);
   }
 
   @Requirement("RIA-54")

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.fleet.ReservedVehicle;
+import com.riaride.fleet.VehicleNotBookableException;
 import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.fleet.internal.domain.BatteryLevel;
 import com.riaride.fleet.internal.domain.BookingBatteryPolicy;
@@ -103,6 +104,44 @@ class VehicleReservationServiceTest {
 
     assertThat(bike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
     assertThat(bike.getHubId()).isEqualTo(HUB);
+  }
+
+  // A failed start left the bike reserved for the pass: a retry may reuse the hold (RIA-92).
+  @Requirement("RIA-92")
+  @Test
+  void shouldConfirmVehicleThatIsStillReserved() {
+    var bike = availableBike("EB-201", 80);
+    bike.reserve(new BookingBatteryPolicy(20));
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+
+    service.confirmReserved(bike.getId());
+
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
+  }
+
+  // A ticket took the held bike out of service before its reservation was cancelled (RIA-92).
+  @Requirement("RIA-92")
+  @Test
+  void shouldRefuseToConfirmVehicleInMaintenance() {
+    var bike = availableBike("EB-201", 80);
+    bike.reserve(new BookingBatteryPolicy(20));
+    bike.reportFault();
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+
+    assertThatThrownBy(() -> service.confirmReserved(bike.getId()))
+        .isInstanceOf(VehicleNotBookableException.class);
+
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.MAINTENANCE);
+  }
+
+  @Requirement("RIA-92")
+  @Test
+  void shouldRefuseToConfirmUnknownVehicle() {
+    var unknown = UUID.randomUUID();
+    when(vehicles.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.confirmReserved(unknown))
+        .isInstanceOf(VehicleNotBookableException.class);
   }
 
   @Requirement("RIA-54")
