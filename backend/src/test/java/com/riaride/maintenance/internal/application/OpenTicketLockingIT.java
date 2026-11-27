@@ -97,8 +97,7 @@ class OpenTicketLockingIT {
         });
     CompletableFuture.allOf(book, ticket).get(10, TimeUnit.SECONDS);
 
-    assertThat(ticket.get().handling())
-        .isEqualTo(FaultHandling.OUT_OF_SERVICE_RESERVATION_CANCELLED);
+    assertThat(ticket.get().handling()).isEqualTo(FaultHandling.OUT_OF_SERVICE_WAS_RESERVED);
     assertThat(storedStatus()).isEqualTo("MAINTENANCE");
     assertThat(ticketCount()).isOne();
   }

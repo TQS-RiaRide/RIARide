@@ -37,7 +37,7 @@ class VehicleFaultTest {
 
     var handling = bike.reportFault();
 
-    assertThat(handling).isEqualTo(FaultHandling.OUT_OF_SERVICE_RESERVATION_CANCELLED);
+    assertThat(handling).isEqualTo(FaultHandling.OUT_OF_SERVICE_WAS_RESERVED);
     assertThat(bike.getStatus()).isEqualTo(VehicleStatus.MAINTENANCE);
     assertThat(bike.getHubId()).isEqualTo(HUB);
   }

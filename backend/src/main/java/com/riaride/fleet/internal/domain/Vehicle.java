@@ -195,7 +195,7 @@ public class Vehicle implements Persistable<UUID> {
       }
       case RESERVED -> {
         this.status = VehicleStatus.MAINTENANCE;
-        yield FaultHandling.OUT_OF_SERVICE_RESERVATION_CANCELLED;
+        yield FaultHandling.OUT_OF_SERVICE_WAS_RESERVED;
       }
       case IN_USE -> {
         this.maintenancePending = true;

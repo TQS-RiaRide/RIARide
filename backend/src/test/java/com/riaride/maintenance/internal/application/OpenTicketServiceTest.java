@@ -113,7 +113,7 @@ class OpenTicketServiceTest {
   @Requirement("RIA-92")
   @Test
   void shouldAnnounceTheOpenedTicketAfterSavingIt() {
-    givenFaultHandled(FaultHandling.OUT_OF_SERVICE_RESERVATION_CANCELLED);
+    givenFaultHandled(FaultHandling.OUT_OF_SERVICE_WAS_RESERVED);
 
     var opened = service.open("EB-901", "Flat tyre");
 
