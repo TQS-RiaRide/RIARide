@@ -1,6 +1,7 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from './i18n';
+import { requirement } from './test/xray';
 import { renderApp } from './testing/renderApp';
 
 // Reset the language before each test, while no component is mounted.
@@ -51,30 +52,35 @@ describe('App', () => {
     expect(await screen.findByTestId('health')).toHaveTextContent('Unreachable');
   });
 
-  it('sends a visitor who opens a staff page back to the landing page', async () => {
-    await renderApp({ path: '/fleet' });
+  // Login and roles (RIA-86); the operator's dashboard test is its acceptance criterion.
+  describe('login and roles', () => {
+    requirement('RIA-86');
 
-    expect(screen.getByText('Vila Ria, at your own pace.')).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Workspaces' })).not.toBeInTheDocument();
+    it('sends a visitor who opens a staff page back to the landing page', async () => {
+      await renderApp({ path: '/fleet' });
+
+      expect(screen.getByText('Vila Ria, at your own pace.')).toBeInTheDocument();
+      expect(screen.queryByRole('navigation', { name: 'Workspaces' })).not.toBeInTheDocument();
+    });
+
+    it('takes a logged-in operator to the operator dashboard and not the hotel backoffice', async () => {
+      await renderApp({ user: 'operator' });
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Fleet' })).toBeInTheDocument();
+      const menu = screen.getByRole('navigation', { name: 'Workspaces' });
+      expect(menu).toHaveTextContent('Fleet');
+      expect(menu).not.toHaveTextContent('Hotel backoffice');
+    });
+
+    it('tells an operator who opens the hotel backoffice that it is not part of the role', async () => {
+      await renderApp({ path: '/hotel', user: 'operator' });
+
+      expect(screen.getByText('This area is not part of your role')).toBeInTheDocument();
+    });
+
+    // RIA-92: operators and admins open tickets from the maintenance tickets workspace.
   });
 
-  // Acceptance criterion of RIA-86.
-  it('takes a logged-in operator to the operator dashboard and not the hotel backoffice', async () => {
-    await renderApp({ user: 'operator' });
-
-    expect(await screen.findByRole('heading', { level: 1, name: 'Fleet' })).toBeInTheDocument();
-    const menu = screen.getByRole('navigation', { name: 'Workspaces' });
-    expect(menu).toHaveTextContent('Fleet');
-    expect(menu).not.toHaveTextContent('Hotel backoffice');
-  });
-
-  it('tells an operator who opens the hotel backoffice that it is not part of the role', async () => {
-    await renderApp({ path: '/hotel', user: 'operator' });
-
-    expect(screen.getByText('This area is not part of your role')).toBeInTheDocument();
-  });
-
-  // RIA-92: operators and admins open tickets from the maintenance tickets workspace.
   it('lets an operator open a ticket from the maintenance tickets workspace', async () => {
     await renderApp({ path: '/fleet', user: 'operator' });
 

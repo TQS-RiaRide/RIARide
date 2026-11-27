@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fakeAuthClient } from '../../testing/renderApp';
 import AuthProvider from './AuthProvider';
 import { useAuth } from './useAuth';
+import { requirement } from '../../test/xray';
 
 function LogoutButton() {
   const { logout } = useAuth();
@@ -13,6 +14,8 @@ function LogoutButton() {
     </button>
   );
 }
+
+requirement('RIA-86');
 
 describe('AuthProvider', () => {
   it('forgets what this browser kept before ending the session', async () => {

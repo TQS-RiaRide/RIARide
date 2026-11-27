@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { renderApp } from '../../testing/renderApp';
+import { requirement } from '../../test/xray';
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');
@@ -11,6 +12,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
   window.localStorage.clear();
 });
+
+requirement('RIA-86');
 
 describe('NoRole', () => {
   it('tells a user with no workspace to ask for a role and lets them log out', async () => {
