@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { appOrigin } from './appLink';
+import { requirement } from '../../test/xray';
+
+requirement('RIA-189');
 
 beforeEach(() => {
   window.sessionStorage.clear();

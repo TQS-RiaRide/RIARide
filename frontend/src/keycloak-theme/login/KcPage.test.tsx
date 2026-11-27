@@ -6,8 +6,11 @@ import { navigation } from './appLink';
 import KcPage from './KcPage';
 import type { KcContextExtension, KcContextExtensionPerPage } from './KcContext';
 import { followKeycloakLanguage } from './language';
+import { requirement } from '../../test/xray';
 
-// Keycloak's login pages, drawn with the app's components (RIA-120).
+requirement('RIA-189');
+
+// Keycloak's login pages, drawn with the app's components (RIA-189).
 
 const { getKcContextMock } = createGetKcContextMock({
   kcContextExtension: { themeName: 'riaride', properties: {} } satisfies KcContextExtension,

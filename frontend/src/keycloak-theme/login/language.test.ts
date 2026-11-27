@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
 import { followKeycloakLanguage } from './language';
+import { requirement } from '../../test/xray';
+
+requirement('RIA-189');
 
 afterEach(async () => {
   await i18n.changeLanguage('en');
