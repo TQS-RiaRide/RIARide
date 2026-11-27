@@ -1,5 +1,6 @@
 -- maintenance module: tickets for faulty bikes, each with an SLA deadline (RIA-92).
--- V11: V9 (passes, RIA-87) and V10 (trips, RIA-55) are taken by other stories.
+-- V9 is unused. #81 (RIA-87) and #82 (RIA-88) also add V11 to V13: whichever of them and this
+-- story merges second renumbers its migrations to the next free versions.
 -- technician_id, resolved_at, trip_id, pass_id and fault_message_id (architecture, data model)
 -- arrive with the stories that use them (RIA-93, RIA-94, RIA-97).
 
