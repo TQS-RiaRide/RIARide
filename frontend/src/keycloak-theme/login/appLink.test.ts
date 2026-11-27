@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { appOrigin } from './appLink';
 import { requirement } from '../../test/xray';
 
@@ -56,6 +56,37 @@ describe('appOrigin', () => {
     expect(appOrigin('http://kc.test/?client_data=not-base64!')).toBeNull();
     expect(appOrigin(`http://kc.test/?client_data=${btoa('"just a string"')}`)).toBeNull();
     expect(appOrigin('http://[bad')).toBeNull();
+  });
+
+  describe('when the browser refuses session storage', () => {
+    const refusing = () => {
+      throw new DOMException('Site data is blocked', 'SecurityError');
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('still takes the origin from client data when reading the storage throws', () => {
+      vi.spyOn(window, 'sessionStorage', 'get').mockImplementation(refusing);
+
+      expect(appOrigin(action('http://localhost:5173/'))).toBe('http://localhost:5173');
+      expect(appOrigin(undefined)).toBeNull();
+    });
+
+    it('still takes the origin from client data when the storage is full', () => {
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      });
+
+      expect(appOrigin(action('http://localhost:5173/'))).toBe('http://localhost:5173');
+    });
+
+    it('is unknown when the stored value cannot be read', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(refusing);
+
+      expect(appOrigin(undefined)).toBeNull();
+    });
   });
 
   it('ignores a stored value that is not a web address', () => {
