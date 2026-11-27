@@ -1,6 +1,9 @@
 package com.riaride.fleet.internal.web;
 
+import com.riaride.fleet.internal.application.CapacityBelowDockedBikesException;
+import com.riaride.fleet.internal.application.HubAccessDeniedException;
 import com.riaride.fleet.internal.application.HubNameAlreadyInUseException;
+import com.riaride.fleet.internal.application.HubNotFoundException;
 import com.riaride.fleet.internal.domain.InvalidHubException;
 import java.util.List;
 import java.util.Map;
@@ -19,12 +22,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import tools.jackson.core.JacksonException;
 
-// Maps hub registration errors to RFC 9457 problem details. A 400 names each invalid field in
+// Maps hub registration (RIA-56) and capacity change (RIA-96) errors to RFC 9457 problem details. A
+// 400 names each invalid field in
 // "invalid-params" (RFC 9457, section 3). Details never repeat the submitted values.
 // Ordered first so it handles validation and unreadable bodies before Spring Boot's default
 // handler.
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = HubController.class)
+@RestControllerAdvice(assignableTypes = {HubController.class, HubCapacityController.class})
 class HubProblemHandler {
 
   private static final Logger log = LoggerFactory.getLogger(HubProblemHandler.class);
@@ -71,6 +75,25 @@ class HubProblemHandler {
   @ExceptionHandler(HubNameAlreadyInUseException.class)
   ProblemDetail hubNameAlreadyInUse(HubNameAlreadyInUseException exception) {
     return problem(HttpStatus.CONFLICT, "Hub name already in use", exception.getMessage());
+  }
+
+  @ExceptionHandler(HubNotFoundException.class)
+  ProblemDetail hubNotFound(HubNotFoundException exception) {
+    return problem(HttpStatus.NOT_FOUND, "Hub not found", exception.getMessage());
+  }
+
+  @ExceptionHandler(HubAccessDeniedException.class)
+  ProblemDetail hubAccessDenied(HubAccessDeniedException exception) {
+    return problem(HttpStatus.FORBIDDEN, "Forbidden", exception.getMessage());
+  }
+
+  // dockedBikes is the hub's own state, so the client can tell how many bikes must move first.
+  @ExceptionHandler(CapacityBelowDockedBikesException.class)
+  ProblemDetail capacityBelowDockedBikes(CapacityBelowDockedBikesException exception) {
+    var problem =
+        problem(HttpStatus.CONFLICT, "Capacity below docked bikes", exception.getMessage());
+    problem.setProperty("dockedBikes", exception.getDockedBikes());
+    return problem;
   }
 
   // A database constraint rejected the hub: in practice, a concurrent registration took the same

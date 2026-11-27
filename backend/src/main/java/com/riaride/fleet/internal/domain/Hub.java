@@ -78,11 +78,23 @@ public class Hub implements Persistable<UUID> {
     var strippedName = validName(name);
     validateKindAndHotel(kind, hotelId);
     validatePosition(latitude, longitude);
+    requireValidCapacity(capacity);
+    return new Hub(strippedName, kind, hotelId, latitude, longitude, capacity);
+  }
+
+  // BR10: a hub has room for at least one bike, when registered and whenever its capacity changes.
+  public static void requireValidCapacity(int capacity) {
     if (capacity < MIN_CAPACITY) {
       throw new InvalidHubException(
           "capacity", "A hub must have room for at least " + MIN_CAPACITY + " bike.");
     }
-    return new Hub(strippedName, kind, hotelId, latitude, longitude, capacity);
+  }
+
+  // The hotel group sets how many bikes a hub takes (RIA-96, BR10). The fleet module checks, under
+  // the hub's lock, that the bikes already docked there still fit.
+  public void changeCapacity(int capacity) {
+    requireValidCapacity(capacity);
+    this.capacity = capacity;
   }
 
   private static String validName(String name) {

@@ -8,9 +8,9 @@ import org.springframework.validation.annotation.Validated;
 
 /**
  * Overtime settings under {@code riaride.trips.overtime}, validated at startup (RIA-88). The
- * backoffice will edit the first three as rules of use (RIA-96).
+ * maximum trip duration is a rule of use the backoffice sets (RIA-96, {@code UsageRules}), so it is
+ * not here.
  *
- * @param maxTripDuration how long a trip runs before overtime starts (BR7)
  * @param grace how long after the limit is not charged
  * @param pricePerBlockCents the price of each started 15-minute block
  * @param retryFirstDelay how long the first retry of a charge that failed for now waits; each
@@ -20,7 +20,6 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("riaride.trips.overtime")
 @Validated
 public record OvertimeProperties(
-    @NotNull Duration maxTripDuration,
     @NotNull Duration grace,
     @Positive long pricePerBlockCents,
     @NotNull Duration retryFirstDelay,
