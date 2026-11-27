@@ -1,7 +1,6 @@
 package com.riaride.fleet.internal.application;
 
 import com.riaride.fleet.ReservedVehicle;
-import com.riaride.fleet.VehicleNotBookableException;
 import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.fleet.VehicleReservations;
 import com.riaride.fleet.internal.domain.BookingBatteryPolicy;
@@ -37,11 +36,11 @@ class VehicleReservationService implements VehicleReservations {
 
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
-  public void confirmReserved(UUID vehicleId) {
-    var vehicle = vehicles.findByIdForUpdate(vehicleId);
-    if (vehicle.isEmpty() || vehicle.get().getStatus() != VehicleStatus.RESERVED) {
-      throw new VehicleNotBookableException();
-    }
+  public boolean isReserved(UUID vehicleId) {
+    return vehicles
+        .findByIdForUpdate(vehicleId)
+        .map(vehicle -> vehicle.getStatus() == VehicleStatus.RESERVED)
+        .orElse(false);
   }
 
   @Override

@@ -15,9 +15,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 // locks the reservation first, see ReservationExpiryJob).
 //
 // If it fails, or has not run yet, nothing is retried: the bike is already in maintenance, so no
-// trip can start on it (StartTripService confirms through fleet that a reused hold's bike is still
-// reserved), and ReservationExpiryJob ends the hold when it expires; Vehicle.release leaves a bike
-// in maintenance as it is.
+// trip can start on it, and the guest's next start cancels the hold (StartTripService checks
+// through fleet that a held bike is still reserved). Otherwise ReservationExpiryJob ends the hold
+// when it expires; Vehicle.release leaves a bike in maintenance as it is.
 @Component
 class ReservationCancellationListener {
 

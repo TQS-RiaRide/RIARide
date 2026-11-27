@@ -23,7 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 //
 // A failed start leaves its reservation active, so the bike stays held for the pass: a retry on the
 // same bike reuses it, and another bike is refused until it expires (BR11). An expired hold is
-// ended here, and its bike released, even if ReservationExpiryJob has not run yet.
+// ended here, and its bike released, even if ReservationExpiryJob has not run yet; so is a hold
+// whose bike is no longer reserved.
 @Service
 public class StartTripService {
 
@@ -74,8 +75,6 @@ public class StartTripService {
         throw new ReservationHeldForAnotherBikeException();
       }
       reservation = held.get();
-      // A ticket may have taken the bike out of service before its reservation was cancelled.
-      vehicles.confirmReserved(reservation.getVehicleId());
     } else {
       var bike = vehicles.reserve(command.vehicleCode());
       reservation =
@@ -88,14 +87,21 @@ public class StartTripService {
   }
 
   // An expired hold ends before a new bike is reserved: flushed first, so the pass's partial unique
-  // index (uq_reservation_active_per_pass) is free for the new reservation.
+  // index (uq_reservation_active_per_pass) is free for the new reservation. A hold whose bike is no
+  // longer reserved (a ticket took it out of service before ReservationCancellationListener ran, or
+  // the listener failed) is cancelled the same way, and its bike is left as it is (RIA-92).
   private boolean isStillHeld(Reservation reservation, Instant now) {
-    if (!reservation.isExpiredAt(now)) {
-      return true;
+    if (reservation.isExpiredAt(now)) {
+      reservation.expire();
+      reservations.saveAndFlush(reservation);
+      vehicles.release(reservation.getVehicleId());
+      return false;
     }
-    reservation.expire();
-    reservations.saveAndFlush(reservation);
-    vehicles.release(reservation.getVehicleId());
-    return false;
+    if (!vehicles.isReserved(reservation.getVehicleId())) {
+      reservation.cancel();
+      reservations.saveAndFlush(reservation);
+      return false;
+    }
+    return true;
   }
 }
