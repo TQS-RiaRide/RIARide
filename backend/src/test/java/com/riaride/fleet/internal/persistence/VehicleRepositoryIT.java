@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import com.riaride.TestRows;
 import com.riaride.TestcontainersConfiguration;
 import com.riaride.fleet.internal.domain.BatteryLevel;
 import com.riaride.fleet.internal.domain.Hub;
@@ -129,5 +130,43 @@ class VehicleRepositoryIT {
         .get()
         .extracting(Vehicle::getId)
         .isEqualTo(vehicle.getId());
+  }
+
+  // BR10: the slots a hub has taken are its docked vehicles. A ridden vehicle has no hub and takes
+  // no slot, and a hub with no vehicle is left out (all its slots are free).
+  @Requirement("RIA-55")
+  @Test
+  void shouldCountTheVehiclesDockedAtEachHub() {
+    var emptyHubId = TestRows.touristSpot(jdbc, "Praia da Barra", 4);
+    TestRows.vehicle(jdbc, "EB-601", "AVAILABLE", hubId);
+    TestRows.vehicle(jdbc, "EB-602", "MAINTENANCE", hubId);
+    TestRows.vehicle(jdbc, "EB-603", "IN_USE", null);
+
+    var occupancy =
+        vehicles.countDockedByHub().stream()
+            .filter(hub -> hub.getHubId().equals(hubId) || hub.getHubId().equals(emptyHubId))
+            .toList();
+
+    assertThat(occupancy)
+        .singleElement()
+        .satisfies(hub -> {
+          assertThat(hub.getHubId()).isEqualTo(hubId);
+          assertThat(hub.getDocked()).isEqualTo(2);
+        });
+    assertThat(vehicles.countByHubId(hubId)).isEqualTo(2);
+    assertThat(vehicles.countByHubId(emptyHubId)).isZero();
+  }
+
+  // V6: EB-601 and eb-601 are the same code, so the second registration is refused.
+  @Requirement("RIA-57")
+  @Test
+  void shouldTreatCodesThatDifferOnlyInCaseAsTheSameCode() {
+    vehicles.saveAndFlush(Vehicle.register("EB-601", VehicleType.E_BIKE, hubId));
+
+    assertThat(vehicles.existsByCodeIgnoreCase("eb-601")).isTrue();
+    assertThat(vehicles.existsByCodeIgnoreCase("EB-6010")).isFalse();
+    assertThatThrownBy(
+            () -> vehicles.saveAndFlush(Vehicle.register("eb-601", VehicleType.E_BIKE, hubId)))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 }

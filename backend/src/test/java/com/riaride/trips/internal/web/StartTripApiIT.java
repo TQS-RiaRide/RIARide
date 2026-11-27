@@ -137,8 +137,8 @@ class StartTripApiIT {
   private void givenPass(UUID guestId) {
     jdbc.update(
         """
-        insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status)
-        values (?, ?, 'STAY', 'INACTIVE', 4000, 5000, 'HELD')
+        insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status, stay_ends_at)
+        values (?, ?, 'STAY', 'INACTIVE', 4000, 5000, 'HELD', timestamptz '2026-12-03 00:00:00+00')
         """,
         UUID.randomUUID(),
         guestId);

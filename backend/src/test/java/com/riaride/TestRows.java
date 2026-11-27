@@ -1,0 +1,93 @@
+package com.riaride;
+
+import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+// Inserts the rows an integration test needs with plain SQL, so a test of one module does not
+// depend on another module's domain classes. Synthetic data only.
+public final class TestRows {
+
+  public static final String MARES_CENTRO = "00000000-0000-0000-0000-000000000001";
+
+  private TestRows() {}
+
+  // stayCode: 8 characters, unique per test.
+  public static UUID stay(JdbcTemplate jdbc, String stayCode) {
+    var id = UUID.randomUUID();
+    jdbc.update(
+        """
+        insert into stay (id, hotel_id, guest_name, stay_code, check_in, check_out, status)
+        values (?, ?::uuid, 'Rita Almeida', ?, date '2026-11-28', date '2026-12-02', 'ACTIVE')
+        """,
+        id,
+        MARES_CENTRO,
+        stayCode);
+    return id;
+  }
+
+  public static UUID guest(JdbcTemplate jdbc, String stayCode, String email) {
+    return guest(jdbc, stayCode, email, UUID.randomUUID().toString());
+  }
+
+  // keycloakId: the token subject the guest signs in with.
+  public static UUID guest(JdbcTemplate jdbc, String stayCode, String email, String keycloakId) {
+    var id = UUID.randomUUID();
+    jdbc.update(
+        """
+        insert into guest (id, keycloak_id, stay_id, email, locale)
+        values (?, ?, ?, ?, 'pt')
+        """,
+        id,
+        keycloakId,
+        stay(jdbc, stayCode),
+        email);
+    return id;
+  }
+
+  // stay_ends_at: the end of the guest's check-out day in Vila Ria, as a purchase stores it (V9).
+  public static UUID pass(JdbcTemplate jdbc, UUID guestId, String status) {
+    var id = UUID.randomUUID();
+    jdbc.update(
+        """
+        insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status,
+                          stay_ends_at)
+        select ?, g.id, 'STAY', ?, 4000, 5000, 'HELD',
+               (s.check_out + 1)::timestamp at time zone 'Europe/Lisbon'
+        from guest g
+        join stay s on s.id = g.stay_id
+        where g.id = ?
+        """,
+        id,
+        status,
+        guestId);
+    return id;
+  }
+
+  public static UUID touristSpot(JdbcTemplate jdbc, String name, int capacity) {
+    var id = UUID.randomUUID();
+    jdbc.update(
+        """
+        insert into hub (id, name, kind, latitude, longitude, capacity)
+        values (?, ?, 'TOURIST_SPOT', 40.64, -8.65, ?)
+        """,
+        id,
+        name,
+        capacity);
+    return id;
+  }
+
+  // hubId null: the vehicle is being ridden.
+  public static UUID vehicle(JdbcTemplate jdbc, String code, String status, UUID hubId) {
+    var id = UUID.randomUUID();
+    jdbc.update(
+        """
+        insert into vehicle (id, code, type, status, hub_id, battery_pct)
+        values (?, ?, 'E_BIKE', ?, ?, 80)
+        """,
+        id,
+        code,
+        status,
+        hubId);
+    return id;
+  }
+}

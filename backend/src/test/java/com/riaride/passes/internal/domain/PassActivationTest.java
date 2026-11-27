@@ -15,9 +15,11 @@ class PassActivationTest {
   private static final UUID GUEST = UUID.fromString("5b7f0c2e-0d1a-4a7e-9a55-3c2d1e0f4a11");
   private static final PassPrice STAY_PRICE = new PassPrice(PassType.STAY, 2500, 5000);
   private static final Instant FIRST_TRIP = Instant.parse("2026-11-30T10:00:10Z");
+  // Check-out on 2 December: the stay ends at midnight in Vila Ria (RIA-87).
+  private static final Instant STAY_ENDS = Instant.parse("2026-12-03T00:00:00Z");
 
   private static Pass paidPass() {
-    var pass = Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1");
+    var pass = Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1", STAY_ENDS);
     pass.confirmPayment();
     return pass;
   }
@@ -49,7 +51,7 @@ class PassActivationTest {
   @Requirement("RIA-54")
   @Test
   void shouldRefuseToActivateAPassThatIsNotPaidYet() {
-    var pending = Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1");
+    var pending = Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1", STAY_ENDS);
 
     assertThatThrownBy(() -> pending.activate(FIRST_TRIP))
         .isInstanceOf(IllegalStateException.class);
