@@ -1,7 +1,7 @@
 import { useId, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { HOTELS } from '../../backend/demoData';
+import { HOTELS } from '../../backend/hotels';
 import { useRegisterStay } from '../../backend/queries';
 import type { Stay } from '../../backend/types';
 import { Button, Icon } from '../../components/ui/ui';

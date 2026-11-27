@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { HOTELS } from '../../backend/demoData';
+import { HOTELS } from '../../backend/hotels';
 import { useRegisterHub } from '../../backend/queries';
 import type { HubKind } from '../../backend/types';
 import Sheet from '../../components/ui/Sheet';

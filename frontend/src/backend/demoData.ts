@@ -1,13 +1,10 @@
+import { HOTELS } from './hotels';
 import type { Hub, Kpis, Stay, Ticket, Trip, Vehicle } from './types';
 
 // Synthetic Vila Ria for the demo adapter. Every name is fictional (Grupo Hoteleiro Marés,
 // RodaLeve); the hotel ids match the backend's seed (V1 migration).
 
-export const HOTELS = [
-  { id: '00000000-0000-0000-0000-000000000001', name: 'Marés Centro' },
-  { id: '00000000-0000-0000-0000-000000000002', name: 'Marés Praia' },
-  { id: '00000000-0000-0000-0000-000000000003', name: 'Marés Salinas' },
-] as const;
+export { HOTELS };
 
 export const DEMO_HUBS: Hub[] = [
   hub('h-centro', 'Marés Centro', 'HOTEL', 'Marés Centro', 40.6413, -8.6537, 12),

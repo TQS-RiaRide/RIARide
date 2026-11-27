@@ -5,7 +5,6 @@ import App from './App';
 import { dataMode } from './backend/config';
 import AuthProvider from './features/auth/AuthProvider';
 import { keycloakConfig } from './features/auth/config';
-import { createDemoAuthClient, loadDemoUser } from './features/auth/demoAuth';
 import { createKeycloakClient } from './features/auth/keycloakClient';
 import i18n from './i18n';
 import { KcPage, type KcContext } from './keycloak-theme/kc.gen';
@@ -23,7 +22,7 @@ const root = createRoot(container);
 if (window.kcContext) {
   void renderKeycloakPage(root, window.kcContext);
 } else {
-  renderApp(root);
+  void renderApp(root);
 }
 
 async function renderKeycloakPage(target: Root, kcContext: KcContext) {
@@ -35,16 +34,29 @@ async function renderKeycloakPage(target: Root, kcContext: KcContext) {
   );
 }
 
-function renderApp(target: Root) {
-  const mode = dataMode();
+async function renderApp(target: Root) {
   // One auth client for the whole app, created outside React so StrictMode cannot create two.
-  // Demo mode swaps Keycloak for synthetic personas and the API for in-memory data.
-  const authClient =
-    mode === 'demo' ? createDemoAuthClient() : createKeycloakClient(keycloakConfig);
+  // import.meta.env.PROD is a constant in a build, so Vite drops the demo branch and its chunks.
+  if (import.meta.env.PROD || dataMode() === 'live') {
+    target.render(
+      <StrictMode>
+        <AuthProvider client={createKeycloakClient(keycloakConfig)}>
+          <App />
+        </AuthProvider>
+      </StrictMode>,
+    );
+    return;
+  }
+  // Demo mode swaps Keycloak for synthetic personas and the API for in-memory data. Both are
+  // loaded only here: production builds are always live, so Vite leaves them out.
+  const [{ createDemoAuthClient, loadDemoUser }, { createDemoBackend }] = await Promise.all([
+    import('./features/auth/demoAuth'),
+    import('./backend/demoBackend'),
+  ]);
   target.render(
     <StrictMode>
-      <AuthProvider client={authClient} loadUser={mode === 'demo' ? loadDemoUser : undefined}>
-        <App mode={mode} />
+      <AuthProvider client={createDemoAuthClient()} loadUser={loadDemoUser}>
+        <App backend={createDemoBackend()} />
       </AuthProvider>
     </StrictMode>,
   );

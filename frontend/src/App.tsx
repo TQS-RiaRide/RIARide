@@ -3,16 +3,14 @@ import { useMemo, useState } from 'react';
 import { createBrowserRouter, createMemoryRouter, RouterProvider } from 'react-router';
 import { Toaster } from 'sonner';
 import { routes } from './app/routes';
-import type { Backend, DataMode } from './backend/Backend';
+import type { Backend } from './backend/Backend';
 import { BackendProvider } from './backend/BackendContext';
-import { createDemoBackend } from './backend/demoBackend';
 import { createLiveBackend } from './backend/liveBackend';
 import { createRegistryStore } from './backend/registry';
 import { useAuth } from './features/auth/useAuth';
 
 interface AppProps {
-  mode?: DataMode;
-  /** Tests pass a backend and a starting URL; the app then uses an in-memory router. */
+  /** Demo mode and tests pass a backend; tests also pass a starting URL, for an in-memory router. */
   backend?: Backend;
   initialPath?: string;
 }
@@ -27,16 +25,14 @@ function newQueryClient(): QueryClient {
   });
 }
 
-export default function App({ mode = 'live', backend: given, initialPath }: AppProps) {
+export default function App({ backend: given, initialPath }: AppProps) {
   const { state, getToken } = useAuth();
   const [queryClient] = useState(newQueryClient);
-  const [demo] = useState(() => (mode === 'demo' ? createDemoBackend() : null));
   const userId = state.status === 'authenticated' ? state.user.id : 'anonymous';
 
   const backend = useMemo(
-    () =>
-      given ?? demo ?? createLiveBackend({ getToken, registry: createRegistryStore(() => userId) }),
-    [given, demo, getToken, userId],
+    () => given ?? createLiveBackend({ getToken, registry: createRegistryStore(() => userId) }),
+    [given, getToken, userId],
   );
 
   const [router] = useState(() =>

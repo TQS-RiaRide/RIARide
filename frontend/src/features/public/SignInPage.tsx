@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Link, Navigate } from 'react-router';
 import { PATHS } from '../../app/paths';
 import { Button, Icon } from '../../components/ui/ui';
-import { PERSONAS } from '../auth/demoAuth';
 import { useAuth } from '../auth/useAuth';
 import Wordmark from '../shell/Wordmark';
 import './public.css';
@@ -12,9 +11,9 @@ import './public.css';
 export default function SignInPage() {
   const { t } = useTranslation('landing');
   const { t: tAuth } = useTranslation('auth');
-  const { state, login, logout, signInAs } = useAuth();
+  const { state, login, logout, personas, signInAs } = useAuth();
   const stuck = state.status === 'error' && state.authenticated;
-  const demo = signInAs !== undefined;
+  const demo = signInAs !== undefined && personas !== undefined;
 
   useEffect(() => {
     if (!demo && state.status === 'anonymous') login();
@@ -35,7 +34,7 @@ export default function SignInPage() {
           <>
             <p className="auth-lead">{t('demo.lead')}</p>
             <ul className="persona-list">
-              {PERSONAS.map((persona) => (
+              {personas.map((persona) => (
                 <li key={persona.id}>
                   <button type="button" className="persona sq" onClick={() => signInAs(persona.id)}>
                     <span className="persona-main">

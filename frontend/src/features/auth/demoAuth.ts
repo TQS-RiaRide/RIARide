@@ -75,6 +75,7 @@ export function findPersona(id: string | null | undefined): Persona | undefined 
 }
 
 export interface DemoAuthClient extends AuthClient {
+  personas: readonly Persona[];
   signInAs(personaId: string): void;
 }
 
@@ -84,6 +85,7 @@ export function createDemoAuthClient(
 ): DemoAuthClient {
   const current = () => findPersona(storage?.getItem(PERSONA_KEY));
   return {
+    personas: PERSONAS,
     async init() {
       return current() !== undefined;
     },

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { HOTELS } from '../../backend/demoData';
+import { HOTELS } from '../../backend/hotels';
 import { usePassPrices, useStays } from '../../backend/queries';
 import { EmptyState, Panel, Skeleton } from '../../components/ui/ui';
 import { formatDay, formatMoney } from '../../lib/format';
