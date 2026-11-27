@@ -16,6 +16,7 @@ build/
 node_modules/
 dist/
 coverage/
+frontend/reports/
 
 # E2E tests
 playwright-report/

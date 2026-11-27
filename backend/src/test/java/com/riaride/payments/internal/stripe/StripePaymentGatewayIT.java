@@ -108,7 +108,7 @@ class StripePaymentGatewayIT {
     stripe.stubFor(post(CUSTOMERS).willReturn(okJson(CUSTOMER)));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldChargePurchaseAndSaveCardForLaterOffSessionCharges() {
     givenCustomerIsCreated();
@@ -130,7 +130,7 @@ class StripePaymentGatewayIT {
   }
 
   // One key per operation, so a retried request never charges twice (ADR 0008).
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldSendIdempotencyKeysWithEveryRequest() {
     givenCustomerIsCreated();
@@ -146,7 +146,7 @@ class StripePaymentGatewayIT {
             .withHeader("Idempotency-Key", equalTo("purchase-1")));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldAuthenticateWithTheConfiguredSecretKey() {
     givenCustomerIsCreated();
@@ -159,7 +159,7 @@ class StripePaymentGatewayIT {
             .withHeader("Authorization", equalTo("Bearer " + API_KEY)));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportDeclinedCardAsPermanentFailure() {
     givenCustomerIsCreated();
@@ -178,7 +178,7 @@ class StripePaymentGatewayIT {
   }
 
   // The MVP has no UI step for 3-D Secure, so a payment that needs it cannot complete.
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportPurchaseThatNeedsAuthenticationAsPermanentFailure() {
     givenCustomerIsCreated();
@@ -196,7 +196,7 @@ class StripePaymentGatewayIT {
     stripe.verify(postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS + "/pi_3ds/cancel")));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportStripeServerErrorAsTransientFailure() {
     givenCustomerIsCreated();
@@ -213,7 +213,7 @@ class StripePaymentGatewayIT {
         .isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportRateLimitAsTransientFailure() {
     givenCustomerIsCreated();
@@ -230,7 +230,7 @@ class StripePaymentGatewayIT {
         .isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportDroppedConnectionAsTransientFailure() {
     givenCustomerIsCreated();
@@ -241,7 +241,7 @@ class StripePaymentGatewayIT {
         .isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportSlowResponseAsTransientFailure() {
     givenCustomerIsCreated();
@@ -252,7 +252,7 @@ class StripePaymentGatewayIT {
   }
 
   // The adapter does not retry on its own: the caller decides (ADR 0008).
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldNotRetryAFailedRequestItself() {
     givenCustomerIsCreated();
@@ -270,7 +270,7 @@ class StripePaymentGatewayIT {
     stripe.verify(1, postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS)));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldChargeOvertimeOffSessionToTheSavedCard() {
     stripe.stubFor(
@@ -293,7 +293,7 @@ class StripePaymentGatewayIT {
   }
 
   // When the bank asks for authentication, overtime comes out of the deposit instead (ADR 0008).
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportOffSessionChargeThatNeedsAuthenticationAsPermanentFailure() {
     stripe.stubFor(
@@ -311,7 +311,7 @@ class StripePaymentGatewayIT {
             failure -> assertThat(failure.reason()).isEqualTo("authentication_required"));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldRefundPartOfAPayment() {
     stripe.stubFor(post(REFUNDS).willReturn(okJson(REFUND)));
@@ -328,7 +328,7 @@ class StripePaymentGatewayIT {
   }
 
   // Only an opaque reference goes to Stripe, never a guest's name (QA Manual 3.1: personal data).
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldSendOnlyTheOpaqueReferenceToStripe() {
     givenCustomerIsCreated();
@@ -346,7 +346,7 @@ class StripePaymentGatewayIT {
   // processing may still succeed: a caller that gave up and retried with a new key could charge
   // twice. While the current intent is still processing it is transient, so the caller retries
   // with the same key, and it carries the intent.
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportProcessingPaymentAsTransientWithItsReference() {
     givenCustomerIsCreated();
@@ -421,7 +421,7 @@ class StripePaymentGatewayIT {
     stripe.verify(postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS + "/pi_processing/cancel")));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldCancelAndReportPaymentLeftWaitingForAnotherCard() {
     givenCustomerIsCreated();
@@ -435,7 +435,7 @@ class StripePaymentGatewayIT {
     stripe.verify(postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS + "/pi_refused/cancel")));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportCustomerCreationFailureWithoutChargingAnything() {
     stripe.stubFor(
@@ -451,7 +451,7 @@ class StripePaymentGatewayIT {
     stripe.verify(0, postRequestedFor(urlPathEqualTo(PAYMENT_INTENTS)));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportIdempotencyKeyInUseAsTransient() {
     givenCustomerIsCreated();
@@ -468,7 +468,7 @@ class StripePaymentGatewayIT {
         .isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportOffSessionServerErrorAsTransient() {
     stripe.stubFor(
@@ -484,7 +484,7 @@ class StripePaymentGatewayIT {
         .isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportSlowOffSessionChargeAsTransient() {
     stripe.stubFor(post(PAYMENT_INTENTS).willReturn(okJson(SUCCEEDED).withFixedDelay(2_000)));
@@ -494,7 +494,7 @@ class StripePaymentGatewayIT {
         .isInstanceOf(TransientPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportRefundOfUnknownPaymentAsPermanent() {
     stripe.stubFor(
@@ -513,7 +513,7 @@ class StripePaymentGatewayIT {
             failure -> assertThat(failure.reason()).isEqualTo("resource_missing"));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportRefundAboveThePaidAmountAsPermanent() {
     stripe.stubFor(
@@ -529,7 +529,7 @@ class StripePaymentGatewayIT {
     assertThatThrownBy(() -> gateway.refund(refund)).isInstanceOf(PermanentPaymentException.class);
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportPendingRefundAsPending() {
     stripe.stubFor(
@@ -541,7 +541,7 @@ class StripePaymentGatewayIT {
     assertThat(refund).isEqualTo(new RefundResult("re_deposit", true));
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldReportFailedRefundAsPermanent() {
     stripe.stubFor(post(REFUNDS).willReturn(okJson(REFUND.replace("\"succeeded\"", "\"failed\""))));
@@ -556,7 +556,7 @@ class StripePaymentGatewayIT {
             });
   }
 
-  @Requirement("RIA-62")
+  @Requirement("RIA-52")
   @Test
   void shouldNeverPutTheSecretKeyInAFailureMessage() {
     stripe.stubFor(
