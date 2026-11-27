@@ -5,6 +5,9 @@ import AuthProvider from './AuthProvider';
 import AuthControls from './AuthControls';
 import type { AuthClient } from './authClient';
 import type { CurrentUser } from './api';
+import { requirement } from '../../test/xray';
+
+requirement('RIA-86');
 
 const operator: CurrentUser = {
   id: 'user-1',
