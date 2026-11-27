@@ -27,7 +27,7 @@ Set `VITE_BACKEND_URL` to point the dev server at another backend.
 Screens read the platform through one port, `src/backend/Backend.ts`, with two adapters:
 
 - **live** (default): the REST API. Where the API has no read endpoint yet (hub list, current pass, trip history, ticket list, KPIs; RIA-107, RIA-117, RIA-118, RIA-120), it lists what this browser created or read and shows an empty state that names the story. Replacing a stopgap with a real endpoint only changes `liveBackend.ts`.
-- **demo** (`npm run dev:demo`, which is `vite --mode demo`; or `VITE_DATA_MODE=demo` for any build): an in-memory Vila Ria with synthetic hubs, bikes, stays and tickets that follows BR6, BR10, BR12 and BR13. The sign-in page offers the synthetic personas instead of Keycloak. Nothing reaches a server.
+- **demo** (`npm run dev:demo`, which is `vite --mode demo`; or `VITE_DATA_MODE=demo` for the dev server): an in-memory Vila Ria with synthetic hubs, bikes, stays and tickets that follows BR6, BR10, BR12 and BR13. The sign-in page offers the synthetic personas instead of Keycloak. Nothing reaches a server. A production build (`npm run build`, the image and the Keycloak theme jar) is always live: demo mode signs anyone in as any role, so Vite leaves the demo modules out of it.
 
 ## Login and roles
 
