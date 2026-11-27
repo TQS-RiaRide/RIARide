@@ -61,4 +61,14 @@ class PassUsageService implements PassUsage {
             .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"));
     return new PassLimits(pass.getExpiresAt(), pass.getStayEndsAt());
   }
+
+  // MANDATORY: the pass closes in the same transaction that ends its trip, or not at all.
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void closeIfEnded(UUID passId, Instant tripEndedAt) {
+    passes
+        .findByIdForUpdate(passId)
+        .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"))
+        .closeIfEndedAt(tripEndedAt);
+  }
 }

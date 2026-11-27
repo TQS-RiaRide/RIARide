@@ -124,6 +124,15 @@ public class Pass implements Persistable<UUID> {
         || status == PassStatus.ACTIVE && expiresAt.isAfter(now);
   }
 
+  // BR8 and BR9 (RIA-89): a pass that ends during a trip stays active until that trip ends, so the
+  // trip goes on and its time after the end is charged as overtime. The trip's end then closes it,
+  // if it came at or after the end of the pass. The deposit stays held until its refund (RIA-114).
+  public void closeIfEndedAt(Instant tripEndedAt) {
+    if (status == PassStatus.ACTIVE && !expiresAt.isAfter(tripEndedAt)) {
+      this.status = PassStatus.CLOSED;
+    }
+  }
+
   // BR3 and BR5: the price and the deposit are charged together at purchase.
   public Money amountToCharge() {
     return Money.cents((long) priceCents + depositCents);

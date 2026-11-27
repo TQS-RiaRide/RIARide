@@ -22,4 +22,8 @@ public interface PassUsage {
 
   // The limits of an ended trip's overtime (RIA-88): when the pass expires and the stay ends.
   PassLimits limitsOf(UUID passId);
+
+  // BR8 and BR9 (RIA-89): a trip ended, so its pass closes if it ended during the trip. Locks the
+  // pass, after the caller has locked the trip. Joins the caller's transaction.
+  void closeIfEnded(UUID passId, Instant tripEndedAt);
 }

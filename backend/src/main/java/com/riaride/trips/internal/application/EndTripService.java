@@ -3,6 +3,7 @@ package com.riaride.trips.internal.application;
 import com.riaride.accounts.GuestDirectory;
 import com.riaride.fleet.VehicleDocking;
 import com.riaride.fleet.VehicleNotInUseException;
+import com.riaride.passes.PassUsage;
 import com.riaride.trips.internal.domain.Trip;
 import com.riaride.trips.internal.domain.TripStatus;
 import com.riaride.trips.internal.persistence.TripRepository;
@@ -22,11 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 // is first read as a projection, which does not load it, so the locked read returns its current
 // state. A concurrent end of the same trip that won is seen under the vehicle lock (the bike is no
 // longer in use) or under the trip lock, and either way answers 409 Trip not in progress.
+//
+// A pass that ended during the trip (BR8, BR9) is closed only now, once the trip has ended, in the
+// same transaction (RIA-89). Its row is locked last, after the trip, as UnlockConfirmationListener
+// does, so the two never deadlock.
 @Service
 public class EndTripService {
 
   private final GuestDirectory guests;
   private final TripRepository trips;
+  private final PassUsage passes;
   private final VehicleDocking docking;
   private final ApplicationEventPublisher events;
   private final Clock clock;
@@ -34,11 +40,13 @@ public class EndTripService {
   public EndTripService(
       GuestDirectory guests,
       TripRepository trips,
+      PassUsage passes,
       VehicleDocking docking,
       ApplicationEventPublisher events,
       Clock clock) {
     this.guests = guests;
     this.trips = trips;
+    this.passes = passes;
     this.docking = docking;
     this.events = events;
     this.clock = clock;
@@ -68,7 +76,9 @@ public class EndTripService {
     if (locked.getStatus() != TripStatus.IN_USE) {
       throw new TripNotInProgressException();
     }
-    locked.end(command.hubId(), clock.instant());
+    var endedAt = clock.instant();
+    locked.end(command.hubId(), endedAt);
+    passes.closeIfEnded(locked.getPassId(), endedAt);
     events.publishEvent(new TripEnded(locked.getId(), locked.getVehicleCode(), command.hubId()));
     return Optional.of(locked);
   }
