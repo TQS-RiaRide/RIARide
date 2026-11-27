@@ -17,6 +17,7 @@ import com.riaride.fleet.HubWithoutFreeSlotException;
 import com.riaride.fleet.ReservedVehicle;
 import com.riaride.fleet.VehicleDocking;
 import com.riaride.fleet.VehicleNotInUseException;
+import com.riaride.passes.PassUsage;
 import com.riaride.trips.internal.domain.Reservation;
 import com.riaride.trips.internal.domain.Trip;
 import com.riaride.trips.internal.domain.TripStatus;
@@ -39,7 +40,8 @@ import org.springframework.context.ApplicationEventPublisher;
 // Unit test (Surefire): ending a guest's trip at a hub (RIA-55, BR10). The bike is docked first,
 // then the trip is locked, checked again and ended, and LOCK is published for that hub. A full hub
 // leaves the trip in use. Another guest's trip is not found, and a trip not in use is refused,
-// without touching the bike.
+// without touching the bike. Once the trip has ended, its pass closes if it ended meanwhile
+// (RIA-89).
 @ExtendWith(MockitoExtension.class)
 class EndTripServiceTest {
 
@@ -55,6 +57,8 @@ class EndTripServiceTest {
 
   @Mock private TripRepository trips;
 
+  @Mock private PassUsage passes;
+
   @Mock private VehicleDocking docking;
 
   @Mock private ApplicationEventPublisher events;
@@ -64,7 +68,9 @@ class EndTripServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new EndTripService(guests, trips, docking, events, Clock.fixed(NOW, ZoneOffset.UTC));
+    service =
+        new EndTripService(
+            guests, trips, passes, docking, events, Clock.fixed(NOW, ZoneOffset.UTC));
     var requested = NOW.minus(Duration.ofMinutes(40));
     var reservation =
         Reservation.hold(
@@ -183,5 +189,32 @@ class EndTripServiceTest {
     assertThatThrownBy(this::end).isInstanceOf(TripNotInProgressException.class);
     assertThat(trip.getEndHubId()).isEqualTo(START_HUB);
     verifyNoInteractions(events);
+  }
+
+  // BR8 and BR9 (RIA-89): the pass may have ended while the trip was in progress. It is closed only
+  // now, after the trip has ended, in the same transaction, and with the trip's end time.
+  @Requirement("RIA-89")
+  @Test
+  void shouldCloseThePassOnceTheTripHasEnded() {
+    givenTheGuestsTripIs(TripStatus.IN_USE);
+    when(trips.findByIdForUpdate(trip.getId())).thenReturn(Optional.of(trip));
+
+    end();
+
+    var order = inOrder(docking, trips, passes);
+    order.verify(docking).dock(VEHICLE, END_HUB);
+    order.verify(trips).findByIdForUpdate(trip.getId());
+    order.verify(passes).closeIfEnded(PASS, NOW);
+  }
+
+  // A trip that cannot end leaves its pass as it is.
+  @Requirement("RIA-89")
+  @Test
+  void shouldNotCloseThePassWhenTheTripCannotEnd() {
+    givenTheGuestsTripIs(TripStatus.IN_USE);
+    doThrow(new HubWithoutFreeSlotException(List.of())).when(docking).dock(VEHICLE, END_HUB);
+
+    assertThatThrownBy(this::end).isInstanceOf(HubWithoutFreeSlotException.class);
+    verifyNoInteractions(passes);
   }
 }

@@ -45,7 +45,7 @@ class OvertimePolicyTest {
   }
 
   // The acceptance criterion: 3 h 20 min is 2 blocks, at 2.00 EUR each.
-  @Requirement("RIA-88")
+  @Requirement({"RIA-88", "RIA-89"})
   @Test
   void shouldCharge2BlocksForATripOf3Hours20Minutes() {
     var overtime = tripOf(POLICY, Duration.ofMinutes(200));
@@ -74,7 +74,7 @@ class OvertimePolicyTest {
   }
 
   // BR8: the pass expires 1 h into the trip, so the 2 h after it are overtime.
-  @Requirement("RIA-88")
+  @Requirement({"RIA-88", "RIA-89"})
   @Test
   void shouldCountFromThePassExpiryWhenItComesFirst() {
     var overtime =
@@ -86,7 +86,7 @@ class OvertimePolicyTest {
   }
 
   // BR9: the stay ends 2 h 40 min into the trip, so the 20 min after it are overtime.
-  @Requirement("RIA-88")
+  @Requirement({"RIA-88", "RIA-89"})
   @Test
   void shouldCountFromTheEndOfTheStayWhenItComesFirst() {
     var overtime =
@@ -94,6 +94,46 @@ class OvertimePolicyTest {
             STARTED, STARTED.plus(Duration.ofHours(3)), FAR, STARTED.plus(Duration.ofMinutes(160)));
 
     assertThat(overtime.blocks()).isEqualTo(2);
+  }
+
+  // RIA-89, first acceptance criterion: the 1-day pass expires at 15:00 during a trip that started
+  // at 14:00 and ends at 15:30, so the 30 minutes after the expiry are 2 blocks.
+  @Requirement("RIA-89")
+  @Test
+  void shouldCharge2BlocksForATripThatEnds30MinutesAfterThePassExpires() {
+    var started = Instant.parse("2026-11-30T14:00:00Z");
+    var expires = Instant.parse("2026-11-30T15:00:00Z");
+
+    var overtime = POLICY.overtimeOf(started, Instant.parse("2026-11-30T15:30:00Z"), expires, FAR);
+
+    assertThat(overtime.blocks()).isEqualTo(2);
+    assertThat(overtime.amount()).contains(Money.cents(400));
+  }
+
+  // RIA-89, second acceptance criterion: a stay pass ends with the stay, during a trip that ends 20
+  // minutes later. The pass expiry and the end of the stay are the same instant, counted once.
+  @Requirement("RIA-89")
+  @Test
+  void shouldCountOnceFromTheEndOfAStayPassThatIsAlsoTheEndOfTheStay() {
+    var stayEnds = STARTED.plus(Duration.ofMinutes(30));
+
+    var overtime =
+        POLICY.overtimeOf(STARTED, stayEnds.plus(Duration.ofMinutes(20)), stayEnds, stayEnds);
+
+    assertThat(overtime.blocks()).isEqualTo(2);
+  }
+
+  // Two limits at the same instant: the pass expires exactly when the 3 hours are up.
+  @Requirement("RIA-89")
+  @ParameterizedTest(name = "pass expiry at the 3 h limit, trip ends {0} after it: {1} blocks")
+  @CsvSource({"PT0S, 0", "PT1S, 1", "PT15M, 1", "PT20M, 2"})
+  void shouldCountOnceFromTheMaximumDurationAndThePassExpiryWhenTheyFallTogether(
+      Duration afterTheLimit, long blocks) {
+    var limit = STARTED.plus(MAX_TRIP);
+
+    var overtime = POLICY.overtimeOf(STARTED, limit.plus(afterTheLimit), limit, FAR);
+
+    assertThat(overtime.blocks()).isEqualTo(blocks);
   }
 
   @Requirement("RIA-88")

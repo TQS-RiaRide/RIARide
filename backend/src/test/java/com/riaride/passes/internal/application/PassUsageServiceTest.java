@@ -202,4 +202,40 @@ class PassUsageServiceTest {
 
     assertThatThrownBy(() -> service.limitsOf(unknown)).isInstanceOf(IllegalStateException.class);
   }
+
+  // BR8 and BR9 (RIA-89): the stay pass ended at the end of the stay, while its trip was still in
+  // progress. The trip ends 20 minutes later and closes it.
+  @Requirement("RIA-89")
+  @Test
+  void shouldCloseThePassWhenItsTripEndsAfterTheEndOfThePass() {
+    var pass = paidPass();
+    pass.activate(NOW);
+    when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
+
+    service.closeIfEnded(pass.getId(), STAY_ENDS.plusSeconds(20 * 60));
+
+    assertThat(pass.getStatus()).isEqualTo(PassStatus.CLOSED);
+  }
+
+  @Requirement("RIA-89")
+  @Test
+  void shouldLeaveThePassActiveWhenItsTripEndsBeforeTheEndOfThePass() {
+    var pass = paidPass();
+    pass.activate(NOW);
+    when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
+
+    service.closeIfEnded(pass.getId(), STAY_ENDS.minusSeconds(60));
+
+    assertThat(pass.getStatus()).isEqualTo(PassStatus.ACTIVE);
+  }
+
+  @Requirement("RIA-89")
+  @Test
+  void shouldRefuseToCloseAnUnknownPass() {
+    var unknown = UUID.randomUUID();
+    when(passes.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.closeIfEnded(unknown, NOW))
+        .isInstanceOf(IllegalStateException.class);
+  }
 }
