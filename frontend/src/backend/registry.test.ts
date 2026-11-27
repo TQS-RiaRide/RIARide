@@ -95,6 +95,22 @@ describe('createRegistryStore', () => {
     expect(store.read().pass).toEqual(PASS);
   });
 
+  it('reads the new value, not an older stored one, once the storage refuses a write', () => {
+    const older = JSON.stringify({ pass: null, tripIds: ['trip-old'] });
+    const storage = {
+      getItem: () => older,
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    };
+    const store = createRegistryStore(() => 'guest-a', storage);
+
+    store.update((current) => ({ ...withPass(current), tripIds: ['trip-new'] }));
+
+    expect(store.read().pass).toEqual(PASS);
+    expect(store.read().tripIds).toEqual(['trip-new']);
+  });
+
   it('never writes stay codes or guest names to storage', () => {
     const store = createRegistryStore(() => 'manager-a');
 
