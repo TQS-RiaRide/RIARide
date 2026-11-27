@@ -115,7 +115,12 @@ services:
 
   frontend:
     profiles: [app]
-    build: ../frontend
+    build:
+      context: ../frontend
+      args:
+        # The browser logs in at Keycloak's published address (KC_HOSTNAME). The realm allows
+        # redirects back to http://localhost:8081 only, so keep FRONTEND_PORT at 8081 to log in.
+        VITE_KEYCLOAK_URL: http://localhost:${KEYCLOAK_PORT:-8180}
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-8081}:80"
     depends_on:
