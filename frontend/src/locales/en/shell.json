@@ -1,0 +1,39 @@
+{
+  "skip": "Skip to content",
+  "search": "Search or run a command",
+  "logOut": "Log out",
+  "account": "Your account",
+  "goTo": "Go to {{place}}",
+  "guestNav": "Main",
+  "tabs": {
+    "bikes": "Bikes",
+    "trips": "Trips"
+  },
+  "roles": {
+    "GUEST": "Guest",
+    "OPERATOR": "Operator",
+    "TECHNICIAN": "Technician",
+    "HOTEL_MANAGER": "Hotel manager",
+    "ADMIN": "Administrator"
+  },
+  "forbidden": {
+    "title": "This area is not part of your role",
+    "body": "Your account can open other areas of RiaRide. Ask an administrator if you need this one.",
+    "back": "Back to my area"
+  },
+  "crash": {
+    "title": "This screen stopped working",
+    "body": "Reload the page to try again. Nothing you saved was lost.",
+    "reload": "Reload"
+  },
+  "notFound": {
+    "title": "There is no page here",
+    "body": "The link may be old, or the address has a typo.",
+    "home": "Go to the start"
+  },
+  "admin": {
+    "title": "Account management is not available yet",
+    "body": "Manage accounts and roles in Keycloak."
+  },
+  "demo": "Demo"
+}

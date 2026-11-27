@@ -1,0 +1,47 @@
+{
+  "documentTitle": "{{title}} · {{realm}}",
+  "home": "Início do RiaRide",
+  "logIn": {
+    "title": "Entrar",
+    "username": "Email ou nome de utilizador",
+    "email": "Email",
+    "password": "Palavra-passe",
+    "forgot": "Esqueceu a palavra-passe?",
+    "rememberMe": "Manter sessão iniciada",
+    "submit": "Entrar",
+    "sending": "A entrar…",
+    "newGuest": "Está hospedado num hotel Marés?",
+    "signUp": "Registe-se com o código da estadia"
+  },
+  "notYou": "Não é você?",
+  "restart": "Usar outra conta",
+  "resetPassword": {
+    "title": "Repor a palavra-passe",
+    "lead": "Indique o email ou o nome de utilizador da conta. Enviamos uma ligação para escolher uma nova palavra-passe.",
+    "submit": "Enviar ligação"
+  },
+  "updatePassword": {
+    "title": "Escolha uma nova palavra-passe",
+    "password": "Nova palavra-passe",
+    "confirm": "Repita a palavra-passe",
+    "logoutOthers": "Terminar sessão nos outros dispositivos",
+    "submit": "Guardar palavra-passe",
+    "cancel": "Cancelar"
+  },
+  "backToLogIn": "Voltar a entrar",
+  "backToApp": "Voltar ao RiaRide",
+  "continue": "Continuar",
+  "error": {
+    "title": "Algo correu mal"
+  },
+  "logoutConfirm": {
+    "title": "Terminar sessão?",
+    "lead": "Sai do RiaRide neste dispositivo.",
+    "submit": "Terminar sessão"
+  },
+  "expired": {
+    "title": "Esta página expirou",
+    "lead": "Passou algum tempo e a página expirou. Continue onde estava ou recomece.",
+    "restart": "Recomeçar"
+  }
+}

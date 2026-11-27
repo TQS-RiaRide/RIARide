@@ -7,7 +7,7 @@ import prettier from 'eslint-config-prettier';
 // QA Manual, section 3.1: typescript-eslint strict rules, react-hooks rules,
 // formatting left to Prettier.
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  globalIgnores(['dist', 'dist_keycloak', 'coverage', 'public/keycloakify-dev-resources']),
   js.configs.recommended,
   tseslint.configs.strict,
   {

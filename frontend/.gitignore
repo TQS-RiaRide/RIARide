@@ -1,0 +1,6 @@
+
+# Local design-tool cache
+.impeccable/
+# Keycloakify: dev copies of Keycloak resources, and the built theme jar
+/public/keycloakify-dev-resources/
+/dist_keycloak/

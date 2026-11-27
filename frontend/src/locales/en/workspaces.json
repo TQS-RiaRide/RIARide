@@ -2,23 +2,18 @@
   "menuLabel": "Workspaces",
   "none": "Your account has no role yet. Ask an administrator to give you one.",
   "GUEST_DASHBOARD": {
-    "title": "My trips",
-    "description": "Your pass, your active and past trips, and your charges."
+    "title": "My trips"
   },
   "OPERATOR_DASHBOARD": {
-    "title": "Operator dashboard",
-    "description": "The fleet at each hub and the open maintenance tickets."
+    "title": "Fleet"
   },
   "MAINTENANCE_TICKETS": {
-    "title": "Maintenance tickets",
-    "description": "Tickets with their SLA deadline and the technician assigned to each."
+    "title": "Maintenance tickets"
   },
   "HOTEL_BACKOFFICE": {
-    "title": "Hotel backoffice",
-    "description": "Rules of use, hub capacity, business KPIs and technical metrics."
+    "title": "Hotel backoffice"
   },
   "ACCOUNT_ADMINISTRATION": {
-    "title": "Accounts and roles",
-    "description": "User accounts and the roles that decide what each user can access."
+    "title": "Accounts and roles"
   }
 }

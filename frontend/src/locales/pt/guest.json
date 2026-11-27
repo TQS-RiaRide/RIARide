@@ -1,0 +1,149 @@
+{
+  "passTypes": {
+    "ONE_DAY": {
+      "name": "Passe 1 dia",
+      "rule": "24 horas a partir da primeira viagem."
+    },
+    "THREE_DAY": {
+      "name": "Passe 3 dias",
+      "rule": "72 horas a partir da primeira viagem."
+    },
+    "STAY": {
+      "name": "Passe estadia",
+      "rule": "Até ao seu check-out."
+    }
+  },
+  "pass": {
+    "label": "O seu passe",
+    "noneTitle": "Ainda sem passe",
+    "noneBody": "Começa na sua primeira viagem.",
+    "buyFrom": "Comprar passe desde {{price}}",
+    "buy": "Comprar passe",
+    "deposit": "Caução, devolvida no fim",
+    "status": {
+      "PENDING": {
+        "title": "Quase pronto",
+        "body": "A confirmar o pagamento…"
+      },
+      "INACTIVE": {
+        "title": "Por começar",
+        "body": "Começa na primeira viagem. {{rule}}"
+      },
+      "ACTIVE": {
+        "title": "Ativo",
+        "body": "{{rule}}"
+      },
+      "CLOSED": {
+        "title": "Passe terminado"
+      }
+    }
+  },
+  "buy": {
+    "title": "Escolha o seu passe",
+    "choose": "Tipo de passe",
+    "deposit": "Caução",
+    "today": "Cobrado hoje",
+    "pay": "Pagar e obter o passe",
+    "paying": "A pagar…",
+    "activation": "Devolvida quando o passe termina.",
+    "card": "Cartão de teste",
+    "cards": {
+      "pm_card_visa": "Visa terminado em 4242",
+      "pm_card_mastercard": "Mastercard terminado em 4444",
+      "pm_card_chargeDeclined": "Cartão recusado"
+    },
+    "bought": "{{pass}} comprado.",
+    "errors": {
+      "declined": "O cartão foi recusado e nada foi cobrado. Experimente outro cartão.",
+      "noStay": "A sua estadia não está ativa, por isso não pode comprar um passe. Fale com a receção.",
+      "alreadyOpen": "Já tem um passe que ainda não terminou.",
+      "inProgress": "Esta compra ainda está a ser processada. Aguarde um momento e tente novamente.",
+      "retry": "Não foi possível concluir o pagamento. Tente novamente: não será cobrado duas vezes."
+    }
+  },
+  "home": {
+    "hello_morning": "Bom dia, {{name}}.",
+    "hello_afternoon": "Boa tarde, {{name}}.",
+    "hello_evening": "Boa noite, {{name}}.",
+    "helloAnon": "Para onde vamos hoje?",
+    "activeTrip": "Viagem em curso na",
+    "bikes": "Bicicletas",
+    "haveCode": "Usar código da bicicleta",
+    "hubs": "Hubs"
+  },
+  "start": {
+    "errors": {
+      "noPass": "Compre um passe antes da primeira viagem.",
+      "noStay": "A sua estadia não está ativa, por isso não pode andar.",
+      "notFound": "Nenhuma bicicleta tem este código. Confirme o código no quadro.",
+      "oneAtATime": "Já tem uma bicicleta. Termine essa viagem primeiro.",
+      "reservedElsewhere": "Tem uma reserva para outra bicicleta.",
+      "unavailable": "Esta bicicleta não pode ser usada agora. Escolha outra."
+    }
+  },
+  "bikes": {
+    "range": "~ {{km}} km",
+    "unlock": "Desbloquear",
+    "unlockBike": "Desbloquear {{code}}",
+    "unavailable_one": "+{{count}} indisponível",
+    "unavailable_other": "+{{count}} indisponíveis",
+    "loadError": "Não foi possível carregar as bicicletas. Mostramos a última lista.",
+    "emptyTitle": "Sem bicicletas aqui agora",
+    "emptyBody": "Experimente outro hub. As bicicletas vão voltando ao longo do dia.",
+    "noHubsTitle": "Ainda não há hubs para mostrar",
+    "noHubsBody": "Está ao lado de uma bicicleta? Comece com o código no quadro."
+  },
+  "code": {
+    "title": "Começar com o código",
+    "description": "O código está pintado no quadro, debaixo do selim.",
+    "label": "Código da bicicleta",
+    "placeholder": "ex.: EB-401",
+    "submit": "Desbloquear"
+  },
+  "trip": {
+    "backToBikes": "Voltar às bicicletas",
+    "notFound": "Não encontrámos esta viagem",
+    "notFoundBody": "Pode pertencer a outra conta.",
+    "status": {
+      "STARTING": "A desbloquear",
+      "IN_USE": "Em viagem",
+      "FAILED": "Não desbloqueou",
+      "ENDED": "Terminada"
+    },
+    "unlocking": "A desbloquear…",
+    "failed": "A bicicleta não desbloqueou. O passe não foi usado; a {{code}} fica reservada para si durante 15 minutos.",
+    "elapsedLabel": "Tempo na bicicleta: {{time}}",
+    "included": "Faltam {{time}} das {{total}} incluídas.",
+    "overtime": "Tempo extra: {{time}}, cobrado a cada 15 minutos.",
+    "endedAt": "Entregue em {{hub}} às {{time}}.",
+    "aHub": "um hub",
+    "end": "Terminar viagem",
+    "endedToast": "Viagem terminada em {{hub}}."
+  },
+  "end": {
+    "title": "Terminar viagem",
+    "description": "Encaixe a bicicleta num lugar livre e confirme aqui.",
+    "pick": "Escolha um hub",
+    "submitAt": "Terminar em {{hub}}",
+    "full": "Cheio agora",
+    "free_one": "{{count}} lugar livre",
+    "free_other": "{{count}} lugares livres",
+    "noHubs": "Não há hubs para escolher.",
+    "errors": {
+      "full": "Esse hub encheu há instantes. Escolha um com lugar livre.",
+      "notRunning": "Esta viagem já não está em curso.",
+      "unknownHub": "Não encontrámos esse hub. Escolha outro."
+    },
+    "nearest": "Hubs mais próximos com lugar livre",
+    "nearbyHub": "{{distance}} · {{free}}"
+  },
+  "trips": {
+    "title": "As suas viagens",
+    "trips": "Viagens",
+    "emptyTitle": "Ainda sem viagens",
+    "emptyBody": "As suas viagens aparecem aqui depois de andar.",
+    "charges": "Pagamentos",
+    "depositHeld": "Retida",
+    "noChargesTitle": "Sem pagamentos"
+  }
+}

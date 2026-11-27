@@ -30,7 +30,10 @@ services:
       retries: 20
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.0
+    # Keycloak 26.8.0 with the RiaRide login theme (the realm's loginTheme), built from the frontend.
+    build:
+      context: ../frontend
+      dockerfile: ../infra/keycloak/Dockerfile
     command: ["start-dev", "--import-realm"]
     environment:
       KC_DB: postgres

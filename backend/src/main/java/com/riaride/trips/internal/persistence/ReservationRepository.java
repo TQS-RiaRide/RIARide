@@ -24,6 +24,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
   List<UUID> findIdsByStatusAndExpiresAtLessThanEqual(
       @Param("status") ReservationStatus status, @Param("now") Instant now);
 
+  // A bike has at most one active reservation (V7, uq_reservation_active_per_vehicle).
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  Optional<Reservation> findByVehicleIdAndStatus(UUID vehicleId, ReservationStatus status);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select r from Reservation r where r.id = :id")
   Optional<Reservation> findByIdForUpdate(@Param("id") UUID id);
