@@ -20,7 +20,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 // Integration test (Failsafe): an operator opens a ticket for a reserved bike (RIA-92), with
 // PostgreSQL in Testcontainers. Once the ticket's transaction commits, the bike is in maintenance
 // and its active reservation is cancelled, so the guest's pass can hold another bike. Until then,
-// a retry of the guest's failed start does not reuse the hold of a bike in maintenance.
+// a retry of the guest's failed start does not reuse the hold of a bike in maintenance, and the
+// guest can start on another bike.
 @SpringBootTest
 @Import({TestcontainersConfiguration.class, FixedClockConfiguration.class})
 class CancelReservationOnTicketIT {
@@ -35,13 +36,14 @@ class CancelReservationOnTicketIT {
 
   private String keycloakId;
 
+  private UUID hubId;
   private UUID vehicleId;
   private UUID reservationId;
 
   @BeforeEach
   void givenAReservedBike() {
     cleanUp();
-    var hubId = UUID.randomUUID();
+    hubId = UUID.randomUUID();
     jdbc.update(
         """
         insert into hub (id, name, kind, hotel_id, latitude, longitude, capacity)
@@ -144,5 +146,31 @@ class CancelReservationOnTicketIT {
             jdbc.queryForObject(
                 "select count(*) from trip where reservation_id = ?", Integer.class, reservationId))
         .isZero();
+  }
+
+  // Same case, but the guest picks another bike: the stale hold is cancelled instead of refusing
+  // the pass for up to 15 minutes, and the bike in maintenance stays there.
+  @Requirement("RIA-92")
+  @Test
+  void shouldStartATripOnAnotherBikeWhenTheHeldBikeIsInMaintenance() {
+    jdbc.update("update vehicle set status = 'MAINTENANCE' where id = ?", vehicleId);
+    jdbc.update(
+        """
+        insert into vehicle (id, code, type, status, hub_id, battery_pct)
+        values (?, 'RIA92R-2', 'E_BIKE', 'AVAILABLE', ?, 80)
+        """,
+        UUID.randomUUID(),
+        hubId);
+
+    var trip = startTrip.start(new StartTripCommand(keycloakId, "RIA92R-2"));
+
+    assertThat(trip.getVehicleCode()).isEqualTo("RIA92R-2");
+    assertThat(
+            jdbc.queryForObject(
+                "select status from reservation where id = ?", String.class, reservationId))
+        .isEqualTo("CANCELLED");
+    assertThat(
+            jdbc.queryForObject("select status from vehicle where id = ?", String.class, vehicleId))
+        .isEqualTo("MAINTENANCE");
   }
 }

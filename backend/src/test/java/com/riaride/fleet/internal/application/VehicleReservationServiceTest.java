@@ -6,7 +6,6 @@ import static org.mockito.Mockito.when;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import com.riaride.fleet.ReservedVehicle;
-import com.riaride.fleet.VehicleNotBookableException;
 import com.riaride.fleet.VehicleNotFoundException;
 import com.riaride.fleet.internal.domain.BatteryLevel;
 import com.riaride.fleet.internal.domain.BookingBatteryPolicy;
@@ -114,7 +113,7 @@ class VehicleReservationServiceTest {
     bike.reserve(new BookingBatteryPolicy(20));
     when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
 
-    service.confirmReserved(bike.getId());
+    assertThat(service.isReserved(bike.getId())).isTrue();
 
     assertThat(bike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
   }
@@ -128,8 +127,7 @@ class VehicleReservationServiceTest {
     bike.reportFault();
     when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
 
-    assertThatThrownBy(() -> service.confirmReserved(bike.getId()))
-        .isInstanceOf(VehicleNotBookableException.class);
+    assertThat(service.isReserved(bike.getId())).isFalse();
 
     assertThat(bike.getStatus()).isEqualTo(VehicleStatus.MAINTENANCE);
   }
@@ -140,8 +138,7 @@ class VehicleReservationServiceTest {
     var unknown = UUID.randomUUID();
     when(vehicles.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.confirmReserved(unknown))
-        .isInstanceOf(VehicleNotBookableException.class);
+    assertThat(service.isReserved(unknown)).isFalse();
   }
 
   @Requirement("RIA-54")
