@@ -6,6 +6,7 @@ import com.riaride.maintenance.internal.domain.InvalidTicketException;
 import com.riaride.maintenance.internal.domain.MaintenanceTicket;
 import com.riaride.maintenance.internal.persistence.MaintenanceTicketRepository;
 import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,10 +44,12 @@ public class OpenTicketService {
     MaintenanceTicket.validDescription(description);
     // The operator may copy the code with spaces around it; codes never contain spaces.
     var vehicle = fleet.reportFault(vehicleCode.strip());
+    // timestamptz keeps microseconds: the answer shows the times as they are stored.
+    var now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     var ticket =
         tickets.save(
             MaintenanceTicket.openByOperator(
-                vehicle.vehicleId(), description, clock.instant(), properties.sla()));
+                vehicle.vehicleId(), description, now, properties.sla()));
     events.publishEvent(
         new MaintenanceTicketOpened(ticket.getId(), vehicle.vehicleId(), ticket.getOpenedAt()));
     return new OpenedTicket(ticket, vehicle.code(), vehicle.handling());
