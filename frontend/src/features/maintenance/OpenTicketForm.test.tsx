@@ -134,7 +134,8 @@ describe('OpenTicketForm', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('treats a failure to get a token as unexpected', async () => {
+  // The refresh token expired while the tab was open: retrying would fail every time, as a 401 does.
+  it('asks the operator to log in again when no token can be got', async () => {
     const submit = vi.fn();
     render(
       <OpenTicketForm getToken={vi.fn().mockRejectedValue(new Error('expired'))} submit={submit} />,
@@ -145,7 +146,7 @@ describe('OpenTicketForm', () => {
 
     expect(submit).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'The ticket could not be opened. Try again.',
+      'Your session has ended. Log in again to open the ticket.',
     );
   });
 
