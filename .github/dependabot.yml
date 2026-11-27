@@ -47,3 +47,8 @@ updates:
     schedule: { interval: weekly }
     target-branch: dev
     labels: ["dependencies", "ai:none"]
+  - package-ecosystem: pip
+    directory: /tools/ai-review-findings
+    schedule: { interval: weekly }
+    target-branch: dev
+    labels: ["dependencies", "ai:none"]

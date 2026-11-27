@@ -25,35 +25,42 @@ class VehicleStatusChangeTest {
   }
 
   @Requirement("RIA-91")
-  @ParameterizedTest(name = "{0} -> {1}: {2}")
+  @ParameterizedTest(name = "{0} -> {1}")
   @CsvSource({
-    "AVAILABLE,   AVAILABLE,   unchanged",
-    "AVAILABLE,   MAINTENANCE, changed",
-    "AVAILABLE,   RETIRED,     changed",
-    "RESERVED,    AVAILABLE,   refused",
-    "RESERVED,    MAINTENANCE, refused",
-    "RESERVED,    RETIRED,     refused",
-    "IN_USE,      AVAILABLE,   refused",
-    "IN_USE,      MAINTENANCE, refused",
-    "IN_USE,      RETIRED,     refused",
-    "MAINTENANCE, AVAILABLE,   changed",
-    "MAINTENANCE, MAINTENANCE, unchanged",
-    "MAINTENANCE, RETIRED,     changed",
-    "RETIRED,     AVAILABLE,   refused",
-    "RETIRED,     MAINTENANCE, refused",
-    "RETIRED,     RETIRED,     unchanged"
+    "AVAILABLE,   AVAILABLE",
+    "AVAILABLE,   MAINTENANCE",
+    "AVAILABLE,   RETIRED",
+    "MAINTENANCE, AVAILABLE",
+    "MAINTENANCE, MAINTENANCE",
+    "MAINTENANCE, RETIRED",
+    "RETIRED,     RETIRED"
   })
-  void shouldApplyOnlyTheOperatorTransitions(VehicleStatus from, VehicleStatus to, String outcome) {
+  void shouldApplyAnOperatorTransitionOrKeepTheSameStatus(VehicleStatus from, VehicleStatus to) {
     var vehicle = bikeWithStatus(from);
 
-    if ("refused".equals(outcome)) {
-      assertThatThrownBy(() -> vehicle.changeStatusAsOperator(to))
-          .isInstanceOf(VehicleStatusChangeRefusedException.class);
-      assertThat(vehicle.getStatus()).isEqualTo(from);
-    } else {
-      vehicle.changeStatusAsOperator(to);
-      assertThat(vehicle.getStatus()).isEqualTo(to);
-    }
+    vehicle.changeStatusAsOperator(to);
+
+    assertThat(vehicle.getStatus()).isEqualTo(to);
+  }
+
+  @Requirement("RIA-91")
+  @ParameterizedTest(name = "{0} -> {1}")
+  @CsvSource({
+    "RESERVED,    AVAILABLE",
+    "RESERVED,    MAINTENANCE",
+    "RESERVED,    RETIRED",
+    "IN_USE,      AVAILABLE",
+    "IN_USE,      MAINTENANCE",
+    "IN_USE,      RETIRED",
+    "RETIRED,     AVAILABLE",
+    "RETIRED,     MAINTENANCE"
+  })
+  void shouldRefuseAnyOtherChangeAndKeepTheBikeAsItWas(VehicleStatus from, VehicleStatus to) {
+    var vehicle = bikeWithStatus(from);
+
+    assertThatThrownBy(() -> vehicle.changeStatusAsOperator(to))
+        .isInstanceOf(VehicleStatusChangeRefusedException.class);
+    assertThat(vehicle.getStatus()).isEqualTo(from);
   }
 
   @Requirement("RIA-91")

@@ -11,11 +11,15 @@ Feature: Change a bike's state
       | EB-702 | available | 80      |
       | EB-703 | in use    | 60      |
 
-  Scenario: The operator retires an available bike and guests no longer see it
+  @TEST_RIA-180
+  Scenario: The operator retires an available bike
     When the operator retires bike "EB-701"
     Then the response status is 200
     And bike "EB-701" is "retired"
-    Given a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
+
+  Scenario: A retired bike is not offered to guests
+    Given bike "EB-701" was retired
+    And a guest "Rita Almeida" with an active stay at "Marés Centro" is logged in
     When the guest lists the bikes at hub "Marés Centro"
     Then bike "EB-701" is not listed
     And bike "EB-702" is listed
