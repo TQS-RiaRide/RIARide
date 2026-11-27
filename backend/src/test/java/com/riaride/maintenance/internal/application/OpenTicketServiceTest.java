@@ -86,6 +86,30 @@ class OpenTicketServiceTest {
     verify(tickets).save(ticket);
   }
 
+  // timestamptz keeps microseconds: the 201 answer shows the times as later reads will (RIA-93).
+  @Requirement("RIA-92")
+  @Test
+  void shouldKeepTheTimesOfATicketToTheMicrosecond() {
+    var nanos = NOW.plusNanos(123_456_789);
+    var service =
+        new OpenTicketService(
+            fleet,
+            tickets,
+            events,
+            new MaintenanceProperties(SLA),
+            Clock.fixed(nanos, ZoneOffset.UTC));
+    givenFaultHandled(FaultHandling.OUT_OF_SERVICE);
+
+    var opened = service.open("EB-901", "Rear brake does not work");
+
+    var micros = NOW.plusNanos(123_456_000);
+    assertThat(opened.ticket().getOpenedAt()).isEqualTo(micros);
+    assertThat(opened.ticket().getSlaDueAt()).isEqualTo(micros.plus(SLA));
+    var event = ArgumentCaptor.forClass(MaintenanceTicketOpened.class);
+    verify(events).publishEvent(event.capture());
+    assertThat(event.getValue().openedAt()).isEqualTo(micros);
+  }
+
   @Requirement("RIA-92")
   @Test
   void shouldAnnounceTheOpenedTicketAfterSavingIt() {
