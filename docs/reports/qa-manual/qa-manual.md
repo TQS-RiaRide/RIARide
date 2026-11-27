@@ -47,11 +47,11 @@ A practice counts only when its evidence link shows it working. Expected (E) pra
 | D6 | Observability with SLO alerts | V | Decided (I4) | Section 4.3 |
 | AI1 | Team AI policy and declaration of AI use | E | Done | Sections 6.1 and 6.2 |
 | AI2 | Versioned agent instructions | E | Done | [`AGENTS.md`](../../../AGENTS.md) → [`CLAUDE.md`](../../../CLAUDE.md), covering style, definition of done, test rules, backend and frontend build commands and the limits on agents' Jira and SonarQube access. Sections 6.3 and 6.4 |
-| AI3 | AI-assisted code review | E | Done | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Evidence: [#25](https://github.com/TQS-RiaRide/RIARide/pull/25), where the Claude review's finding is recorded as partly accepted in the AI review findings table, and [#40](https://github.com/TQS-RiaRide/RIARide/pull/40). Section 6.6 |
-| AI4 | Specification-driven generation (≥ 2 stories) | E | Partial | Section 6.5. Story 1, RIA-56 Register a hub ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), generated from its approved Gherkin scenarios through the agent flow of section 6.3; story 2 is planned for I3 from an OpenSpec proposal |
+| AI3 | AI-assisted code review | E | Done | [`ai-review.yml`](../../../.github/workflows/ai-review.yml) and [`docs/ai-review.md`](../../ai-review.md). Evidence: [#25](https://github.com/TQS-RiaRide/RIARide/pull/25), where the Claude review's finding is recorded as partly accepted in the AI review findings table, and [#40](https://github.com/TQS-RiaRide/RIARide/pull/40). Findings are counted by severity and decision with [`tools/ai-review-findings`](../../../tools/ai-review-findings/README.md) (RIA-108). Section 6.6 |
+| AI4 | Specification-driven generation (≥ 2 stories) | E | Partial | Section 6.5. Story 1, RIA-56 Register a hub ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), generated from its approved Gherkin scenarios through the agent flow of section 6.3, with the human review's corrections recorded in section 6.5; story 2 is planned for I3 from an OpenSpec proposal |
 | AI5 | Critical analysis of AI's contribution | E | Decided (I5) | Section 6.7; data collected from every PR from now on |
 | AI6 | Coordination of several agents | V | Done | Section 6.3: the agents are defined in [`.claude/agents/`](../../../.claude/agents/), first used for RIA-56 ([PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35)), and the `Agent boundaries` CI check enforces their roles |
-| AI7 | Agents in the CI pipeline | V | Decided (I3) | Section 6.6: PR summary and failure triage. The AI review job counts as AI3, not here |
+| AI7 | Agents in the CI pipeline | V | Partial | Section 6.6: [`ai-pr-summary.yml`](../../../.github/workflows/ai-pr-summary.yml) and [`ai-failure-triage.yml`](../../../.github/workflows/ai-failure-triage.yml) (RIA-140). They only run once released to `main`; a summary and a triage comment will be linked as evidence after the I3 release. The AI review job counts as AI3, not here |
 
 ## 2. Project management
 
@@ -126,7 +126,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 
 - **When:** every change to `dev` or `main` goes through a pull request. No direct pushes.
 - **Who approves:** at least one team member other than the author. The author merges after approval and a green CI. Agents never approve or merge.
-- **AI review:** each non-draft pull request receives an advisory review from Claude ([`docs/ai-review.md`](../../ai-review.md)), with findings tagged `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`. The author records each finding as accepted or rejected, with a reason, in the PR template's *AI review findings* table. The human reviewer checks that table before approving.
+- **AI review:** each non-draft pull request receives an advisory review from Claude ([`docs/ai-review.md`](../../ai-review.md)), with findings tagged `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`. The author records each finding in the PR template's *AI review findings* table: the finding starts with its severity (`HIGH: ...`), then the decision (Accepted, Accepted in part, Rejected or Deferred) and the reason. The human reviewer checks that table before approving. [`tools/ai-review-findings`](../../../tools/ai-review-findings/README.md) counts the findings of every pull request by severity and decision (section 6.7).
 
 **Review checklist**
 
@@ -137,7 +137,7 @@ These guidelines are short on purpose: they state the key choices, and the refer
 - [ ] Input is validated at the boundary; errors are handled and do not leak internal data.
 - [ ] No secrets, credentials or personal data; test data is synthetic.
 - [ ] Security hotspots raised by SonarQube on this change are reviewed.
-- [ ] The AI review findings table is filled in, and the reasons for rejections are sound.
+- [ ] The AI review findings table is filled in, each finding starts with its severity, and the reasons for rejections are sound.
 - [ ] The pull request has its AI label (section 6.2); the `AI label` check fails without it.
 - [ ] Documentation that the change affects is updated (API documentation, `CLAUDE.md`, this manual).
 - [ ] The reviewer can explain the change; anyone may be asked to explain any merged code.
@@ -252,6 +252,7 @@ A story is done when all of the following hold:
 | Backend | Spotless check → unit tests (Surefire) → integration and Cucumber tests (Failsafe, Testcontainers) → JaCoCo → OWASP Dependency-Check → SonarQube |
 | Frontend | ESLint and Prettier check → Vitest with coverage → build → `npm audit` → SonarQube |
 | Simulator | ruff → pytest with coverage → `pip-audit` → SonarQube |
+| Tools | ruff → pytest with coverage → SonarQube, for the AI review findings script (section 6.7); it has no runtime dependencies to audit |
 | AI review | Advisory review of non-draft pull requests from this repository, when opened, reopened or marked ready (section 6.6) |
 
 The workflow always starts, and every component job runs in parallel on every push and pull request; none is conditional, so a missing or moved project file fails its job instead of skipping it. A final summary job depends on all of them, runs with `if: always()` and fails unless every `needs.<job>.result` is `success`; a `failure`, `cancelled` or `skipped` result fails it. Without `if: always()`, the summary job would itself be skipped when a component job fails, and branch protection treats a skipped required check as passing. It is the required status check. Path filters at workflow level are not used, because a workflow that never starts would leave a required check waiting forever. On `main`, the test reports are also imported into Xray (section 2.3).
@@ -325,7 +326,7 @@ Failing tests fail the job, and the failed job blocks the merge through the requ
 
 - Named `*IT.java` and run by Maven Failsafe in the `verify` phase, separately from unit tests run by Surefire.
 - **Persistence:** repositories and Flyway migrations against PostgreSQL in Testcontainers, never an in-memory database.
-- **REST API:** controllers with the full Spring context and REST Assured, including authorization per role and error responses.
+- **REST API:** controllers with the full Spring context and REST Assured, including authorization per role and error responses. `RoleAccessMatrixIT` (RIA-86) calls every endpoint with a real Keycloak token for each role and checks allowed, 403 and 401, including tokens with edited claims or signed by another key; it fails when an endpoint is missing from its matrix, so every new endpoint must declare its roles there.
 - **Simulator adapter:** against Mosquitto in Testcontainers: telemetry messages update vehicle state; commands (lock, unlock) are published correctly.
 - **Simulator contract:** the MQTT message formats are defined as JSON Schemas in the repository. The simulator's tests validate what it emits, and the backend's tests validate what the adapter accepts. A replacement simulator only has to meet the same schemas.
 - **Payment adapter:** against [WireMock](https://wiremock.org/) stubs of the Stripe API, so CI needs no network or Stripe key ([ADR 0008](../../architecture/adr/0008-stripe-test-mode.md)). The stubs cover success and the failures the adapter must classify: transient (network error, 5xx, rate limit) and permanent (card declined, `authentication_required`). stripe-mock was not chosen because it cannot return these failures. The MVP uses no webhooks. Stripe test mode is used in staging and end-to-end tests, which also catch stubs that drift from the real API.
@@ -458,13 +459,29 @@ Two stories, chosen by the Product Owner from the core stories, are generated by
 - **Story 1 (I2):** RIA-56 Register a hub, from its approved Gherkin scenarios ([`RIA-56-register-hub.feature`](../../../backend/src/test/resources/features/RIA-56-register-hub.feature)), through the agent flow of section 6.3: [PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35), with its human review and follow-up fixes in [PR #43](https://github.com/TQS-RiaRide/RIARide/pull/43).
 - **Story 2 (I3):** from an [OpenSpec](https://github.com/Fission-AI/OpenSpec) change proposal, reviewed by the team before generation.
 
-For each, this section will link the specification, the agent's pull request and its human review, and record what had to be corrected and why.
+For each, this section links the specification, the agent's pull request and its human review, and records what had to be corrected and why.
+
+#### Story 1: Register a hub (RIA-56)
+
+What the human review of [PR #35](https://github.com/TQS-RiaRide/RIARide/pull/35) (`ai:generated`) had to correct, summarized from the full record in [RIA-168](https://riaride.atlassian.net/browse/RIA-168):
+
+| Step | What happened | Correction |
+|---|---|---|
+| Before generation | The feature file used `/api/hubs` | Changed to `/api/v1/hubs` to match the architecture, before any agent ran |
+| Checkpoint 1 (test author) | The tests were correct, but the agent found 6 gaps in the specification that it could not decide | The Product Owner settled 7 points: a duplicate name gets 409; OPERATOR and ADMIN may register a hub; names are at most 120 characters, compared exactly and trimmed; the hotel is identified by its name; the story has no GET endpoint. The test author updated the tests twice, and a person fixed the feature file layout once |
+| Checkpoint 2 (implementer) | No test was changed (empty `git diff` on the tests); the build was green | Two decisions outside the specification were accepted: fractions are refused in whole-number fields across the API, and names cannot contain control characters |
+| Checkpoint 3 (reviewer agent) | 8 findings: 0 HIGH, 2 MEDIUM, 6 LOW | 6 accepted. 3 needed code fixes, made through another test author → implementer round: the wrong error reason for a tourist spot with an unknown hotel, Unicode control and format characters accepted in the hub name, and the same for the `hotel` field (added by the Product Owner). 1 was a missing test for the duplicate-name race; the code was already right. 2 were documentation only. 2 rejected: a `Location` header pointing to a GET that does not exist yet, and `created_at` using the database clock. The missing `ai:*` label was also added |
+
+The record shows three things. No HIGH defect reached the pull request. Most of the human effort went into business decisions the specification left open, plus 3 small robustness fixes. The agents never changed tests they did not own. One lesson for story 2: settle the open business questions before generation, not at the first checkpoint. The same ASCII-only control-character check was then found in the guest name (RIA-50) and logged as a follow-up.
 
 ### 6.6 Agents in the CI pipeline
 
 - **AI review (AI3):** [`ai-review.yml`](../../../.github/workflows/ai-review.yml) reviews non-draft pull requests from this repository when they are opened, reopened or marked ready for review. It skips Dependabot and fork pull requests, and it does not run on each push; a new review is requested by re-running the job.
-- **PR summary (AI7):** a comment summarizing the change and its risk, posted when a pull request is opened.
-- **Failure triage (AI7):** when CI fails on a pull request, an agent reads the logs and posts a comment with the likely cause and a suggested fix.
+- **PR summary (AI7):** [`ai-pr-summary.yml`](../../../.github/workflows/ai-pr-summary.yml) posts one comment, headed *AI PR summary*, when a non-draft pull request from this repository is opened or marked ready for review: what changes by module, the risk (Low, Medium or High, raised for migrations, security configuration, concurrency, public API or MQTT contract changes, payments and CI files), where to look first, and the tests added. It describes and does not review: findings are the AI review's.
+- **Failure triage (AI7):** [`ai-failure-triage.yml`](../../../.github/workflows/ai-failure-triage.yml) runs when a CI run of a pull request from this repository fails (`workflow_run`). The agent reads the failed jobs' logs and the diff and posts one comment per commit, headed *AI CI failure triage*: the failed job and step, the likely cause with the key log lines, whether it is the code, the tests or the infrastructure, a suggested fix and its confidence. It is a separate workflow, so it never decides whether CI passes, and it checks out the default branch only, never the pull request's code.
+- **When they run:** `claude-code-action` only runs when the workflow file is identical to the version on the default branch (`main`), and `workflow_run` always uses that version. So both agents post nothing until they are released to `main`, and the summary skips itself on a pull request that edits its own file.
+
+Both skip pull requests opened by Dependabot (checked on the author, not on whoever re-runs the job) and from forks, which have no access to the secret. They use the same `CLAUDE_CODE_OAUTH_TOKEN` and the same restriction as the AI review ([`docs/ai-review.md`](../../ai-review.md)): `--allowedTools` allows only read-only tools, `gh pr comment <n> --body` on the current pull request, `gh pr diff` and `gh pr view` on it and, for the triage, `gh run view` on the failed run. The prompts treat the pull request text, the diff and the logs as data, never as instructions.
 
 All agent jobs have permission only to read the code and comment on pull requests. They cannot approve, request changes, push or merge, and branch protection requires a human approval.
 
@@ -473,7 +490,7 @@ All agent jobs have permission only to read the code and comment on pull request
 *Written in I5*, from data collected on every pull request from now on:
 
 - **Share of AI-produced changes:** each pull request has one label, `ai:none`, `ai:assisted` or `ai:generated`, counted with `gh pr list --label`. The `AI label` check ([`ai-label.yml`](../../../.github/workflows/ai-label.yml)) fails a pull request with none of the three, more than one, or an unknown `ai:*` label; it is a required check in the branch protection of `dev` and `main`, so it blocks the merge. Dependabot pull requests get `ai:none` automatically. The earlier pull requests that have no label (#3 to #14, #17 and #20) will be labelled by the QA Engineer from their template declarations before the I5 analysis.
-- **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so a script can count them.
+- **AI review findings:** accepted and rejected, by severity, from the findings tables. Each row starts with the severity (`HIGH: ...`), so [`tools/ai-review-findings`](../../../tools/ai-review-findings/README.md) can count them, in total and per `ai:*` label. Rows recorded before this convention (RIA-108) have no severity and are counted as `UNRATED`.
 - **Agent actions in Jira and SonarQube:** agent comments on stories and fixes of SonarQube issues proposed by agents (section 6.4), and how many of those fixes needed human rework.
 - **Defects and rework traced to AI:** Jira bugs and follow-up pull requests that name the original pull request, and quality gate failures on AI-labelled pull requests.
 

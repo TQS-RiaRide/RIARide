@@ -49,13 +49,15 @@ public class FleetSteps {
   }
 
   // A hub at the hotel of the same name, with the e-bikes of the table docked there. Columns:
-  // code, status ("available", "in use", ...) and battery (%).
+  // code, status ("available", "in use", ...) and battery (%). A bike in use is out on a trip, so
+  // it is not docked and takes no slot.
   @Given("a hub {string} with these bikes:")
   public void aHubWithTheseBikes(String hubName, DataTable bikes) {
     var hubId = aHotelHub(hubName);
     for (var bike : bikes.asMaps()) {
       var status = bike.get("status").trim().toUpperCase(Locale.ROOT).replace(' ', '_');
-      insertBike(bike.get("code"), status, Integer.valueOf(bike.get("battery")), hubId);
+      var dockedAt = "IN_USE".equals(status) ? null : hubId;
+      insertBike(bike.get("code"), status, Integer.valueOf(bike.get("battery")), dockedAt);
     }
   }
 
