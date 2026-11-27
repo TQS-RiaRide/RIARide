@@ -50,8 +50,17 @@ export default function OpenTicketForm({ getToken, submit = openTicket }: OpenTi
     setSending(true);
     setOpened(null);
     setFailure(null);
+    let token: string;
     try {
-      const ticket = await submit(await getToken(), { vehicleCode, description });
+      token = await getToken();
+    } catch {
+      // The session cannot be refreshed: retrying fails every time, as after a 401.
+      setFailure({ kind: 'sessionExpired', fields: [] });
+      setSending(false);
+      return;
+    }
+    try {
+      const ticket = await submit(token, { vehicleCode, description });
       setOpened(ticket);
       setVehicleCode('');
       setDescription('');
