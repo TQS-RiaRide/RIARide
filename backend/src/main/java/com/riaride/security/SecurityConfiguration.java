@@ -52,6 +52,12 @@ class SecurityConfiguration {
                 // Hub registration (RIA-56): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs")
                 .hasAnyRole("OPERATOR", "ADMIN")
+                // Rules of use (RIA-96): hotel managers and admins set the hub capacity and the
+                // maximum trip duration.
+                .requestMatchers(HttpMethod.PUT, "/api/v1/hubs/*/capacity")
+                .hasAnyRole("HOTEL_MANAGER", "ADMIN")
+                .requestMatchers("/api/v1/usage-rules")
+                .hasAnyRole("HOTEL_MANAGER", "ADMIN")
                 // Vehicle registration at a hub (RIA-57): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs/*/vehicles")
                 .hasAnyRole("OPERATOR", "ADMIN")

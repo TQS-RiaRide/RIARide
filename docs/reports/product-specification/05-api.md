@@ -12,6 +12,9 @@ Implemented so far, on `dev`:
 | `POST /api/v1/hubs` | Operator, admin | Registers a hub with its capacity | 6.1 (RIA-56) |
 | `POST /api/v1/hubs/{hubId}/vehicles` | Operator, admin | Registers a bike at a hub with a free slot | 6.2 (RIA-57) |
 | `GET /api/v1/hubs/{hubId}/vehicles?type=` | Guest, operator, admin | Lists the vehicles at a hub, optionally of one type, each marked bookable | 3.1 and 9.2 (RIA-53, RIA-59) |
+| `PUT /api/v1/hubs/{hubId}/capacity` | Hotel manager, admin | Sets how many bikes a hub takes; a hotel manager changes the hubs of their hotel and the tourist spots, and a capacity below the bikes docked is a 409 | 8.2 (RIA-96) |
+| `GET /api/v1/usage-rules` | Hotel manager, admin | Reads the rules of use in force: the maximum trip duration and when it took effect | 8.2 (RIA-96) |
+| `PUT /api/v1/usage-rules` | Hotel manager, admin | Changes the maximum trip duration (15 min to 24 h), for trips that start from then on | 8.2 (RIA-96) |
 | `PUT /api/v1/vehicles/{id}/status` | Operator, admin | Activates (`AVAILABLE`), deactivates (`MAINTENANCE`) or retires (`RETIRED`) a bike; a retired bike leaves its hub, and a change the lifecycle does not allow, such as retiring a bike in use, is a 409 | 6.3 (RIA-91) |
 | `POST /api/v1/trips` | Guest | Starts a trip on a bike now; the trip starts when telemetry confirms the unlock | 3.2 (RIA-54) |
 | `GET /api/v1/trips/{id}` | Guest | Reads one of the guest's own trips | 3.2 (RIA-54) |

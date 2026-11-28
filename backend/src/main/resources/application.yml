@@ -81,9 +81,9 @@ riaride:
     # How often ReservationExpiryJob looks for holds that ended unused (BR11).
     reservation-expiry-check-interval: 30s
     overtime:
-      # BR7: overtime starts after 3 h, per started 15-minute block, at 2.00 EUR per block and with
-      # no grace period (Product Owner decisions, RIA-88).
-      max-trip-duration: 3h
+      # BR7: overtime is charged per started 15-minute block, at 2.00 EUR per block and with no
+      # grace period (Product Owner decisions, RIA-88). It starts after the maximum trip duration,
+      # a rule of use the backoffice sets (RIA-96, table usage_rule; 3 h until changed).
       grace: 0m
       price-per-block-cents: 200
       # A charge that failed for now is retried after 1 min, then 2, 4 and 8 min, then left to the
