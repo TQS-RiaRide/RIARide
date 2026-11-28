@@ -107,6 +107,21 @@ class RoleAccessMatrixIT {
               "/api/v1/hubs/{hubId}/vehicles",
               "/api/v1/hubs/" + ANY_ID + "/vehicles",
               Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
+          new Endpoint(
+              "PUT",
+              "/api/v1/hubs/{hubId}/capacity",
+              "/api/v1/hubs/" + ANY_ID + "/capacity",
+              Set.of(Role.HOTEL_MANAGER, Role.ADMIN)),
+          new Endpoint(
+              "GET",
+              "/api/v1/usage-rules",
+              "/api/v1/usage-rules",
+              Set.of(Role.HOTEL_MANAGER, Role.ADMIN)),
+          new Endpoint(
+              "PUT",
+              "/api/v1/usage-rules",
+              "/api/v1/usage-rules",
+              Set.of(Role.HOTEL_MANAGER, Role.ADMIN)),
           new Endpoint("POST", "/api/v1/passes", "/api/v1/passes", Set.of(Role.GUEST)),
           new Endpoint(
               "PUT",
@@ -134,6 +149,11 @@ class RoleAccessMatrixIT {
               "/api/v1/hubs/{hubId}/vehicles",
               "/api/v1/hubs/not-a-uuid/vehicles?type=NOT_A_TYPE",
               Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
+          new Endpoint(
+              "PUT",
+              "/api/v1/hubs/{hubId}/capacity",
+              "/api/v1/hubs/not-a-uuid/capacity",
+              Set.of(Role.HOTEL_MANAGER, Role.ADMIN)),
           new Endpoint(
               "PUT",
               "/api/v1/vehicles/{id}/status",
