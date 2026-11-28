@@ -6,6 +6,7 @@ import com.riaride.trips.internal.application.StartTripCommand;
 import com.riaride.trips.internal.application.StartTripService;
 import com.riaride.trips.internal.application.TripQueryService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,7 +21,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 // Starting a trip now (RIA-54). The answer is 202 Accepted: the trip is STARTING until telemetry
 // confirms the unlock, so the client follows it at the Location it is given. Ending it at a hub
-// (RIA-55) answers 200 with the ended trip, or 409 with the nearest hubs that have a free slot.
+// (RIA-55) answers 200 with the ended trip, or 409 with the nearest hubs that have a free slot. The
+// guest lists their own trips, newest first (RIA-107).
 @RestController
 @RequestMapping("/api/v1/trips")
 class TripController {
@@ -60,6 +62,12 @@ class TripController {
         .end(new EndTripCommand(authentication.getName(), id, request.hubId()))
         .map(TripResponse::from)
         .orElseThrow(TripNotFoundException::new);
+  }
+
+  @GetMapping
+  @PreAuthorize("hasRole('GUEST')")
+  List<TripResponse> list(JwtAuthenticationToken authentication) {
+    return trips.listForGuest(authentication.getName()).stream().map(TripResponse::from).toList();
   }
 
   @GetMapping("/{id}")

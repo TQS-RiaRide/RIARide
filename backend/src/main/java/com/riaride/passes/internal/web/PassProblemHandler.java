@@ -33,6 +33,11 @@ class PassProblemHandler {
     return problem(HttpStatus.FORBIDDEN, "No active stay", exception.getMessage());
   }
 
+  @ExceptionHandler(NoCurrentPassException.class)
+  ProblemDetail noCurrentPass(NoCurrentPassException exception) {
+    return problem(HttpStatus.NOT_FOUND, "No current pass", exception.getMessage());
+  }
+
   @ExceptionHandler(PassAlreadyOpenException.class)
   ProblemDetail passAlreadyOpen(PassAlreadyOpenException exception) {
     return problem(HttpStatus.CONFLICT, "Pass already open", exception.getMessage());
