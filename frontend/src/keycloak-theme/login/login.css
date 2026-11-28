@@ -1,0 +1,82 @@
+/* Keycloak's pages reuse the app's auth-page frame (features/public/public.css); these are the few
+   pieces only Keycloak needs. */
+
+.kc-page {
+  position: relative;
+  min-height: 100dvh;
+}
+
+.kc-top {
+  position: absolute;
+  top: calc(var(--space-4) + var(--safe-top));
+  right: calc(var(--space-5) + var(--safe-right));
+}
+
+.kc-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.kc-link {
+  color: var(--color-water);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+
+.kc-link:hover {
+  color: var(--color-ink);
+}
+
+.kc-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.kc-user {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 12px;
+  background: var(--color-surface-sunk);
+}
+
+.kc-user-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.kc-actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.kc-button-link,
+.kc-button-block {
+  width: 100%;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.form-note {
+  padding: var(--space-3) var(--space-4);
+  border-radius: 12px;
+  background: var(--color-water-soft);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+}
+
+/* The language menu sits over the frame on phones, so the wordmark leaves it room. */
+@media (max-width: 479px) {
+  .kc-page .auth-page {
+    padding-top: calc(var(--space-6) + var(--hit) + var(--safe-top));
+  }
+}

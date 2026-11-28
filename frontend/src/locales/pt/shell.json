@@ -1,0 +1,39 @@
+{
+  "skip": "Saltar para o conteúdo",
+  "search": "Procurar ou executar um comando",
+  "logOut": "Sair",
+  "account": "A sua conta",
+  "goTo": "Ir para {{place}}",
+  "guestNav": "Principal",
+  "tabs": {
+    "bikes": "Bicicletas",
+    "trips": "Viagens"
+  },
+  "roles": {
+    "GUEST": "Hóspede",
+    "OPERATOR": "Operador",
+    "TECHNICIAN": "Técnico",
+    "HOTEL_MANAGER": "Gestor de hotel",
+    "ADMIN": "Administrador"
+  },
+  "forbidden": {
+    "title": "Esta área não faz parte do seu perfil",
+    "body": "A sua conta pode abrir outras áreas do RiaRide. Peça a um administrador se precisar desta.",
+    "back": "Voltar à minha área"
+  },
+  "crash": {
+    "title": "Este ecrã deixou de funcionar",
+    "body": "Recarregue a página para tentar novamente. Nada do que guardou se perdeu.",
+    "reload": "Recarregar"
+  },
+  "notFound": {
+    "title": "Não há nenhuma página aqui",
+    "body": "A ligação pode estar desatualizada, ou o endereço tem um erro.",
+    "home": "Ir para o início"
+  },
+  "admin": {
+    "title": "A gestão de contas ainda não está disponível",
+    "body": "Gira as contas e os perfis no Keycloak."
+  },
+  "demo": "Demo"
+}

@@ -1,0 +1,58 @@
+{
+  "title": "Vila Ria, at your own pace.",
+  "lead": "E-bikes for guests of the Marés hotels. Pick one up at any hub, leave it at another, and pay only for your pass.",
+  "signUp": "Create an account",
+  "haveAccount": "I have an account",
+  "fine": "You need the stay code the front desk gives you at check-in.",
+  "factsLabel": "How it works",
+  "facts": {
+    "code": {
+      "title": "Sign up with your stay code"
+    },
+    "pass": {
+      "title": "Passes from {{price}}",
+      "body": "One day, three days or your whole stay."
+    },
+    "hubs": {
+      "title": "Leave it at any hub",
+      "body": "Hotels, the historic centre, the salt pans: end your trip wherever there is a free slot."
+    }
+  },
+  "staff": "RodaLeve team or Grupo Marés staff?",
+  "staffLink": "Log in to the backoffice",
+  "redirecting": "Taking you to the login page…",
+  "demo": {
+    "title": "Sign in as",
+    "lead": "Demo: pick a role.",
+    "personas": {
+      "guest": "Guest at Marés Praia",
+      "operator": "Fleet operator, RodaLeve",
+      "technician": "Technician, RodaLeve",
+      "manager": "Hotel manager, Grupo Marés",
+      "admin": "Administrator"
+    }
+  },
+  "signUpForm": {
+    "title": "Create your account",
+    "stayCode": "Stay code",
+    "stayCodeHint": "On your key card, e.g. PRAIA-7K4Q",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint_one": "At least {{count}} character.",
+    "passwordHint_other": "At least {{count}} characters.",
+    "submit": "Create account",
+    "sending": "Creating…",
+    "created": "Welcome to RiaRide.",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log in",
+    "errors": {
+      "email": "Enter a valid email address.",
+      "password": "The password needs at least 8 characters.",
+      "stayCode": "Enter the stay code from the front desk.",
+      "stayCodeUnknown": "This stay code is not valid. Check it with the front desk.",
+      "stayEnded": "This stay has already ended, so its code no longer works. Ask the front desk.",
+      "taken": "There is already an account with this email. Log in instead.",
+      "invalid": "Check the fields and try again."
+    }
+  }
+}

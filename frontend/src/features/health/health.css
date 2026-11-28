@@ -1,0 +1,32 @@
+.health {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+}
+
+.health:empty {
+  display: none;
+}
+
+.health strong {
+  font-weight: 500;
+}
+
+.health-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-ink-muted);
+}
+
+.health-down {
+  background: var(--color-action-bright);
+}
+
+/* Also used by guest.css */
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}

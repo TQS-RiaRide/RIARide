@@ -1,0 +1,114 @@
+.tickets-page {
+  max-width: var(--shell-max);
+}
+
+.tickets-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .tickets-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tickets-layout > .open-ticket {
+    order: -1;
+  }
+}
+
+.tickets {
+  display: grid;
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+.ticket {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 12px;
+}
+
+.ticket + .ticket {
+  box-shadow: 0 -1px 0 var(--color-line-soft);
+}
+
+.ticket-code {
+  font-weight: 600;
+}
+
+.ticket-main {
+  display: grid;
+  min-width: 0;
+}
+
+.ticket-desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.ticket-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
+}
+
+.ticket-due {
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+}
+
+.ticket-urgent {
+  background: var(--color-action-soft);
+}
+
+.ticket-urgent .ticket-due {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.ticket-overdue {
+  background: var(--color-danger-strong);
+  color: var(--color-on-action);
+}
+
+.ticket-overdue .ticket-due {
+  color: var(--color-on-action);
+  font-weight: 600;
+}
+
+.tickets-panel {
+  padding-top: var(--space-2);
+}
+
+.open-ticket {
+  padding-bottom: var(--space-5);
+}
+
+.open-ticket-head {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5) var(--space-2);
+}
+
+.open-ticket-intro {
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+  max-width: 52ch;
+}
+
+.open-ticket-form {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-5) 0;
+}
+
+.counter {
+  justify-self: end;
+}

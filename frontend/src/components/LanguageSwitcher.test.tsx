@@ -32,3 +32,15 @@ describe('LanguageSwitcher', () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('pt');
   });
 });
+
+describe('LanguageSwitcher with its own change handler', () => {
+  it('hands the chosen language over and leaves the UI language alone', () => {
+    const chosen: string[] = [];
+    render(<LanguageSwitcher compact onChange={(language) => chosen.push(language)} />);
+
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'pt' } });
+
+    expect(chosen).toEqual(['pt']);
+    expect(i18n.language).toBe('en');
+  });
+});

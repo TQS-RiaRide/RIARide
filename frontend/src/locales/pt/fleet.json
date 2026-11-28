@@ -1,0 +1,105 @@
+{
+  "title": "Frota",
+  "loading": "A carregar a frota…",
+  "refreshing": "A atualizar…",
+  "updated": "Atualizado {{when}}",
+  "actions": {
+    "registerHub": "Registar hub",
+    "registerBike": "Registar bicicleta",
+    "search": "Procurar bicicletas",
+    "lowBattery": "Mostrar bicicletas com pouca bateria"
+  },
+  "hubs": {
+    "title": "Ocupação dos hubs",
+    "countLabel": "{{docked}} de {{capacity}} lugares ocupados",
+    "level": {
+      "full": "Cheio",
+      "low": "Quase vazio"
+    },
+    "suggestion_one": "Mover {{count}} bicicleta de {{from}} para {{to}}.",
+    "suggestion_other": "Mover {{count}} bicicletas de {{from}} para {{to}}.",
+    "emptyTitle": "Ainda sem hubs",
+    "emptyBody": "Registe o primeiro hub para começar a colocar bicicletas."
+  },
+  "tickets": {
+    "title": "Pedidos por prazo SLA",
+    "all": "Todos os pedidos"
+  },
+  "table": {
+    "title": "Bicicletas",
+    "search": "Código ou hub",
+    "filters": "Filtrar bicicletas",
+    "filter": {
+      "ALL": "Todas",
+      "AVAILABLE": "Disponíveis",
+      "RESERVED": "Reservadas",
+      "IN_USE": "Em uso",
+      "MAINTENANCE": "Manutenção",
+      "RETIRED": "Retiradas",
+      "LOW_BATTERY": "Bateria fraca"
+    },
+    "clearHub": "Mostrar todos os hubs",
+    "bike": "Bicicleta",
+    "hub": "Hub",
+    "status": "Estado",
+    "battery": "Bateria",
+    "actions": "Ações",
+    "onTrip": "Numa viagem",
+    "actionsFor": "Ações para {{code}}",
+    "changeStatus": "Mudar estado",
+    "openTicket": "Abrir um pedido",
+    "emptyTitle": "Ainda sem bicicletas",
+    "emptyBody": "Registe bicicletas num hub para as ver aqui.",
+    "noMatchTitle": "Nenhuma bicicleta corresponde",
+    "noMatchBody": "Limpe a pesquisa ou escolha outro filtro."
+  },
+  "status": {
+    "changed": "{{code}} está agora {{status}}.",
+    "restored": "{{code}} voltou ao que estava.",
+    "undo": "Anular",
+    "refused": "{{code}} não pode mudar para esse estado agora.",
+    "notFound": "{{code}} já não existe."
+  },
+  "registerHub": {
+    "title": "Registar um hub",
+    "name": "Nome",
+    "kind": "Tipo",
+    "kinds": {
+      "HOTEL": "Hotel",
+      "TOURIST_SPOT": "Ponto turístico"
+    },
+    "hotel": "Hotel",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "capacity": "Lugares",
+    "submit": "Registar hub",
+    "done_one": "{{name}} registado com {{count}} lugar.",
+    "done_other": "{{name}} registado com {{count}} lugares.",
+    "errors": {
+      "name": "Dê um nome ao hub.",
+      "hotel": "Escolha o hotel deste hub.",
+      "latitude": "Indique a latitude como número, por exemplo 40.6405.",
+      "longitude": "Indique a longitude como número, por exemplo -8.6538.",
+      "capacity": "O hub precisa de pelo menos 1 lugar.",
+      "taken": "Já existe um hub com este nome.",
+      "invalid": "Verifique os campos do hub."
+    }
+  },
+  "registerBike": {
+    "title": "Registar uma bicicleta",
+    "hub": "Hub",
+    "hubOption_one": "{{name}} · {{count}} lugar livre",
+    "hubOption_other": "{{name}} · {{count}} lugares livres",
+    "noRoom": "Todos os hubs estão cheios. Liberte um lugar ou registe um hub primeiro.",
+    "code": "Código da bicicleta",
+    "codeHint": "p. ex. EB-701",
+    "another": "Adicionar outra",
+    "submit": "Registar bicicleta",
+    "done": "{{code}} registada.",
+    "errors": {
+      "full": "Este hub não tem lugar livre. Escolha outro hub.",
+      "taken": "Já existe uma bicicleta com este código.",
+      "invalid": "Use letras, algarismos e hífenes, por exemplo EB-701."
+    }
+  }
+}

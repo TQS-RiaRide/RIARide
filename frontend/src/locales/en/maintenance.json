@@ -1,0 +1,32 @@
+{
+  "openTicket": {
+    "heading": "Open a ticket",
+    "intro": "The bike leaves service. Repair within 24 h.",
+    "vehicleCode": "Bike code",
+    "vehicleCodeHint": "e.g. EB-701",
+    "description": "Fault",
+    "submit": "Open ticket",
+    "sending": "Opening…",
+    "opened": "Ticket opened for {{code}}.",
+    "inMaintenance": "The bike is in maintenance until it is repaired.",
+    "deadline": "Repair deadline: {{deadline}}.",
+    "errors": {
+      "vehicleCode": "Enter the code of the bike.",
+      "description": "Describe the fault in up to 500 characters.",
+      "invalid": "Check the fields of the ticket.",
+      "notFound": "No bike has this code.",
+      "retired": "This bike is retired, so it cannot get a ticket.",
+      "forbidden": "Your account cannot open tickets.",
+      "sessionExpired": "Your session has ended. Log in again to open the ticket.",
+      "unexpected": "The ticket could not be opened. Try again."
+    }
+  },
+  "list": {
+    "title": "Open tickets",
+    "emptyTitle": "No open tickets",
+    "emptyBody": "Every bike is in service.",
+    "overdue": "{{time}} late",
+    "left": "{{time}} left"
+  },
+  "pending": "The bike is on a trip: it moves to maintenance when the trip ends."
+}

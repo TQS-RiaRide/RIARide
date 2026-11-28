@@ -1,6 +1,7 @@
 {
   "realm": "riaride",
   "displayName": "RiaRide",
+  "loginTheme": "riaride",
   "enabled": true,
   "sslRequired": "external",
   "registrationAllowed": false,
