@@ -78,4 +78,17 @@ describe('Workspaces', () => {
       'Backoffice do hotel',
     );
   });
+
+  it('shows the content given for the open workspace only', () => {
+    render(
+      <Workspaces
+        workspaces={['OPERATOR_DASHBOARD', 'MAINTENANCE_TICKETS']}
+        content={{ MAINTENANCE_TICKETS: <p>Ticket form</p> }}
+      />,
+    );
+
+    expect(screen.queryByText('Ticket form')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Maintenance tickets' }));
+    expect(screen.getByText('Ticket form')).toBeInTheDocument();
+  });
 });

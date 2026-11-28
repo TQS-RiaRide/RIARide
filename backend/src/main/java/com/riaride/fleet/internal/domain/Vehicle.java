@@ -1,5 +1,6 @@
 package com.riaride.fleet.internal.domain;
 
+import com.riaride.fleet.FaultHandling;
 import com.riaride.fleet.VehicleNotBookableException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -62,6 +63,11 @@ public class Vehicle implements Persistable<UUID> {
 
   @Column(name = "last_telemetry_at")
   private Instant lastTelemetryAt;
+
+  // A fault was reported while the bike was in use (RIA-92): the trip continues, and the trip end
+  // moves the bike to maintenance instead of available.
+  @Column(name = "maintenance_pending", nullable = false)
+  private boolean maintenancePending;
 
   // Telemetry updates the battery while bookings and maintenance change the status: without the
   // lock, a transaction that loaded the vehicle earlier would write its old status back.
@@ -162,7 +168,8 @@ public class Vehicle implements Persistable<UUID> {
   }
 
   // The trip ended at a hub with a free slot (RIA-55, BR10): the vehicle is docked there and can be
-  // booked again. Whether the hub has a free slot needs the other vehicles, so
+  // booked again, unless a fault was reported during the trip (RIA-92): then it is in maintenance.
+  // Whether the hub has a free slot needs the other vehicles, so
   // VehicleDockingService checks it.
   public void endRide(UUID hubId) {
     if (hubId == null) {
@@ -171,8 +178,33 @@ public class Vehicle implements Persistable<UUID> {
     if (status != VehicleStatus.IN_USE) {
       throw new IllegalStateException("Only a vehicle in use can end a ride");
     }
-    this.status = VehicleStatus.AVAILABLE;
+    this.status = maintenancePending ? VehicleStatus.MAINTENANCE : VehicleStatus.AVAILABLE;
+    this.maintenancePending = false;
     this.hubId = hubId;
+  }
+
+  // A fault was reported on the bike (RIA-92): it leaves service so that no guest can book it. An
+  // available or reserved bike moves to maintenance at its hub; a bike in use keeps its status
+  // until its trip ends (endRide); a bike already in maintenance stays as it is. A retired bike
+  // never returns to the lifecycle.
+  public FaultHandling reportFault() {
+    return switch (status) {
+      case AVAILABLE -> {
+        this.status = VehicleStatus.MAINTENANCE;
+        yield FaultHandling.OUT_OF_SERVICE;
+      }
+      case RESERVED -> {
+        this.status = VehicleStatus.MAINTENANCE;
+        yield FaultHandling.OUT_OF_SERVICE_WAS_RESERVED;
+      }
+      case IN_USE -> {
+        this.maintenancePending = true;
+        yield FaultHandling.PENDING_UNTIL_TRIP_ENDS;
+      }
+      case MAINTENANCE -> FaultHandling.ALREADY_OUT_OF_SERVICE;
+      case RETIRED ->
+          throw new VehicleStatusChangeRefusedException(status, VehicleStatus.MAINTENANCE);
+    };
   }
 
   // A reading older than the last one is ignored: with QoS 1, a redelivered or late message must
@@ -225,6 +257,10 @@ public class Vehicle implements Persistable<UUID> {
 
   public UUID getHubId() {
     return hubId;
+  }
+
+  public boolean isMaintenancePending() {
+    return maintenancePending;
   }
 
   public Instant getLastTelemetryAt() {

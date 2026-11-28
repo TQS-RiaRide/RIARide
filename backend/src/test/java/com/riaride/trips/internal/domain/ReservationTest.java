@@ -105,4 +105,40 @@ class ReservationTest {
     assertThatThrownBy(reservation::expire).isInstanceOf(IllegalStateException.class);
     assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.USED);
   }
+
+  // A fault was reported on the reserved bike (RIA-92): it is in maintenance, so the hold ends.
+  @Requirement("RIA-92")
+  @Test
+  void shouldBeCancelledWhenTheBikeLeavesService() {
+    var reservation = Reservation.hold(PASS, EB_201, NOW, HOLD);
+
+    reservation.cancel();
+
+    assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+  }
+
+  @Requirement("RIA-92")
+  @Test
+  void shouldOnlyCancelAnActiveReservation() {
+    var used = Reservation.hold(PASS, EB_201, NOW, HOLD);
+    used.markUsed();
+    var expired = Reservation.hold(PASS, EB_201, NOW, HOLD);
+    expired.expire();
+
+    assertThatThrownBy(used::cancel).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(expired::cancel).isInstanceOf(IllegalStateException.class);
+    assertThat(used.getStatus()).isEqualTo(ReservationStatus.USED);
+    assertThat(expired.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+  }
+
+  @Requirement("RIA-92")
+  @Test
+  void shouldNotUseOrExpireACancelledReservation() {
+    var reservation = Reservation.hold(PASS, EB_201, NOW, HOLD);
+    reservation.cancel();
+
+    assertThatThrownBy(reservation::markUsed).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(reservation::expire).isInstanceOf(IllegalStateException.class);
+    assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+  }
 }

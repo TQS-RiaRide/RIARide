@@ -87,6 +87,15 @@ public class Reservation implements Persistable<UUID> {
     this.status = ReservationStatus.EXPIRED;
   }
 
+  // A fault was reported on the bike, which is now in maintenance (RIA-92): the hold ends, so the
+  // pass can hold another bike.
+  public void cancel() {
+    if (status != ReservationStatus.ACTIVE) {
+      throw new IllegalStateException("Only an active reservation can be cancelled");
+    }
+    this.status = ReservationStatus.CANCELLED;
+  }
+
   // Codes are unique regardless of case (V6), so eb-201 is the same bike as EB-201.
   public boolean isFor(String code) {
     return vehicleCode.equalsIgnoreCase(code);

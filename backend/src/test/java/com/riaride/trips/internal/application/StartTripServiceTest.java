@@ -158,13 +158,14 @@ class StartTripServiceTest {
     verifyNoInteractions(passes, vehicles, reservations, events);
   }
 
-  // The failed start left the bike reserved for this pass: the fleet is not asked again.
+  // The failed start left the bike reserved for this pass: the fleet only confirms it still is.
   @Requirement("RIA-54")
   @Test
   void shouldReuseActiveReservationForSameBikeAfterFailedStart() {
     var held = Reservation.hold(PASS, EB_201, NOW.minusSeconds(120), Duration.ofMinutes(15));
     when(reservations.findByPassIdAndStatus(PASS, ReservationStatus.ACTIVE))
         .thenReturn(Optional.of(held));
+    when(vehicles.isReserved(VEHICLE)).thenReturn(true);
 
     var trip = service.start(start("EB-201"));
 
@@ -175,12 +176,56 @@ class StartTripServiceTest {
     verify(events).publishEvent(new TripStartRequested("EB-201"));
   }
 
+  // A ticket took the held bike out of service and its reservation was not cancelled yet (the
+  // listener runs after the ticket commits, or failed). The hold is cancelled, as the listener
+  // would
+  // have done, and the bike is reserved afresh, which the fleet refuses: no trip, no unlock.
+  @Requirement("RIA-92")
+  @Test
+  void shouldRefuseToReuseHoldWhoseBikeIsNoLongerReserved() {
+    var held = Reservation.hold(PASS, EB_201, NOW.minusSeconds(120), Duration.ofMinutes(15));
+    when(reservations.findByPassIdAndStatus(PASS, ReservationStatus.ACTIVE))
+        .thenReturn(Optional.of(held));
+    when(vehicles.isReserved(VEHICLE)).thenReturn(false);
+    when(vehicles.reserve("EB-201")).thenThrow(new VehicleNotBookableException());
+
+    assertThatThrownBy(() -> service.start(start("EB-201")))
+        .isInstanceOf(VehicleNotBookableException.class);
+
+    verify(trips, never()).saveAndFlush(any());
+    verifyNoInteractions(events);
+  }
+
+  // Same case, but the guest picks another bike: the stale hold no longer blocks the pass for up to
+  // 15 minutes (BR6, BR11). The bike in maintenance is not released.
+  @Requirement("RIA-92")
+  @Test
+  void shouldCancelHoldWhoseBikeIsNoLongerReservedAndReserveAnotherBike() {
+    var held = Reservation.hold(PASS, EB_201, NOW.minusSeconds(120), Duration.ofMinutes(15));
+    var eb202 = new ReservedVehicle(UUID.randomUUID(), "EB-202", HUB);
+    when(reservations.findByPassIdAndStatus(PASS, ReservationStatus.ACTIVE))
+        .thenReturn(Optional.of(held));
+    when(vehicles.isReserved(VEHICLE)).thenReturn(false);
+    when(vehicles.reserve("EB-202")).thenReturn(eb202);
+
+    var trip = service.start(start("EB-202"));
+
+    assertThat(held.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+    var order = inOrder(reservations, vehicles);
+    order.verify(reservations).saveAndFlush(held);
+    order.verify(vehicles).reserve("EB-202");
+    verify(vehicles, never()).release(VEHICLE);
+    assertThat(trip.getVehicleCode()).isEqualTo("EB-202");
+    assertThat(trip.getReservationId()).isNotEqualTo(held.getId());
+  }
+
   @Requirement("RIA-54")
   @Test
   void shouldRefuseOtherBikeWhileReservationHeld() {
     var held = Reservation.hold(PASS, EB_201, NOW.minusSeconds(120), Duration.ofMinutes(15));
     when(reservations.findByPassIdAndStatus(PASS, ReservationStatus.ACTIVE))
         .thenReturn(Optional.of(held));
+    when(vehicles.isReserved(VEHICLE)).thenReturn(true);
 
     assertThatThrownBy(() -> service.start(start("EB-202")))
         .isInstanceOf(ReservationHeldForAnotherBikeException.class);
