@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// The sign-up form. toString hides the password and the stay code (QA Manual 3.4).
+// The sign-up form. toString hides the email, the password and the stay code (QA Manual 3.4).
 record SignUpGuestRequest(
     @NotBlank @Email @Size(max = 254) String email,
     @NotBlank @Size(min = 8, max = 128) String password,
@@ -23,9 +23,7 @@ record SignUpGuestRequest(
 
   @Override
   public String toString() {
-    return "SignUpGuestRequest[email="
-        + email
-        + ", password=********, stayCode=********, locale="
+    return "SignUpGuestRequest[email=********, password=********, stayCode=********, locale="
         + locale
         + "]";
   }
