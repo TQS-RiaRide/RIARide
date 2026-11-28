@@ -1,6 +1,8 @@
 # RiaRide
 
 [![CI](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml)
+[![Quality gate](https://sonarcloud.io/api/project_badges/measure?project=TQS-RiaRide_RIARide&metric=alert_status)](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=TQS-RiaRide_RIARide&metric=coverage)](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide)
 
 ## Project abstract
 
@@ -27,3 +29,4 @@
 
 - [Backlog (Jira)](<https://riaride.atlassian.net/jira/software/projects/RIA/boards/1>)
 - [CI pipeline (GitHub Actions)](https://github.com/TQS-RiaRide/RIARide/actions/workflows/ci.yml)
+- [Quality and coverage dashboard (SonarQube Cloud)](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide)

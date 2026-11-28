@@ -293,6 +293,20 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+						<configuration>
+							<!-- Coverage exclusions (QA Manual, section 3.3). Keep in sync
+							     with sonar.coverage.exclusions in sonar-project.properties. -->
+							<excludes>
+								<exclude>com/riaride/RiaRideApplication*.class</exclude>
+								<exclude>com/riaride/ClockConfiguration*.class</exclude>
+								<exclude>com/riaride/accounts/internal/application/AccountsConfiguration*.class</exclude>
+								<exclude>com/riaride/accounts/internal/keycloak/KeycloakConfiguration*.class</exclude>
+								<exclude>com/riaride/fleet/internal/application/FleetConfiguration*.class</exclude>
+								<exclude>com/riaride/trips/internal/application/TripsConfiguration*.class</exclude>
+								<exclude>com/riaride/telemetry/internal/mqtt/DisabledMqttConfiguration*.class</exclude>
+								<exclude>com/riaride/telemetry/internal/mqtt/TelemetryMqttConfiguration*.class</exclude>
+							</excludes>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

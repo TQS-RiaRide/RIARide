@@ -184,7 +184,7 @@ Tests are linked to stories in Xray (scenario tag `@RIA-n`, JUnit `@Requirement(
 ### Quality and CI
 
 - CI on every push and pull request: build, unit and integration tests, quality gate, with a status badge and author notification on failure.
-- SonarQube Cloud with JaCoCo, Vitest LCOV and pytest-cov. Quality gate on new code: coverage ≥ 80 %, duplication ≤ 3 %, A ratings, 100 % hotspots reviewed. It is a required check and blocks the merge.
+- SonarQube Cloud with JaCoCo, Vitest LCOV and pytest-cov ([dashboard](https://sonarcloud.io/project/overview?id=TQS-RiaRide_RIARide)). Coverage exclusions are by path only, and a file with logic is always measured. They are listed in `sonar-project.properties`, mirrored in the JaCoCo, Vitest and coverage.py configs (QA Manual 3.3). Quality gate on new code: coverage ≥ 80 %, duplication ≤ 3 %, A ratings, 100 % hotspots reviewed. It is a required check and blocks the merge.
 - Dependency vulnerability scanning on every build: OWASP Dependency-Check (fails on CVSS ≥ 7), `npm audit --audit-level=high`, `pip-audit`. Trivy scans images before they are pushed.
 - Never weaken or delete a test, or lower a threshold, to make a build pass.
 
