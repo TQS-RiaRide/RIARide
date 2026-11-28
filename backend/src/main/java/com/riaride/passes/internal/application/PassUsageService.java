@@ -76,6 +76,6 @@ class PassUsageService implements PassUsage {
   @Override
   @Transactional(readOnly = true)
   public List<UUID> findEndedPasses(Instant at) {
-    return passes.findIdsByStatusAndExpiresAtLessThanEqual(PassStatus.ACTIVE, at);
+    return passes.findIdsOfEndedPasses(at);
   }
 }

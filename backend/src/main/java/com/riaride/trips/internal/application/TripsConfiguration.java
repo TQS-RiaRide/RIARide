@@ -6,8 +6,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-// Scheduling runs UnlockTimeoutJob (riaride.trips.unlock-timeout-check-interval) and
-// OvertimeRetryJob (riaride.trips.overtime.retry-check-interval).
+// Scheduling runs UnlockTimeoutJob (riaride.trips.unlock-timeout-check-interval),
+// ReservationExpiryJob (riaride.trips.reservation-expiry-check-interval), OvertimeRetryJob
+// (riaride.trips.overtime.retry-check-interval) and EndedPassClosingJob
+// (riaride.trips.ended-pass-check-interval).
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({TripsProperties.class, OvertimeProperties.class})
 @EnableScheduling

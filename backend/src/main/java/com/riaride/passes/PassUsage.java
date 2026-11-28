@@ -29,7 +29,7 @@ public interface PassUsage {
   // pass, after any trip the caller has locked. Joins the caller's transaction.
   boolean closeIfEnded(UUID passId, Instant at);
 
-  // RIA-89: the active passes that have ended by the given time, which may still have a trip in
-  // progress.
+  // RIA-89: the open passes that have ended by the given time: active ones past their expiry, which
+  // may still have a trip in progress, and paid ones never used whose stay has ended.
   List<UUID> findEndedPasses(Instant at);
 }

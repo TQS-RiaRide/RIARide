@@ -15,9 +15,13 @@ import org.springframework.transaction.support.TransactionOperations;
 // Closes the passes that ended (expiry or check-out, BR8, BR9) with no trip in progress (RIA-89). A
 // guest holds only one open pass at a time (RIA-52), so an ended pass left open would stop them
 // buying another. A pass whose trip is still starting or in use is left alone: the trip continues,
-// and its end closes the pass (EndTripService). It lives in trips, since passes cannot depend on
-// trips. Each pass is closed in a transaction of its own; one that fails is tried again on the next
-// run. No trip can start on an ended pass, so none appears between the check and the close.
+// and its end closes the pass (EndTripService). A paid pass that was never used is closed once the
+// stay has ended. It lives in trips, since passes cannot depend on trips. Each pass is closed in a
+// transaction of its own; one that fails is tried again on the next run.
+//
+// A start that read the pass just before it ended can still commit a starting trip after the check.
+// UnlockConfirmationListener then checks the pass again under its lock, finds it closed, fails the
+// trip and locks the bike again (BR13), so no trip runs on a closed pass.
 @Component
 public class EndedPassClosingJob {
 

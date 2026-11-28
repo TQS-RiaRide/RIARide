@@ -21,10 +21,17 @@ public interface PassRepository extends JpaRepository<Pass, UUID> {
 
   Optional<Pass> findFirstByGuestIdAndStatusIn(UUID guestId, Collection<PassStatus> statuses);
 
-  // Ids only: EndedPassClosingJob then closes each pass in a transaction of its own (RIA-89).
-  @Query("select p.id from Pass p where p.status = :status and p.expiresAt <= :at")
-  List<UUID> findIdsByStatusAndExpiresAtLessThanEqual(
-      @Param("status") PassStatus status, @Param("at") Instant at);
+  // The passes that have ended by the given time (RIA-89): active ones past their expiry, and paid
+  // ones never used whose stay has ended. Ids only: EndedPassClosingJob then closes each pass in a
+  // transaction of its own.
+  @Query(
+      """
+      select p.id from Pass p
+      where p.status = com.riaride.passes.internal.domain.PassStatus.ACTIVE and p.expiresAt <= :at
+         or p.status = com.riaride.passes.internal.domain.PassStatus.INACTIVE
+            and p.stayEndsAt <= :at
+      """)
+  List<UUID> findIdsOfEndedPasses(@Param("at") Instant at);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select p from Pass p where p.id = :id")
