@@ -37,11 +37,12 @@ import org.springframework.test.web.servlet.ResultMatcher;
 // secret data: they never appear in the logs, and an error response never repeats them. Each test
 // drives the real flow with synthetic data, PostgreSQL and Keycloak in Testcontainers and the real
 // security filter chain, through every outcome it can reach, and then searches everything the
-// application wrote to the console and every error response for those values.
+// application wrote to the console, at DEBUG level for the application's own code, and every
+// error response, body and headers, for those values.
 //
 // Out of reach here: Keycloak being unavailable during sign-up (its handler logs a fixed message
 // and the HTTP status, see GuestProblemHandler), and the login form itself, which Keycloak serves.
-@SpringBootTest
+@SpringBootTest(properties = "logging.level.com.riaride=DEBUG")
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, FixedClockConfiguration.class})
 @ExtendWith(OutputCaptureExtension.class)
@@ -55,6 +56,7 @@ class PersonalDataNotExposedIT {
   private static final String PASSWORD = "Mare-Alta-Gdpr-2026";
   private static final String SHORT_PASSWORD = "Gdpr-26";
   private static final String STAY_CODE = "H5N7R3KQ";
+  private static final String OTHER_STAY_CODE = "M3T6V8XB";
   private static final String ENDED_STAY_CODE = "J6P8S4LV";
   private static final String UNKNOWN_STAY_CODE = "W9X2Y3Z4";
   private static final String GUEST_NAME = "Leonor Brandão Vieira";
@@ -75,6 +77,7 @@ class PersonalDataNotExposedIT {
     jdbc.update("delete from guest");
     jdbc.update("delete from stay");
     TestKeycloak.deleteUsersWithEmail(EMAIL);
+    TestKeycloak.deleteUsersWithEmail("other." + EMAIL);
     keycloakUsers.forEach(TestKeycloak::deleteUser);
   }
 
@@ -112,9 +115,14 @@ class PersonalDataNotExposedIT {
         .formatted(MARES_CENTRO, guestName, checkIn, checkOut);
   }
 
-  // The body of an error response, after checking its status.
+  // An error response's headers and body, after checking its status.
   private String errorBody(ResultActions request, ResultMatcher expected) throws Exception {
-    return request.andExpect(expected).andReturn().getResponse().getContentAsString();
+    var response = request.andExpect(expected).andReturn().getResponse();
+    var headers = new StringBuilder();
+    for (var name : response.getHeaderNames()) {
+      headers.append(name).append(": ").append(response.getHeaders(name)).append('\n');
+    }
+    return headers + response.getContentAsString();
   }
 
   private ResultActions signUp(String json) throws Exception {
@@ -135,19 +143,25 @@ class PersonalDataNotExposedIT {
   }
 
   // Sign-up through each of its outcomes: created, then refused because the email already has an
-  // account, the stay code is unknown or its stay has ended, the email or the password is invalid,
-  // or the body is not JSON.
+  // account (with another unused stay code, so the email check is reached), the stay code is
+  // already used, unknown or its stay has ended, the email or the password is invalid, or the body
+  // is not JSON. Sign-up reads the stay's guest name and gives it to Keycloak, so the name is
+  // searched for too.
   @Requirement("RIA-51")
   @Test
   void shouldNeverLogOrReturnTheEmailPasswordOrStayCodeOfASignUp(CapturedOutput output)
       throws Exception {
     givenStay(STAY_CODE, "2026-11-28", "2026-12-02");
+    givenStay(OTHER_STAY_CODE, "2026-11-28", "2026-12-02");
     givenStay(ENDED_STAY_CODE, "2026-11-20", "2026-11-25");
 
     signUp(signUpBody(EMAIL, PASSWORD, STAY_CODE)).andExpect(status().isCreated());
     var errors =
         List.of(
-            errorBody(signUp(signUpBody(EMAIL, PASSWORD, STAY_CODE)), status().is4xxClientError()),
+            errorBody(signUp(signUpBody(EMAIL, PASSWORD, OTHER_STAY_CODE)), status().isConflict()),
+            errorBody(
+                signUp(signUpBody("other." + EMAIL, PASSWORD, STAY_CODE)),
+                status().isUnprocessableContent()),
             errorBody(
                 signUp(signUpBody(EMAIL, PASSWORD, UNKNOWN_STAY_CODE)),
                 status().isUnprocessableContent()),
@@ -165,12 +179,15 @@ class PersonalDataNotExposedIT {
     var values =
         List.of(
             EMAIL,
+            "other." + EMAIL,
             MALFORMED_EMAIL,
             PASSWORD,
             SHORT_PASSWORD,
             STAY_CODE,
+            OTHER_STAY_CODE,
             ENDED_STAY_CODE,
-            UNKNOWN_STAY_CODE);
+            UNKNOWN_STAY_CODE,
+            GUEST_NAME);
     assertThat(errors).allSatisfy(body -> assertThat(body).doesNotContain(values));
     assertThat(output.getAll()).doesNotContain(values);
   }
@@ -212,7 +229,8 @@ class PersonalDataNotExposedIT {
 
   // Login is Keycloak's; the backend only checks the access token on each request. A valid token,
   // a tampered one and one used where its role is not allowed never reach the logs, and the 401
-  // and 403 problem details do not repeat them.
+  // and 403 responses (WWW-Authenticate included) do not repeat them. Each segment is searched on
+  // its own too: the claims (payload) and both signatures.
   @Requirement("RIA-86")
   @Test
   void shouldNeverLogOrReturnAnAccessToken(CapturedOutput output) throws Exception {
@@ -227,9 +245,12 @@ class PersonalDataNotExposedIT {
                 registerStay(guest.accessToken(), stayBody(GUEST_NAME, "2026-12-01", "2026-12-05")),
                 status().isForbidden()));
 
-    var signature = guest.accessToken().substring(guest.accessToken().lastIndexOf('.') + 1);
-    assertThat(errors)
-        .allSatisfy(body -> assertThat(body).doesNotContain(guest.accessToken(), tampered));
-    assertThat(output.getAll()).doesNotContain(guest.accessToken(), tampered, signature);
+    var segments = guest.accessToken().split("\\.");
+    var payload = segments[1];
+    var signature = segments[2];
+    var tamperedSignature = tampered.substring(tampered.lastIndexOf('.') + 1);
+    var values = List.of(guest.accessToken(), tampered, payload, signature, tamperedSignature);
+    assertThat(errors).allSatisfy(response -> assertThat(response).doesNotContain(values));
+    assertThat(output.getAll()).doesNotContain(values);
   }
 }
