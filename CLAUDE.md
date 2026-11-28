@@ -149,7 +149,7 @@ The architecture proposal is I1 work. Already fixed:
 Pending team review. Full rationale, diagrams and ADRs are in [`docs/architecture/`](docs/architecture/README.md).
 
 - **Backend:** modular monolith with Spring Modulith, built with Maven. Ports and adapters only at external integrations.
-- **Database:** PostgreSQL only, with Flyway.
+- **Database:** PostgreSQL only, with Flyway. Migrations are named `V<n>__<module>_<change>.sql`; a merged migration is never edited; the pull request that merges second renumbers its migrations above the highest on `dev` (architecture, section 6).
 - **Frontend:** React, Vite and TypeScript.
 - **Simulator:** Python, bidirectional MQTT through Mosquitto.
 - **Payments:** Stripe test mode.

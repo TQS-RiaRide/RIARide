@@ -325,7 +325,7 @@ Failing tests fail the job, and the failed job blocks the merge through the requ
 **Integration tests**
 
 - Named `*IT.java` and run by Maven Failsafe in the `verify` phase, separately from unit tests run by Surefire.
-- **Persistence:** repositories and Flyway migrations against PostgreSQL in Testcontainers, never an in-memory database.
+- **Persistence:** repositories and Flyway migrations against PostgreSQL in Testcontainers, never an in-memory database. Migrations follow the rules in the architecture document (section 6, Migration rules): never edit a merged one, and the pull request that merges second renumbers.
 - **REST API:** controllers with the full Spring context and REST Assured, including authorization per role and error responses. `RoleAccessMatrixIT` (RIA-86) calls every endpoint with a real Keycloak token for each role and checks allowed, 403 and 401, including tokens with edited claims or signed by another key; it fails when an endpoint is missing from its matrix, so every new endpoint must declare its roles there.
 - **Simulator adapter:** against Mosquitto in Testcontainers: telemetry messages update vehicle state; commands (lock, unlock) are published correctly.
 - **Simulator contract:** the MQTT message formats are defined as JSON Schemas in the repository. The simulator's tests validate what it emits, and the backend's tests validate what the adapter accepts. A replacement simulator only has to meet the same schemas.

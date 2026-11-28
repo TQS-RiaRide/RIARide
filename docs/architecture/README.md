@@ -175,6 +175,33 @@ Each table belongs to one module, and code in another module never accesses it d
 
 The base price lives in `pass_price`, one row per pass type. `pass` copies the amounts at purchase, so later price changes do not alter past passes. Thresholds live in `usage_rule`, owned by `passes` and edited from the backoffice UI: maximum trip duration (3 h), reservation hold (15 min), minimum battery (20 %), overtime price per 15 min, and `overtimeGraceMinutes` (0).
 
+### Tables and migrations today
+
+The diagram above is the target model. This is what the migrations on `dev` create, so the two can be compared. Flyway owns the schema: the backend applies the migrations when it starts, and Hibernate only validates the tables against the entities (`ddl-auto: validate`). Tests run the same migrations on PostgreSQL in Testcontainers, never on an in-memory database (QA Manual, section 5.2).
+
+| Table | Module | Migration | Rules the database enforces |
+|---|---|---|---|
+| `hotel` | `accounts` | V1 | Unique name; the three Marés hotels are seeded with fixed ids, carried in the `hotel_id` token claim |
+| `stay` | `accounts` | V1 | Unique stay code; check-out after check-in |
+| `guest` | `accounts` | V2 | One account per stay, per email and per Keycloak id; locale `pt` or `en` |
+| `hub` | `fleet` | V3 | Unique name; a hotel hub has a hotel and a tourist spot none; capacity at least 1 |
+| `pass_price` | `passes` | V4 | One row per pass type, seeded; positive amounts |
+| `pass` | `passes` | V4, V11 | One open pass per guest (partial unique index); an active pass has an expiry; `stay_ends_at` kept at purchase |
+| `payment` | `payments` | V4 | Unique idempotency key |
+| `vehicle` | `fleet` | V5, V6 | Code unique regardless of case; battery 0 to 100 |
+| `reservation` | `trips` | V7, V8 | One active reservation per vehicle and per pass (partial unique indexes) |
+| `trip` | `trips` | V7, V10 | One trip in progress per pass (partial unique index); an ended trip has an end time and an end hub |
+
+Pull requests still open add `payment` overtime and `event_publication` (RIA-88), `usage_rule` (RIA-96), `maintenance_ticket`, the vehicle's pending maintenance and cancelled reservations (RIA-92). Each adds its row to this table when it merges. The target model's `telemetry_event`, `suggested_route` and `route_stop` belong to stories not started yet.
+
+### Migration rules
+
+- **Name.** `V<n>__<module>_<change>.sql`, where the module owns the table, for example `V10__trips_trip_ended.sql`. Tables owned by a library keep the library's name (`event_publication`, Spring Modulith). `MigrationFilesTest` checks the names and that no version is used twice.
+- **Never edit a merged migration.** Flyway stores a checksum per migration and refuses to start when one changes. A fix to a merged migration is a new migration.
+- **Numbering across pull requests.** A pull request takes the next free number on `dev` when it adds a migration. Flyway refuses a migration older than one already applied (`outOfOrder` is off), so when another pull request merges first with the same or a higher number, the one merging second renumbers its migrations above the highest on `dev` before it merges, and says so in its description. A pull request stacked on another numbers after it. Gaps are allowed: V9 was left free for RIA-87, which then became V11.
+- **Data in migrations.** A migration that adds a `NOT NULL` column fills it for existing rows first (V11 does this for `stay_ends_at`). Migrations seed only the reference data every environment needs: the hotels and the base prices. Representative demo data comes from a separate seed profile (I4).
+- **Local databases.** A database that applied a migration which was then renumbered or changed before merging no longer validates. `docker compose -f infra/compose.yaml down -v` recreates it.
+
 ## 7. Key flows
 
 ### Registration
