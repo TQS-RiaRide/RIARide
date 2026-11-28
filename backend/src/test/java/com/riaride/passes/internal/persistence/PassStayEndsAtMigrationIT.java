@@ -24,8 +24,9 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PassStayEndsAtMigrationIT {
 
-  // The last migration before RIA-87's.
-  private static final String BEFORE_RIA_87 = "10";
+  // RIA-87's migration, found by its name: its number changes if another story's migration lands
+  // first and this one is renumbered.
+  private static final String RIA_87_MIGRATION = "passes stay ends at";
   private static final String MARES_CENTRO = "00000000-0000-0000-0000-000000000001";
   private static final Instant FIRST_TRIP = Instant.parse("2026-11-30T10:00:00Z");
   // Check-out on 2 December: the stay ends at midnight in Vila Ria (UTC+0 in winter).
@@ -41,7 +42,7 @@ class PassStayEndsAtMigrationIT {
         new DriverManagerDataSource(
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     jdbc = new JdbcTemplate(dataSource);
-    flyway(dataSource, BEFORE_RIA_87).migrate();
+    flyway(dataSource, versionBefore(dataSource, RIA_87_MIGRATION)).migrate();
     var rita = guest("MIGR2345", "rita.almeida@example.test");
     oldPass(rita, "ONE_DAY", "CLOSED", FIRST_TRIP);
     oldPass(rita, "THREE_DAY", "CLOSED", FIRST_TRIP);
@@ -79,6 +80,17 @@ class PassStayEndsAtMigrationIT {
   @AfterAll
   void stopDatabase() {
     postgres.stop();
+  }
+
+  // The version of the migration just before the one with this description.
+  private static String versionBefore(DriverManagerDataSource dataSource, String description) {
+    var migrations = flyway(dataSource, "latest").info().all();
+    for (var i = 1; i < migrations.length; i++) {
+      if (migrations[i].getDescription().equals(description)) {
+        return migrations[i - 1].getVersion().getVersion();
+      }
+    }
+    throw new IllegalStateException("No migration named " + description);
   }
 
   private static Flyway flyway(DriverManagerDataSource dataSource, String target) {

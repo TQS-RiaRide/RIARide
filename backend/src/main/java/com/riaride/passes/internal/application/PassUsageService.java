@@ -1,5 +1,6 @@
 package com.riaride.passes.internal.application;
 
+import com.riaride.passes.PassLimits;
 import com.riaride.passes.PassUsage;
 import com.riaride.passes.UsablePass;
 import com.riaride.passes.internal.domain.PassStatus;
@@ -49,5 +50,15 @@ class PassUsageService implements PassUsage {
         .findById(passId)
         .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"))
         .activate(at);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PassLimits limitsOf(UUID passId) {
+    var pass =
+        passes
+            .findById(passId)
+            .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"));
+    return new PassLimits(pass.getExpiresAt(), pass.getStayEndsAt());
   }
 }
