@@ -1,14 +1,16 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Workspace } from './workspace';
 
 interface WorkspacesProps {
   workspaces: readonly Workspace[];
+  /** What a workspace shows under its description, as its stories add it (RIA-92: tickets). */
+  content?: Partial<Record<Workspace, ReactNode>>;
 }
 
 // The menu of the workspaces the user's roles may open, and the one that is open (RIA-86).
-// Each workspace's own content arrives with its stories; for now each shows what it is for.
-export default function Workspaces({ workspaces }: WorkspacesProps) {
+// Each workspace shows what it is for, then the content its stories added, if any.
+export default function Workspaces({ workspaces, content = {} }: WorkspacesProps) {
   const { t } = useTranslation('workspaces');
   const headingId = useId();
   const [selected, setSelected] = useState<Workspace | undefined>(workspaces[0]);
@@ -42,6 +44,7 @@ export default function Workspaces({ workspaces }: WorkspacesProps) {
       <section aria-labelledby={headingId} className="workspace-panel">
         <h2 id={headingId}>{t(`${current}.title`)}</h2>
         <p>{t(`${current}.description`)}</p>
+        {content[current]}
       </section>
     </div>
   );

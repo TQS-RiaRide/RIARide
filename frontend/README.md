@@ -22,7 +22,7 @@ Set `VITE_BACKEND_URL` to point the dev server at another backend.
 
 ## Login and roles
 
-The app logs in with Keycloak through keycloak-js: Authorization Code with PKCE (S256), tokens kept in memory only and refreshed before each use ([ADR 0009](../docs/architecture/adr/0009-keycloak.md)). After login it calls `GET /api/v1/me` and shows a menu with only the workspaces of the user's roles (operator: operator dashboard and maintenance tickets, never the hotel backoffice). The menu only decides what the UI offers; the backend checks the role on every request.
+The app logs in with Keycloak through keycloak-js: Authorization Code with PKCE (S256), tokens kept in memory only and refreshed before each use ([ADR 0009](../docs/architecture/adr/0009-keycloak.md)). After login it calls `GET /api/v1/me` and shows a menu with only the workspaces of the user's roles (operator: operator dashboard and maintenance tickets, never the hotel backoffice). The menu only decides what the UI offers; the backend checks the role on every request. In the maintenance tickets workspace, operators and admins open a ticket for a faulty bike by its code (`POST /api/v1/tickets`, RIA-92); technicians see the workspace without that form.
 
 | Variable (build time)     | Default                 | Meaning                            |
 | ------------------------- | ----------------------- | ---------------------------------- |

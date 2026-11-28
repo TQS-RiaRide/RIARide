@@ -36,6 +36,15 @@ class VehicleReservationService implements VehicleReservations {
 
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
+  public boolean isReserved(UUID vehicleId) {
+    return vehicles
+        .findByIdForUpdate(vehicleId)
+        .map(vehicle -> vehicle.getStatus() == VehicleStatus.RESERVED)
+        .orElse(false);
+  }
+
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public boolean startRide(UUID vehicleId) {
     var vehicle = vehicles.findByIdForUpdate(vehicleId);
     if (vehicle.isEmpty() || vehicle.get().getStatus() != VehicleStatus.RESERVED) {

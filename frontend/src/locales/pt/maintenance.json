@@ -1,0 +1,25 @@
+{
+  "openTicket": {
+    "heading": "Abrir um pedido",
+    "intro": "Registe uma avaria numa bicicleta. Ela sai de serviço para que nenhum hóspede a possa reservar, e o pedido tem de ser resolvido em 24 horas.",
+    "vehicleCode": "Código da bicicleta",
+    "vehicleCodeHint": "Como está escrito na bicicleta, por exemplo EB-701.",
+    "description": "Avaria",
+    "submit": "Abrir pedido",
+    "sending": "A abrir…",
+    "opened": "Pedido aberto para {{code}}.",
+    "inMaintenance": "A bicicleta fica em manutenção até ser reparada.",
+    "pending": "A bicicleta está numa viagem: passa a manutenção quando a viagem terminar.",
+    "deadline": "Prazo de reparação: {{deadline}}.",
+    "errors": {
+      "vehicleCode": "Indique o código da bicicleta.",
+      "description": "Descreva a avaria em até 500 caracteres.",
+      "invalid": "Verifique os campos do pedido.",
+      "notFound": "Nenhuma bicicleta tem este código.",
+      "retired": "Esta bicicleta foi retirada, por isso não pode ter pedidos.",
+      "forbidden": "A sua conta não pode abrir pedidos.",
+      "sessionExpired": "A sua sessão terminou. Inicie sessão novamente para abrir o pedido.",
+      "unexpected": "Não foi possível abrir o pedido. Tente novamente."
+    }
+  }
+}

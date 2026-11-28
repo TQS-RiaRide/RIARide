@@ -105,6 +105,42 @@ class VehicleReservationServiceTest {
     assertThat(bike.getHubId()).isEqualTo(HUB);
   }
 
+  // A failed start left the bike reserved for the pass: a retry may reuse the hold (RIA-92).
+  @Requirement("RIA-92")
+  @Test
+  void shouldConfirmVehicleThatIsStillReserved() {
+    var bike = availableBike("EB-201", 80);
+    bike.reserve(new BookingBatteryPolicy(20));
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+
+    assertThat(service.isReserved(bike.getId())).isTrue();
+
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
+  }
+
+  // A ticket took the held bike out of service before its reservation was cancelled (RIA-92).
+  @Requirement("RIA-92")
+  @Test
+  void shouldRefuseToConfirmVehicleInMaintenance() {
+    var bike = availableBike("EB-201", 80);
+    bike.reserve(new BookingBatteryPolicy(20));
+    bike.reportFault();
+    when(vehicles.findByIdForUpdate(bike.getId())).thenReturn(Optional.of(bike));
+
+    assertThat(service.isReserved(bike.getId())).isFalse();
+
+    assertThat(bike.getStatus()).isEqualTo(VehicleStatus.MAINTENANCE);
+  }
+
+  @Requirement("RIA-92")
+  @Test
+  void shouldRefuseToConfirmUnknownVehicle() {
+    var unknown = UUID.randomUUID();
+    when(vehicles.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
+
+    assertThat(service.isReserved(unknown)).isFalse();
+  }
+
   @Requirement("RIA-54")
   @Test
   void shouldNotStartRideOfUnknownVehicle() {

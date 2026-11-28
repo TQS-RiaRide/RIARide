@@ -62,6 +62,9 @@ riaride:
     unlock-timeout-check-interval: 5s
     # How often ReservationExpiryJob looks for holds that ended unused (BR11).
     reservation-expiry-check-interval: 30s
+  maintenance:
+    # How long a maintenance ticket has to be resolved, counted from its opening (RIA-92).
+    sla: 24h
 
 management:
   endpoints:
