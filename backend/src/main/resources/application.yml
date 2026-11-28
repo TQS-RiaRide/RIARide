@@ -58,9 +58,11 @@ riaride:
     unlock-timeout: 30s
     # BR11: how long a bike stays reserved for the pass.
     reservation-hold: 15m
-    # How often UnlockTimeoutJob looks for starts that are overdue.
+    # How often UnlockTimeoutJob looks for starts that are overdue; the first look is one interval
+    # after startup.
     unlock-timeout-check-interval: 5s
-    # How often ReservationExpiryJob looks for holds that ended unused (BR11).
+    # How often ReservationExpiryJob looks for holds that ended unused (BR11); the first look is one
+    # interval after startup.
     reservation-expiry-check-interval: 30s
 
 management:

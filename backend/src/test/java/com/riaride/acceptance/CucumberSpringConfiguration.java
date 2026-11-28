@@ -17,15 +17,13 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-// The single Spring context shared by all Cucumber scenarios: the full
-// application on a random port, backed by PostgreSQL in Testcontainers
-// (never an in-memory database) and by Keycloak with the realm from
-// infra/keycloak, so tokens are real and validated against its JWKS, and by Mosquitto for
-// telemetry.
+// The single Spring context shared by all Cucumber scenarios: the full application on a random
+// port, backed by PostgreSQL in Testcontainers (never an in-memory database) and by Keycloak with
+// the realm from infra/keycloak, so tokens are real and validated against its JWKS, and by
+// Mosquitto for telemetry.
 // The containers start once per JVM. Today is fixed: the TestClock starts each scenario at the
 // instant of FixedClockConfiguration, so date rules do not depend on when the build runs, and only
-// a
-// step moves it (the 30-second unlock timeout of RIA-54).
+// a step moves it (the 30-second unlock timeout of RIA-54).
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Import(TestClock.class)

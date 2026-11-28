@@ -6,8 +6,9 @@ riaride:
       # application start, since a missing key fails startup.
       secret-key: sk_test_unused_in_tests
   trips:
-    # The scheduled jobs would act on other tests' trips and reservations in a shared context; the
-    # tests that need them call UnlockTimeoutJob and ReservationExpiryJob on their own clock.
+    # The scheduled jobs would act on other tests' trips and reservations in a shared context, so
+    # they first run a day after the context starts, which no test reaches. The tests that need
+    # them call UnlockTimeoutJob and ReservationExpiryJob on their own clock.
     unlock-timeout-check-interval: 1d
     reservation-expiry-check-interval: 1d
   telemetry:

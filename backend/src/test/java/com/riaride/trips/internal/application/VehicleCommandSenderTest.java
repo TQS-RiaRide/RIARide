@@ -56,8 +56,7 @@ class VehicleCommandSenderTest {
   }
 
   // The command is sent after the trip is stored: a failure there must not turn the guest's 202
-  // into
-  // a 500 for a trip that exists. The trip then times out (BR13).
+  // into a 500 for a trip that exists. The trip then times out (BR13).
   @Requirement("RIA-54")
   @Test
   void shouldNotFailTheCallerWhenTheUnlockCannotBeSent() {
