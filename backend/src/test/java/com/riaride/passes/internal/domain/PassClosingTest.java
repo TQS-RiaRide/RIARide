@@ -99,14 +99,25 @@ class PassClosingTest {
     assertThat(pass.getStatus()).isEqualTo(PassStatus.CLOSED);
   }
 
-  // Only an active pass has trips to end; a paid pass that was never used is left as it is.
+  // A paid pass that was never used ends with the stay (BR1, RIA-87), so it closes then too.
   @Requirement("RIA-89")
-  @Test
-  void shouldLeaveAPassThatWasNeverUsedAsItIs() {
+  @ParameterizedTest(name = "never used, {0} minutes from the end of the stay: closed = {1}")
+  @CsvSource({"-1, false", "0, true", "1, true"})
+  void shouldCloseAPassThatWasNeverUsedOnceTheStayHasEnded(int minutesFromStayEnd, boolean closed) {
     var pass = paidPass(PassType.ONE_DAY);
 
-    pass.closeIfEndedAt(STAY_ENDS.plus(Duration.ofMinutes(1)));
+    pass.closeIfEndedAt(STAY_ENDS.plus(Duration.ofMinutes(minutesFromStayEnd)));
 
-    assertThat(pass.getStatus()).isEqualTo(PassStatus.INACTIVE);
+    assertThat(pass.getStatus()).isEqualTo(closed ? PassStatus.CLOSED : PassStatus.INACTIVE);
+  }
+
+  // A pass whose payment has not gone through is not open for trips yet; the purchase settles it.
+  @Requirement("RIA-89")
+  @Test
+  void shouldLeaveAPendingPassAsItIs() {
+    var pass = Pass.purchase(GUEST, new PassPrice(PassType.ONE_DAY, 2500, 5000), KEY, STAY_ENDS);
+
+    assertThat(pass.closeIfEndedAt(STAY_ENDS.plus(Duration.ofMinutes(1)))).isFalse();
+    assertThat(pass.getStatus()).isEqualTo(PassStatus.PENDING);
   }
 }

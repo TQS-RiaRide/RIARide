@@ -48,3 +48,11 @@ Feature: Pass ends during a trip
     Given the payment sandbox accepts the card
     When the guest buys a "stay" pass
     Then the response status is 201
+
+  # A paid pass that was never used ends with the stay (RIA-87), and is closed by the same job.
+  @BR9
+  Scenario: A stay pass that was never used is closed once the stay has ended
+    Given the guest has a "stay" pass that was never used
+    And it is "3 December 2026, 00:01" in Vila Ria
+    When the job that closes ended passes runs
+    Then the guest's pass is closed, with its deposit still held

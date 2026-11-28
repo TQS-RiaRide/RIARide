@@ -75,8 +75,7 @@ public class PassEndSteps {
   }
 
   // The scheduler runs the job on the same clock; the step runs it at once, so the scenario does
-  // not
-  // wait for it.
+  // not wait for it.
   @When("the job that closes ended passes runs")
   public void theJobThatClosesEndedPassesRuns() {
     closingJob.closeEndedPasses();

@@ -219,13 +219,13 @@ class PassUsageServiceTest {
     assertThat(pass.getStatus()).isEqualTo(PassStatus.CLOSED);
   }
 
-  // The passes EndedPassClosingJob looks at: active ones whose end has come (RIA-89).
+  // The passes EndedPassClosingJob looks at (RIA-89): active ones whose end has come, and paid ones
+  // never used whose stay has ended.
   @Requirement("RIA-89")
   @Test
-  void shouldFindTheActivePassesThatHaveEnded() {
+  void shouldFindThePassesThatHaveEnded() {
     var ended = UUID.randomUUID();
-    when(passes.findIdsByStatusAndExpiresAtLessThanEqual(PassStatus.ACTIVE, NOW))
-        .thenReturn(List.of(ended));
+    when(passes.findIdsOfEndedPasses(NOW)).thenReturn(List.of(ended));
 
     assertThat(service.findEndedPasses(NOW)).containsExactly(ended);
   }
