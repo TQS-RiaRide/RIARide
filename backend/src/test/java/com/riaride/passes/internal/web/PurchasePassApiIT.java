@@ -110,6 +110,9 @@ class PurchasePassApiIT {
     jdbc.update("delete from pass");
     jdbc.update("delete from guest");
     jdbc.update("delete from stay");
+    // Put the Flyway V4 seed back: the container is shared with the other integration tests.
+    jdbc.update(
+        "update pass_price set price_cents = 4000, deposit_cents = 5000 where pass_type = 'STAY'");
   }
 
   private static Jwt jwt(String token, String subject, String role) {

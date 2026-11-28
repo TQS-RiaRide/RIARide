@@ -9,6 +9,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -46,6 +47,14 @@ public class PassSteps {
     jdbc.update("delete from payment");
     jdbc.update("delete from pass");
     CucumberSpringConfiguration.STRIPE.resetAll();
+  }
+
+  // Puts the Flyway V4 seed back, so a scenario that changes the stay pass price does not leak it
+  // into later scenarios or other integration tests sharing the PostgreSQL container.
+  @After
+  public void restoreSeededStayPassPrice() {
+    jdbc.update(
+        "update pass_price set price_cents = 4000, deposit_cents = 5000 where pass_type = 'STAY'");
   }
 
   private static int cents(String euros) {
