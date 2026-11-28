@@ -21,6 +21,12 @@ RIA-
 
 ### AI review findings
 
+<!--
+One row per finding, so tools/ai-review-findings can count them (QA Manual, section 6.7).
+Finding: starts with the severity, CRITICAL, HIGH, MEDIUM or LOW, then a colon ("HIGH: ...").
+Decision: Accepted, Accepted in part, Rejected or Deferred.
+-->
+
 | Finding | Accepted / Rejected | Reason |
 |---|---|---|
 |  |  |  |
