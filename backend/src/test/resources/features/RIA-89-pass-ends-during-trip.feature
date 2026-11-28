@@ -36,3 +36,15 @@ Feature: Pass ends during a trip
     Then the response status is 200
     And the guest is charged 2 blocks of 15 minutes of overtime, 4.00 EUR, off-session
     And the guest's pass is closed, with its deposit still held
+
+  # A pass that ends with no trip in progress is closed by a scheduled job, so the guest can buy
+  # another: a guest holds only one open pass at a time (Product Owner decision, RIA-52).
+  @BR8
+  Scenario: A 1-day pass that expires with no trip in progress is closed, and the guest can buy another
+    Given the guest has an active "1-day" pass that expires at "30 November 2026, 15:00"
+    And it is "30 November 2026, 15:01" in Vila Ria
+    When the job that closes ended passes runs
+    Then the guest's pass is closed, with its deposit still held
+    Given the payment sandbox accepts the card
+    When the guest buys a "stay" pass
+    Then the response status is 201

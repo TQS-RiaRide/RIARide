@@ -15,6 +15,7 @@ import com.riaride.passes.internal.persistence.PassRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -212,9 +213,21 @@ class PassUsageServiceTest {
     pass.activate(NOW);
     when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
 
-    service.closeIfEnded(pass.getId(), STAY_ENDS.plusSeconds(20 * 60));
+    var closed = service.closeIfEnded(pass.getId(), STAY_ENDS.plusSeconds(20 * 60));
 
+    assertThat(closed).isTrue();
     assertThat(pass.getStatus()).isEqualTo(PassStatus.CLOSED);
+  }
+
+  // The passes EndedPassClosingJob looks at: active ones whose end has come (RIA-89).
+  @Requirement("RIA-89")
+  @Test
+  void shouldFindTheActivePassesThatHaveEnded() {
+    var ended = UUID.randomUUID();
+    when(passes.findIdsByStatusAndExpiresAtLessThanEqual(PassStatus.ACTIVE, NOW))
+        .thenReturn(List.of(ended));
+
+    assertThat(service.findEndedPasses(NOW)).containsExactly(ended);
   }
 
   @Requirement("RIA-89")
@@ -224,8 +237,9 @@ class PassUsageServiceTest {
     pass.activate(NOW);
     when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
 
-    service.closeIfEnded(pass.getId(), STAY_ENDS.minusSeconds(60));
+    var closed = service.closeIfEnded(pass.getId(), STAY_ENDS.minusSeconds(60));
 
+    assertThat(closed).isFalse();
     assertThat(pass.getStatus()).isEqualTo(PassStatus.ACTIVE);
   }
 

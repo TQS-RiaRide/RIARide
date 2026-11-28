@@ -67,6 +67,17 @@ class PassClosingTest {
     assertThat(pass.getStatus()).isEqualTo(PassStatus.ACTIVE);
   }
 
+  // EndedPassClosingJob counts the passes it closed: only the call that closes one says so.
+  @Requirement("RIA-89")
+  @Test
+  void shouldSayWhetherThisCallClosedThePass() {
+    var pass = activePass(PassType.ONE_DAY);
+
+    assertThat(pass.closeIfEndedAt(pass.getExpiresAt().minusSeconds(1))).isFalse();
+    assertThat(pass.closeIfEndedAt(pass.getExpiresAt())).isTrue();
+    assertThat(pass.closeIfEndedAt(pass.getExpiresAt().plusSeconds(60))).isFalse();
+  }
+
   @Requirement("RIA-89")
   @Test
   void shouldKeepTheDepositHeldWhenThePassCloses() {

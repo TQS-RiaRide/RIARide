@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.riaride.FixedClockConfiguration;
 import com.riaride.TestClock;
+import com.riaride.trips.internal.application.EndedPassClosingJob;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -23,10 +25,12 @@ public class PassEndSteps {
 
   private final JdbcTemplate jdbc;
   private final TestClock clock;
+  private final EndedPassClosingJob closingJob;
 
-  public PassEndSteps(JdbcTemplate jdbc, TestClock clock) {
+  public PassEndSteps(JdbcTemplate jdbc, TestClock clock, EndedPassClosingJob closingJob) {
     this.jdbc = jdbc;
     this.clock = clock;
+    this.closingJob = closingJob;
   }
 
   private static Instant inVilaRia(String time) {
@@ -68,6 +72,14 @@ public class PassEndSteps {
         expiresAt.minus(lasts).toString(),
         expiresAt.toString(),
         "1-day".equals(passType) ? "ONE_DAY" : "THREE_DAY");
+  }
+
+  // The scheduler runs the job on the same clock; the step runs it at once, so the scenario does
+  // not
+  // wait for it.
+  @When("the job that closes ended passes runs")
+  public void theJobThatClosesEndedPassesRuns() {
+    closingJob.closeEndedPasses();
   }
 
   // The deposit is refunded or withheld at the end of the pass by RIA-114; until then it is held.
