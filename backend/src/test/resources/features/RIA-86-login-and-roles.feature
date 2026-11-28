@@ -14,6 +14,7 @@ Feature: Log in and see only the features of my role
   may not call an endpoint gets 403 Forbidden as a problem detail. A request without a valid
   token gets 401 Unauthorized.
 
+  @TEST_RIA-178
   Scenario: An operator sees the operator dashboard and not the hotel backoffice
     Given a user "Rui Almeida" with the "OPERATOR" role is logged in
     When the user opens their account
