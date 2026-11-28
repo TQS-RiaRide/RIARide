@@ -32,6 +32,8 @@ class PassUsageServiceTest {
   private static final Instant NOW = Instant.parse("2026-11-30T10:00:00Z");
   private static final UUID GUEST = UUID.fromString("5b7f0c2e-0d1a-4a7e-9a55-3c2d1e0f4a11");
   private static final PassPrice STAY_PRICE = new PassPrice(PassType.STAY, 2500, 5000);
+  // Check-out on 2 December: the stay ends at midnight in Vila Ria (RIA-87).
+  private static final Instant STAY_ENDS = Instant.parse("2026-12-03T00:00:00Z");
 
   @Mock private PassRepository passes;
 
@@ -43,7 +45,7 @@ class PassUsageServiceTest {
   }
 
   private static Pass pendingPass() {
-    return Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1");
+    return Pass.purchase(GUEST, STAY_PRICE, GUEST + ":purchase-1", STAY_ENDS);
   }
 
   private static Pass paidPass() {

@@ -107,7 +107,7 @@ Product definitions and backlog:
 | ID | Rule | Proposal |
 |---|---|---|
 | BR1 | Access | Only guests with an active stay can register and book |
-| BR2 | Pass types | 1-day pass (24 h after activation), 3-day pass and stay pass (valid until check-out) |
+| BR2 | Pass types | 1-day pass (24 h after activation), 3-day pass (72 h) and stay pass (valid until check-out); no pass lasts past the end of the check-out day in Vila Ria |
 | BR3 | Pricing | One base price, used by all hotels in the group |
 | BR4 | Activation | On the first trip, not at purchase |
 | BR5 | Deposit | Charged at purchase, refunded at the end of the pass if there are no problems |

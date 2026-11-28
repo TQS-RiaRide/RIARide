@@ -109,15 +109,36 @@ public class PassSteps {
   // stories that need a guest with a pass (RIA-59), without going through the payment sandbox.
   @Given("the guest has a valid {string} pass")
   public void theGuestHasAValidPass(String passType) {
+    insertPaidPass(passType.toUpperCase(Locale.ROOT));
+  }
+
+  // RIA-87: a pass bought and never used, as the scenario names its type ("1-day", "3-day",
+  // "stay").
+  @Given("the guest has a {string} pass that was never used")
+  public void theGuestHasAPassThatWasNeverUsed(String passType) {
+    insertPaidPass(
+        switch (passType) {
+          case "1-day" -> "ONE_DAY";
+          case "3-day" -> "THREE_DAY";
+          case "stay" -> "STAY";
+          default -> throw new IllegalArgumentException("Unknown pass type " + passType);
+        });
+  }
+
+  // The pass keeps the end of the guest's stay, midnight after the check-out day in Vila Ria, as
+  // a purchase stores it (RIA-87).
+  private void insertPaidPass(String passType) {
     jdbc.update(
         """
-        insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status)
-        select ?::uuid, ?::uuid, pass_type, 'INACTIVE', price_cents, deposit_cents, 'HELD'
-        from pass_price where pass_type = ?
+        insert into pass (id, guest_id, pass_type, status, price_cents, deposit_cents, deposit_status, stay_ends_at)
+        select ?::uuid, g.id, p.pass_type, 'INACTIVE', p.price_cents, p.deposit_cents, 'HELD',
+               (s.check_out + 1)::timestamp at time zone 'Europe/Lisbon'
+        from pass_price p, guest g join stay s on s.id = g.stay_id
+        where p.pass_type = ? and g.id = ?::uuid
         """,
         UUID.randomUUID().toString(),
-        guestId,
-        passType.toUpperCase(Locale.ROOT));
+        passType,
+        guestId);
   }
 
   @Given("the payment sandbox accepts the card")
