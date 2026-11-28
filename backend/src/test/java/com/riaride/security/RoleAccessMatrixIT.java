@@ -98,6 +98,11 @@ class RoleAccessMatrixIT {
               "POST", "/api/v1/stays", "/api/v1/stays", Set.of(Role.HOTEL_MANAGER, Role.ADMIN)),
           new Endpoint("POST", "/api/v1/hubs", "/api/v1/hubs", Set.of(Role.OPERATOR, Role.ADMIN)),
           new Endpoint(
+              "GET",
+              "/api/v1/hubs",
+              "/api/v1/hubs",
+              Set.of(Role.GUEST, Role.OPERATOR, Role.TECHNICIAN, Role.HOTEL_MANAGER, Role.ADMIN)),
+          new Endpoint(
               "POST",
               "/api/v1/hubs/{hubId}/vehicles",
               "/api/v1/hubs/" + ANY_ID + "/vehicles",
@@ -109,11 +114,14 @@ class RoleAccessMatrixIT {
               Set.of(Role.GUEST, Role.OPERATOR, Role.ADMIN)),
           new Endpoint("POST", "/api/v1/passes", "/api/v1/passes", Set.of(Role.GUEST)),
           new Endpoint(
+              "GET", "/api/v1/passes/current", "/api/v1/passes/current", Set.of(Role.GUEST)),
+          new Endpoint(
               "PUT",
               "/api/v1/vehicles/{id}/status",
               "/api/v1/vehicles/" + ANY_ID + "/status",
               Set.of(Role.OPERATOR, Role.ADMIN)),
           new Endpoint("POST", "/api/v1/trips", "/api/v1/trips", Set.of(Role.GUEST)),
+          new Endpoint("GET", "/api/v1/trips", "/api/v1/trips", Set.of(Role.GUEST)),
           new Endpoint("GET", "/api/v1/trips/{id}", "/api/v1/trips/" + ANY_ID, Set.of(Role.GUEST)),
           new Endpoint(
               "POST",
