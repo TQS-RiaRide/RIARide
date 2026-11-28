@@ -39,6 +39,11 @@ class SecurityConfiguration {
             requests
                 .requestMatchers("/actuator/health", "/actuator/health/**")
                 .permitAll()
+                // The API documentation (RIA-107) is public: it lists the endpoints and their
+                // roles, never data. Calling an endpoint from Swagger UI still needs a token.
+                .requestMatchers(
+                    "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**")
+                .permitAll()
                 // Guest sign-up (RIA-51): the guest has no account, and so no token, yet.
                 .requestMatchers(HttpMethod.POST, "/api/v1/guests")
                 .permitAll()
@@ -52,11 +57,19 @@ class SecurityConfiguration {
                 // Hub registration (RIA-56): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs")
                 .hasAnyRole("OPERATOR", "ADMIN")
+                // The hub list (RIA-107): every platform role.
+                .requestMatchers(HttpMethod.GET, "/api/v1/hubs")
+                .hasAnyRole("GUEST", "OPERATOR", "TECHNICIAN", "HOTEL_MANAGER", "ADMIN")
                 // Vehicle registration at a hub (RIA-57): operators and admins only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/hubs/*/vehicles")
                 .hasAnyRole("OPERATOR", "ADMIN")
                 // Buying a pass (RIA-52): guests only.
                 .requestMatchers(HttpMethod.POST, "/api/v1/passes")
+                .hasRole("GUEST")
+                // The guest's current pass and their trips (RIA-107).
+                .requestMatchers(HttpMethod.GET, "/api/v1/passes/current")
+                .hasRole("GUEST")
+                .requestMatchers(HttpMethod.GET, "/api/v1/trips")
                 .hasRole("GUEST")
                 // Activating, deactivating or retiring a bike (RIA-91): operators and admins only.
                 .requestMatchers(HttpMethod.PUT, "/api/v1/vehicles/*/status")

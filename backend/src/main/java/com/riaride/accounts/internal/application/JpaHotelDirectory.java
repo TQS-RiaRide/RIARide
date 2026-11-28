@@ -3,6 +3,8 @@ package com.riaride.accounts.internal.application;
 import com.riaride.accounts.HotelDirectory;
 import com.riaride.accounts.HotelSummary;
 import com.riaride.accounts.internal.persistence.HotelRepository;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,5 +22,14 @@ class JpaHotelDirectory implements HotelDirectory {
   @Transactional(readOnly = true)
   public Optional<HotelSummary> findByName(String name) {
     return hotels.findByName(name).map(hotel -> new HotelSummary(hotel.getId(), hotel.getName()));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<HotelSummary> findAll() {
+    return hotels.findAll().stream()
+        .map(hotel -> new HotelSummary(hotel.getId(), hotel.getName()))
+        .sorted(Comparator.comparing(HotelSummary::name))
+        .toList();
   }
 }

@@ -36,6 +36,10 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
 
   Optional<Trip> findByIdAndGuestId(UUID id, UUID guestId);
 
+  // A guest's trips, newest first (RIA-107); ix_trip_guest_id serves it. Capped, as a stay
+  // never comes near it.
+  List<Trip> findTop100ByGuestIdOrderByRequestedAtDesc(UUID guestId);
+
   // The guest's trip as a projection, read before the trip is locked (EndTripService, RIA-55).
   @Query(
       "select t.status as status, t.vehicleId as vehicleId from Trip t"
