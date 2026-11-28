@@ -1,6 +1,7 @@
 package com.riaride.passes;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +20,16 @@ public interface PassUsage {
   // BR4: the first confirmed trip activates the pass; later trips keep the first activation time.
   // Joins the caller's transaction.
   void activateOnFirstTrip(UUID passId, Instant at);
+
+  // The limits of an ended trip's overtime (RIA-88): when the pass expires and the stay ends.
+  PassLimits limitsOf(UUID passId);
+
+  // BR8 and BR9 (RIA-89): the pass closes if it has ended by the given time, after the trip that
+  // ran past its end, or with no trip in progress. True only when this call closed it. Locks the
+  // pass, after any trip the caller has locked. Joins the caller's transaction.
+  boolean closeIfEnded(UUID passId, Instant at);
+
+  // RIA-89: the open passes that have ended by the given time: active ones past their expiry, which
+  // may still have a trip in progress, and paid ones never used whose stay has ended.
+  List<UUID> findEndedPasses(Instant at);
 }

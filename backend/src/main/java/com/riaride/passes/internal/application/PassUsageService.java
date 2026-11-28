@@ -1,11 +1,13 @@
 package com.riaride.passes.internal.application;
 
+import com.riaride.passes.PassLimits;
 import com.riaride.passes.PassUsage;
 import com.riaride.passes.UsablePass;
 import com.riaride.passes.internal.domain.PassStatus;
 import com.riaride.passes.internal.persistence.PassRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -49,5 +51,31 @@ class PassUsageService implements PassUsage {
         .findById(passId)
         .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"))
         .activate(at);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PassLimits limitsOf(UUID passId) {
+    var pass =
+        passes
+            .findById(passId)
+            .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"));
+    return new PassLimits(pass.getExpiresAt(), pass.getStayEndsAt());
+  }
+
+  // MANDATORY: the pass closes in the same transaction that ends its trip, or not at all.
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public boolean closeIfEnded(UUID passId, Instant at) {
+    return passes
+        .findByIdForUpdate(passId)
+        .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"))
+        .closeIfEndedAt(at);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<UUID> findEndedPasses(Instant at) {
+    return passes.findIdsOfEndedPasses(at);
   }
 }

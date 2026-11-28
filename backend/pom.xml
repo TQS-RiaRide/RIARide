@@ -51,6 +51,17 @@
 			<groupId>org.springframework.modulith</groupId>
 			<artifactId>spring-modulith-starter-core</artifactId>
 		</dependency>
+		<!-- Event publication registry (architecture, section 5): keeps an overtime charge until it succeeds. -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-jdbc</artifactId>
+		</dependency>
+		<!-- OvertimeRetryJob deletes publications whose last attempt failed (RIA-88); the starter
+		     brings this module at runtime only. -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-events-core</artifactId>
+		</dependency>
 		<!-- OAuth2 resource server: validates Keycloak JWTs against the realm's JWKS. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

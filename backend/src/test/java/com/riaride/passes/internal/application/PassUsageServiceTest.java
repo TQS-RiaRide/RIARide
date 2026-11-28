@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import com.riaride.passes.PassLimits;
 import com.riaride.passes.UsablePass;
 import com.riaride.passes.internal.domain.Pass;
 import com.riaride.passes.internal.domain.PassPrice;
@@ -14,6 +15,7 @@ import com.riaride.passes.internal.persistence.PassRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -178,5 +180,76 @@ class PassUsageServiceTest {
     when(passes.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
 
     assertThat(service.canStartTrip(unknown, NOW)).isFalse();
+  }
+
+  // The limits of an ended trip's overtime (RIA-88): when the pass expires and the stay ends.
+  @Requirement("RIA-88")
+  @Test
+  void shouldGiveTheExpiryOfAnActivePassAndTheEndOfTheStay() {
+    var pass = paidPass();
+    pass.activate(NOW);
+    when(passes.findById(pass.getId())).thenReturn(Optional.of(pass));
+
+    var limits = service.limitsOf(pass.getId());
+
+    assertThat(limits).isEqualTo(new PassLimits(pass.getExpiresAt(), STAY_ENDS));
+  }
+
+  @Requirement("RIA-88")
+  @Test
+  void shouldRefuseTheLimitsOfAnUnknownPass() {
+    var unknown = UUID.randomUUID();
+    when(passes.findById(unknown)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.limitsOf(unknown)).isInstanceOf(IllegalStateException.class);
+  }
+
+  // BR8 and BR9 (RIA-89): the stay pass ended at the end of the stay, while its trip was still in
+  // progress. The trip ends 20 minutes later and closes it.
+  @Requirement("RIA-89")
+  @Test
+  void shouldCloseThePassWhenItsTripEndsAfterTheEndOfThePass() {
+    var pass = paidPass();
+    pass.activate(NOW);
+    when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
+
+    var closed = service.closeIfEnded(pass.getId(), STAY_ENDS.plusSeconds(20 * 60));
+
+    assertThat(closed).isTrue();
+    assertThat(pass.getStatus()).isEqualTo(PassStatus.CLOSED);
+  }
+
+  // The passes EndedPassClosingJob looks at (RIA-89): active ones whose end has come, and paid ones
+  // never used whose stay has ended.
+  @Requirement("RIA-89")
+  @Test
+  void shouldFindThePassesThatHaveEnded() {
+    var ended = UUID.randomUUID();
+    when(passes.findIdsOfEndedPasses(NOW)).thenReturn(List.of(ended));
+
+    assertThat(service.findEndedPasses(NOW)).containsExactly(ended);
+  }
+
+  @Requirement("RIA-89")
+  @Test
+  void shouldLeaveThePassActiveWhenItsTripEndsBeforeTheEndOfThePass() {
+    var pass = paidPass();
+    pass.activate(NOW);
+    when(passes.findByIdForUpdate(pass.getId())).thenReturn(Optional.of(pass));
+
+    var closed = service.closeIfEnded(pass.getId(), STAY_ENDS.minusSeconds(60));
+
+    assertThat(closed).isFalse();
+    assertThat(pass.getStatus()).isEqualTo(PassStatus.ACTIVE);
+  }
+
+  @Requirement("RIA-89")
+  @Test
+  void shouldRefuseToCloseAnUnknownPass() {
+    var unknown = UUID.randomUUID();
+    when(passes.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.closeIfEnded(unknown, NOW))
+        .isInstanceOf(IllegalStateException.class);
   }
 }
