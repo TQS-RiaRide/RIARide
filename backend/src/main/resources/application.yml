@@ -80,6 +80,8 @@ riaride:
     unlock-timeout-check-interval: 5s
     # How often ReservationExpiryJob looks for holds that ended unused (BR11).
     reservation-expiry-check-interval: 30s
+    # How often EndedPassClosingJob closes the passes that ended with no trip in progress (RIA-89).
+    ended-pass-check-interval: 1m
     overtime:
       # BR7: overtime starts after 3 h, per started 15-minute block, at 2.00 EUR per block and with
       # no grace period (Product Owner decisions, RIA-88).

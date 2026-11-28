@@ -7,6 +7,7 @@ import com.riaride.passes.internal.domain.PassStatus;
 import com.riaride.passes.internal.persistence.PassRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -65,10 +66,16 @@ class PassUsageService implements PassUsage {
   // MANDATORY: the pass closes in the same transaction that ends its trip, or not at all.
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
-  public void closeIfEnded(UUID passId, Instant tripEndedAt) {
-    passes
+  public boolean closeIfEnded(UUID passId, Instant at) {
+    return passes
         .findByIdForUpdate(passId)
         .orElseThrow(() -> new IllegalStateException("The pass of a trip no longer exists"))
-        .closeIfEndedAt(tripEndedAt);
+        .closeIfEndedAt(at);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<UUID> findEndedPasses(Instant at) {
+    return passes.findIdsByStatusAndExpiresAtLessThanEqual(PassStatus.ACTIVE, at);
   }
 }
