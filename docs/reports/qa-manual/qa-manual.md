@@ -194,7 +194,7 @@ The platform stores guests' email, password, stay and trip history, which is per
 - Collect only what the flows need: no name, address or document number for guests.
 - Passwords are held by Keycloak only; card data stays in Stripe and never reaches the backend.
 - A trip records its start and end hubs and times. The latest vehicle state is kept on `vehicle`, and every telemetry message, with its position, is kept in `telemetry_event`; joined with `trip`, that history rebuilds a guest's route. A scheduled job therefore deletes `telemetry_event` rows older than 7 days, which is enough for the telemetry lag metrics and for debugging.
-- Logs and error responses contain no email, password, token or stay code.
+- Logs and error responses contain no email, password, token or stay code, nor the guest name a hotel registers. [`PersonalDataNotExposedIT`](../../../backend/src/test/java/com/riaride/security/PersonalDataNotExposedIT.java) drives guest sign-up, stay registration and token checks through each outcome they can reach, with synthetic values, and fails if any of them appears in the application's output or in an error response (RIA-141).
 - Seed, test and demo data are synthetic (section 3.1); real data is never loaded into any environment.
 
 ## 4. Continuous delivery pipeline (CI/CD) and observability
